@@ -86,6 +86,7 @@ include_once("../menu.php");
         <th>STUDENT ID</th>
         <th>PAYMENT CATEGORY</th>
         <th>PAYMENT REASON</th>
+        <th>PAYMENT METHOD</th>
         <th>PAYMENT NOTE</th>
         <th>PAYMENT AMOUNT</th>
         <th>PAYMENTQTY</th>
@@ -109,6 +110,7 @@ if(mysqli_num_rows($result)>0){
         <td>'.$row['student_id'].'</td>
         <td>'.$row['payment_type'].'</td>
         <td>'.$row['payment_reason'].'</td>
+        <td>'.(isset($row['payment_method']) && $row['payment_method']!=='' ? $row['payment_method'] : '-').'</td>
         <td>'.$row['pays_note'].'</td>
         <td>'.$row['pays_amount'].'</td>
         <td>'.$row['pays_qty'].'</td>

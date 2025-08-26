@@ -186,6 +186,12 @@ if ($u_t === 'STU') {
             </a>
           </li>
           <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentReport.php">
+              <i class="fa fa-file-invoice-dollar"></i>
+              <span>Registration Payment Report</span>
+            </a>
+          </li>
+          <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentApproval.php">
               <i class="fa fa-check-circle"></i>
               <span>Registration Payment Approval</span>

@@ -17,6 +17,9 @@ include_once("../menu.php");
     
 $student_id=$student_name=$student_profile_img =$payment_id=$pays_reason=$payment_note=$pays_amount=$payment_id=$pays_date=$department=null;
 
+// Ensure payment_method column exists on pays
+@mysqli_query($con, "ALTER TABLE `pays` ADD COLUMN `payment_method` VARCHAR(20) NULL AFTER `payment_reason`");
+
 
 if(isset($_POST['Add'])){
     
@@ -33,6 +36,7 @@ if(isset($_POST['Add'])){
     if
     (!empty($_POST['payment_type'])
     &&!empty($_POST['payment_reason'])
+    &&!empty($_POST['payment_method'])
     &&!empty($_POST['payment_qty'])
     &&!empty($_POST['payment_note'])
     &&!empty($_POST['payment_amount'])){
@@ -44,11 +48,12 @@ if(isset($_POST['Add'])){
       $pays_note=$_POST['payment_note'];
       $pays_amount=$_POST['payment_amount'];
       $payment_type=$_POST['payment_type'];
+      $payment_method=$_POST['payment_method'];
      
      
       
-      $sql="INSERT INTO `pays` (`student_id`,`payment_type`,`payment_reason`,`pays_note`,`pays_amount`,`pays_qty`,`pays_date`,`pays_department`) 
-      VALUES ('$student_id','$payment_type','$pays_reason','$pays_note','$pays_amount','$pays_qty',CURDATE(),'$pays_department')";
+      $sql="INSERT INTO `pays` (`student_id`,`payment_type`,`payment_reason`,`payment_method`,`pays_note`,`pays_amount`,`pays_qty`,`pays_date`,`pays_department`) 
+      VALUES ('$student_id','$payment_type','$pays_reason','$payment_method','$pays_note','$pays_amount','$pays_qty',CURDATE(),'$pays_department')";
         // $sql="INSERT INTO `pays`(`student_id`,`payment_reason`,`pays_note`,`pays_amount`,`pays_qty`,`pays_department`) 
         // VALUES ('$student_id','$pays_reason','$pays_note','$pays_amount','$pays_qty','$pays_department')";
 
@@ -218,6 +223,24 @@ if(isset($_POST['edit'])){
                          </select>
                     </div>
 
+                    <div class="form-group col-md-12"><i class="fas fa-coins"></i>&nbsp;
+                        <label for="inputEmail4">Amount</label>
+                        <input type="number" min="1" 
+                        class="form-control <?php  if(isset($_POST['Add']) && empty($_POST['payment_amount'])){echo ' is-invalid';}if(isset($_POST['Add']) && !empty($_POST['payment_amount'])){echo ' is-valid';} ?>"
+                             placeholder="Amount" name="payment_amount">
+                    </div>
+
+                    <div class="input-group mb-3 col-md-12">
+                        <div class="input-group-prepend">
+                            <label class="input-group-text" for="payment_method"><i class="fas fa-university"></i>&nbsp;Payment Method</label>
+                        </div>
+                        <select class="custom-select <?php  if(isset($_POST['Add']) && empty($_POST['payment_method'])){echo ' is-invalid';}if(isset($_POST['Add']) && !empty($_POST['payment_method'])){echo ' is-valid';} ?>" id="payment_method" name="payment_method">
+                            <option value="" selected disabled>-- Select Method --</option>
+                            <option value="SLGTI">SLGTI</option>
+                            <option value="BANK">Bank</option>
+                        </select>
+                    </div>
+
                     <div class="form-group col-md-12"><i class="fas fa-th"></i>&nbsp;
                         <label for="text">Qty</label>
                         <input type="number"  min="1" max="50"class="form-control <?php  if(isset($_POST['Add']) && empty($_POST['payment_qty'])){echo ' is-invalid';}if(isset($_POST['Add']) && !empty($_POST['payment_qty'])){echo ' is-valid';} ?>"
@@ -228,12 +251,6 @@ if(isset($_POST['edit'])){
                         <input type="text" 
                         class="form-control <?php  if(isset($_POST['Add']) && empty($_POST['payment_note'])){echo ' is-invalid';}if(isset($_POST['Add']) && !empty($_POST['payment_note'])){echo ' is-valid';} ?>" 
                              placeholder="Note" name="payment_note">
-                    </div>
-                    <div class="form-group col-md-12"><i class="fas fa-coins"></i>&nbsp;
-                        <label for="inputEmail4">Amount</label>
-                        <input type="number" min="1" 
-                        class="form-control <?php  if(isset($_POST['Add']) && empty($_POST['payment_amount'])){echo ' is-invalid';}if(isset($_POST['Add']) && !empty($_POST['payment_amount'])){echo ' is-valid';} ?>"
-                             placeholder="Amount" name="payment_amount">
                     </div>
                 </div>
                 <h2>

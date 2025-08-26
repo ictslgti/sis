@@ -17,6 +17,8 @@ if (!in_array($userType, ['ACC', 'ADM', 'FIN'])) {
 mysqli_query($con, "ALTER TABLE `pays` ADD COLUMN `approved` TINYINT(1) NOT NULL DEFAULT 0") or true;
 mysqli_query($con, "ALTER TABLE `pays` ADD COLUMN `approved_at` DATETIME NULL") or true;
 mysqli_query($con, "ALTER TABLE `pays` ADD COLUMN `approved_by` VARCHAR(50) NULL") or true;
+// Ensure payment_method column exists in `pays`
+mysqli_query($con, "ALTER TABLE `pays` ADD COLUMN `payment_method` VARCHAR(20) NULL AFTER `payment_reason`") or true;
 
 // Handle Approve action
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_pays_id'])) {
@@ -46,6 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_payment'])) {
   $pays_department = isset($_POST['pays_department']) ? trim($_POST['pays_department']) : '';
   $payment_type = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : 'Registration';
   $payment_reason = isset($_POST['payment_reason']) ? trim($_POST['payment_reason']) : 'Registration Fee';
+  $payment_method = isset($_POST['payment_method']) ? trim($_POST['payment_method']) : '';
 
   $err = '';
   if ($student_id === '') { $err = 'Student is required'; }
@@ -53,6 +56,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_payment'])) {
   elseif ($pays_qty <= 0) { $err = 'Quantity must be at least 1'; }
   elseif ($payment_type === '') { $err = 'Payment type is required'; }
   elseif ($payment_reason === '') { $err = 'Payment reason is required'; }
+  elseif ($payment_method === '') { $err = 'Payment method is required'; }
 
   if ($err === '') {
     // If department selected, ensure the student belongs to that department
@@ -91,8 +95,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_payment'])) {
       }
       mysqli_stmt_close($pr);
     }
-    if ($stmt = mysqli_prepare($con, "INSERT INTO `pays` (`student_id`,`payment_type`,`payment_reason`,`pays_note`,`pays_amount`,`pays_qty`,`pays_date`,`pays_department`,`approved`,`approved_at`,`approved_by`) VALUES (?,?,?,?,?, ?, CURDATE(), ?, 0, NULL, NULL)")) {
-      $bindOk = mysqli_stmt_bind_param($stmt, 'ssssdis', $student_id, $payment_type, $payment_reason, $pays_note, $pays_amount, $pays_qty, $pays_department);
+    if ($stmt = mysqli_prepare($con, "INSERT INTO `pays` (`student_id`,`payment_type`,`payment_reason`,`payment_method`,`pays_note`,`pays_amount`,`pays_qty`,`pays_date`,`pays_department`,`approved`,`approved_at`,`approved_by`) VALUES (?,?,?,?,?,?,?, CURDATE(), ?, 0, NULL, NULL)")) {
+      $bindOk = mysqli_stmt_bind_param($stmt, 'sssssdis', $student_id, $payment_type, $payment_reason, $payment_method, $pays_note, $pays_amount, $pays_qty, $pays_department);
       $execOk = $bindOk && mysqli_stmt_execute($stmt);
       // Use insert_id to determine success more reliably than affected_rows
       $insertId = $execOk ? mysqli_insert_id($con) : 0;
@@ -186,14 +190,6 @@ $addReasonsRes = mysqli_query($con, "SELECT payment_reason FROM payment WHERE pa
             <?php } } ?>
           </select>
         </div>
-        <div class="form-group col-md-2">
-          <label>Amount</label>
-          <input type="number" step="0.01" min="0" name="pays_amount" class="form-control" placeholder="0.00" required>
-        </div>
-        <div class="form-group col-md-2">
-          <label>Qty</label>
-          <input type="number" min="1" name="pays_qty" class="form-control" value="1" required>
-        </div>
       </div>
       <div class="form-row">
         <div class="form-group col-md-3">
@@ -214,7 +210,25 @@ $addReasonsRes = mysqli_query($con, "SELECT payment_reason FROM payment WHERE pa
             <?php } } ?>
           </select>
         </div>
-        <div class="form-group col-md-6">
+        <div class="form-group col-md-2">
+          <label>Amount</label>
+          <input type="number" step="0.01" min="0" name="pays_amount" class="form-control" placeholder="0.00" required>
+        </div>
+        <div class="form-group col-md-2">
+          <label>Payment Method</label>
+          <select name="payment_method" class="form-control" required>
+            <option value="">-- Select Method --</option>
+            <option value="SLGTI">SLGTI</option>
+            <option value="BANK">Bank</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group col-md-2">
+          <label>Qty</label>
+          <input type="number" min="1" name="pays_qty" class="form-control" value="1" required>
+        </div>
+        <div class="form-group col-md-10">
           <label>Note</label>
           <input type="text" name="pays_note" class="form-control" placeholder="Optional note">
         </div>
@@ -367,6 +381,7 @@ $res = mysqli_query($con, $sql);
               <th>Department</th>
               <th>Note</th>
               <th>Reason</th>
+              <th>Method</th>
               <th>Amount</th>
               <th>Qty</th>
               <th>Date</th>
@@ -383,6 +398,7 @@ $res = mysqli_query($con, $sql);
               <td><?php echo htmlspecialchars($row['department_name'] ?: ($row['pays_department'] ?: '-')); ?></td>
               <td><?php echo htmlspecialchars(($row['pays_note'] !== null && $row['pays_note'] !== '') ? $row['pays_note'] : '-'); ?></td>
               <td><?php echo htmlspecialchars($row['payment_reason']); ?></td>
+              <td><?php echo htmlspecialchars(isset($row['payment_method']) && $row['payment_method']!=='' ? $row['payment_method'] : '-'); ?></td>
               <td><?php echo number_format((float)$row['pays_amount'], 2); ?></td>
               <td><?php echo (int)$row['pays_qty']; ?></td>
               <td><?php echo htmlspecialchars($row['pays_date']); ?></td>
