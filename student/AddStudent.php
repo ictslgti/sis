@@ -22,17 +22,25 @@ include_once("../menu.php");
 <!-- form start---->
 <?php
 //echo $_SESSION['user_name'];  
+// Ensure new columns exist for nationality and WhatsApp
+$__col = mysqli_query($con, "SHOW COLUMNS FROM `student` LIKE 'student_nationality'");
+if ($__col && mysqli_num_rows($__col) === 0) { @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_nationality` VARCHAR(100) NULL"); }
+$__col = mysqli_query($con, "SHOW COLUMNS FROM `student` LIKE 'student_whatsapp'");
+if ($__col && mysqli_num_rows($__col) === 0) { @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_whatsapp` VARCHAR(25) NULL"); }
+
 $stid = $title = $fname = $ininame = $gender = $civil = $email = $nic = $dob = $phone = $address = $zip = $district = $division = $province = $blood = $mode =
 $ename = $eaddress = $ephone = $erelation = $enstatus = $coid = $year = $enroll = $exit = $qutype = $index = $yoe = $subject = $results = null;
+$nationality = $whatsapp = null;
 //$stid = $_SESSION['user_name'];
 // edit
 if(isset($_GET['edit']))
 {
   $stid =$_GET['edit'];
   $sql = "SELECT s.`student_id`,`student_title`,`student_fullname`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,
-  `student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,
-  `student_em_address`,`student_em_phone`,`student_em_relation`,e.`course_id`,e.`course_mode`,e.`academic_year`,e.`student_enroll_date`,e.`student_enroll_exit_date`,
-  e.`student_enroll_status` FROM `student` s LEFT JOIN `student_enroll` e ON s.`student_id` = e.`student_id` WHERE s.`student_id`='$stid' ORDER BY e.`student_enroll_date` DESC LIMIT 1";
+  `student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,
+  s.`student_nationality`,s.`student_whatsapp`,`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`,
+  e.`course_id`,e.`course_mode`,e.`academic_year`,e.`student_enroll_date`,e.`student_enroll_exit_date`, e.`student_enroll_status`
+  FROM `student` s LEFT JOIN `student_enroll` e ON s.`student_id` = e.`student_id` WHERE s.`student_id`='$stid' ORDER BY e.`student_enroll_date` DESC LIMIT 1";
   $result = mysqli_query($con,$sql);
 
   //echo 'academic_year'.$row['academic_year'];
@@ -60,6 +68,8 @@ if(isset($_GET['edit']))
     $eaddress = $row['student_em_address'];
     $ephone = $row['student_em_phone'];
     $erelation = $row['student_em_relation'];
+    if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
+    if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
     $coid = $row['course_id'];
     $mode = $row['course_mode'];
     $year = $row['academic_year'];
@@ -101,28 +111,30 @@ if(isset($_GET['edit']))
     &&!empty($_POST['relation']))
     
      {
-       echo "SUCCESS";
-        $stid=$_POST['sid'];
-        $title=$_POST['title'];
-        $fname=$_POST['fullname'];
-        $ininame=$_POST['ini_name'];
-        $gender=$_POST['gender'];
-        $civil=$_POST['civil'];
-        $email=$_POST['email'];
-        $email =($_POST["email"]);
+      echo "SUCCESS";
+       $stid=$_POST['sid'];
+       $title=$_POST['title'];
+       $fname=$_POST['fullname'];
+       $ininame=$_POST['ini_name'];
+       $gender=$_POST['gender'];
+       $civil=$_POST['civil'];
+       $email=$_POST['email'];
+       $email =($_POST["email"]);
           // check if e-mail address is well-formed
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) 
-        {
-            $emailErr = "Invalid email format";
-        }
-        $nic=$_POST['nic'];
-        $dob=$_POST['dob'];
-        $phone=$_POST['phone'];
+       if (!filter_var($email, FILTER_VALIDATE_EMAIL)) 
+       {
+           $emailErr = "Invalid email format";
+       }
+       $nic=$_POST['nic'];
+       $dob=$_POST['dob'];
+       $phone=$_POST['phone'];
+        $whatsapp = isset($_POST['whatsapp']) ? $_POST['whatsapp'] : null;
         $address=$_POST['address'];
         $zip=$_POST['zip'];
         $district=$_POST['district'];
         $division=$_POST['ds'];
         $province=$_POST['province'];
+        $nationality = isset($_POST['nationality']) ? $_POST['nationality'] : null;
         $blood=$_POST['blood'];
         $ename=$_POST['Ename'];
         $eaddress=$_POST['addressE'];
@@ -130,10 +142,10 @@ if(isset($_GET['edit']))
         $erelation=$_POST['relation'];
         
         $sqlstudent = "INSERT INTO `student`(`student_id`, `student_title`, `student_fullname`, `student_ininame`, `student_gender`, `student_civil`, 
-        `student_email`, `student_nic`, `student_dob`, `student_phone`, `student_address`, `student_zip`, `student_district`, `student_divisions`, 
-        `student_provice`, `student_blood`, `student_em_name`, `student_em_address`, `student_em_phone`, `student_em_relation`) VALUES 
-        ('$stid','$title','$fname','$ininame','$gender','$civil','$email','$nic','$dob','$phone','$address','$zip','$district','$division','$province',
-        '$blood','$ename','$eaddress','$ephone','$erelation')";
+        `student_email`, `student_nic`, `student_dob`, `student_phone`, `student_whatsapp`, `student_address`, `student_zip`, `student_district`, `student_divisions`, 
+        `student_provice`, `student_blood`, `student_nationality`, `student_em_name`, `student_em_address`, `student_em_phone`, `student_em_relation`) VALUES 
+        ('$stid','$title','$fname','$ininame','$gender','$civil','$email','$nic','$dob','$phone',".($whatsapp?"'".mysqli_real_escape_string($con,$whatsapp)."'":"NULL").",'$address','$zip','$district','$division','$province',
+        ".($nationality?"'".mysqli_real_escape_string($con,$nationality)."'":"NULL").",'$blood','$ename','$eaddress','$ephone','$erelation')";
 
               if(mysqli_query($con,$sqlstudent))
               {
@@ -203,11 +215,13 @@ if(isset($_POST['Edit']))
          $nic=$_POST['nic'];
          $dob=$_POST['dob'];
          $phone=$_POST['phone'];
+         $whatsapp = isset($_POST['whatsapp']) ? $_POST['whatsapp'] : null;
          $address=$_POST['address'];
          $zip=$_POST['zip'];
          $district=$_POST['district'];
          $division=$_POST['ds'];
          $province=$_POST['province'];
+         $nationality = isset($_POST['nationality']) ? $_POST['nationality'] : null;
          $blood=$_POST['blood'];
          $ename=$_POST['Ename'];
          $eaddress=$_POST['addressE'];
@@ -215,9 +229,10 @@ if(isset($_POST['Edit']))
          $erelation=$_POST['relation'];
 
          $sql1 = "UPDATE `student` SET `student_title`='$title',`student_fullname`='$fname',`student_ininame`='$ininame',`student_gender`='$gender',
-         `student_civil`='$civil',`student_email`='$email',`student_nic`='$nic',`student_dob`='$dob',`student_phone`='$phone',`student_address`='$address',
+         `student_civil`='$civil',`student_email`='$email',`student_nic`='$nic',`student_dob`='$dob',`student_phone`='$phone',`student_whatsapp`=".(
+            $whatsapp?"'".mysqli_real_escape_string($con,$whatsapp)."'":"NULL").",`student_address`='$address',
          `student_zip`='$zip',`student_district`='$district',`student_divisions`='$division',`student_provice`='$province',`student_blood`='$blood',
-         `student_em_name`='$ename',`student_em_address`='$eaddress',`student_em_phone`='$ephone',`student_em_relation`='$erelation' WHERE student_id = '$stid'";
+         `student_nationality`=".( $nationality?"'".mysqli_real_escape_string($con,$nationality)."'":"NULL").",`student_em_name`='$ename',`student_em_address`='$eaddress',`student_em_phone`='$ephone',`student_em_relation`='$erelation' WHERE student_id = '$stid'";
         
     
             if(mysqli_query($con,$sql1))
@@ -401,9 +416,16 @@ if(isset($_POST['Edit']))
             <select name="civil" id="civilstatus" class="custom-select" value="<?php echo $civil; ?>" required>
             <option selected disabled>Choose Status</option>
               <option value="Single"<?php if($civil=="Single")  echo 'selected';?>>Single</option> 
-              <option value="Married"<?php if($civil=="Married") echo ' selected';?> >Married</option>
-            </select>
-        </div>
+            <option value="Married"<?php if($civil=="Married") echo ' selected';?> >Married</option>
+          </select>
+      </div>
+    </div>
+  
+    <div class="form-row">
+      <div class="col-md-4 mb-3">
+        <label for="nationality"> Nationality: </label>
+        <input type="text" class="form-control" id="nationality" name="nationality" value="<?php echo $nationality; ?>" placeholder="e.g. Sri Lankan">
+      </div>
     </div>
   
     <div class="form-row">
@@ -434,7 +456,14 @@ if(isset($_POST['Edit']))
             <input type="number" class="form-control" id="phone" name="phone" maxlength="10" minlength="10" value="<?php echo $phone; ?>" placeholder=""  required>
           </div>
     </div>    
-
+    
+    <div class="form-row">
+      <div class="col-md-3 mb-3">
+        <label for="whatsapp"> WhatsApp No: </label>
+        <input type="text" class="form-control" id="whatsapp" name="whatsapp" value="<?php echo $whatsapp; ?>" placeholder="e.g. +94XXXXXXXXX">
+      </div>
+    </div>
+    
     <div class="form-row"> 
           <div class="col-md-12 mb-3">
             <label for="address"> Address: </label>

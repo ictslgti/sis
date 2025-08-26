@@ -117,6 +117,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $u_ephone  = isset($_POST['ephone']) ? trim($_POST['ephone']) : null;
     $u_eaddress= isset($_POST['eaddress']) ? trim($_POST['eaddress']) : null;
     $u_erel    = isset($_POST['erelation']) ? trim($_POST['erelation']) : null;
+    // New fields
+    $u_nationality = isset($_POST['nationality']) ? trim($_POST['nationality']) : null;
+    $u_whatsapp    = isset($_POST['whatsapp']) ? trim($_POST['whatsapp']) : null;
 
     $sqlUpd = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_civil=?, student_dob=?, student_blood=?, student_email=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_em_name=?, student_em_phone=?, student_em_address=?, student_em_relation=? WHERE student_id=?";
     if ($stmt = mysqli_prepare($con, $sqlUpd)) {
@@ -162,6 +165,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'bank_branch' => "ALTER TABLE student ADD COLUMN bank_branch VARCHAR(128) NULL",
             'bank_frontsheet_path' => "ALTER TABLE student ADD COLUMN bank_frontsheet_path VARCHAR(255) NULL",
             'bank_name' => "ALTER TABLE student ADD COLUMN bank_name VARCHAR(64) NULL",
+            // New student fields
+            'student_nationality' => "ALTER TABLE student ADD COLUMN student_nationality VARCHAR(64) NULL",
+            'student_whatsapp' => "ALTER TABLE student ADD COLUMN student_whatsapp VARCHAR(20) NULL",
           ];
           foreach ($needCols as $col=>$ddl) {
             if ($chk = mysqli_prepare($con, "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='student' AND COLUMN_NAME=? LIMIT 1")) {
@@ -172,6 +178,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
               mysqli_stmt_close($chk);
               if (!$exists) { @mysqli_query($con, $ddl); }
             }
+          }
+        }
+        // Update new simple fields if provided
+        if ($u_nationality !== null || $u_whatsapp !== null) {
+          $sqlExtra = 'UPDATE student SET ';
+          $sets = [];
+          $params = [];
+          $types = '';
+          if ($u_nationality !== null) { $sets[] = 'student_nationality=?'; $params[] = $u_nationality; $types .= 's'; }
+          if ($u_whatsapp !== null)    { $sets[] = 'student_whatsapp=?';    $params[] = $u_whatsapp;    $types .= 's'; }
+          $sqlExtra .= implode(', ', $sets) . ' WHERE student_id=? LIMIT 1';
+          if ($stX = mysqli_prepare($con, $sqlExtra)) {
+            $types .= 's';
+            $params[] = $loggedUser;
+            mysqli_stmt_bind_param($stX, $types, ...$params);
+            mysqli_stmt_execute($stX);
+            mysqli_stmt_close($stX);
           }
         }
         // Update bank details if any data provided
@@ -256,6 +279,7 @@ if (isset($_GET['updated']) && $_GET['updated'] === '1' && !isset($_GET['Sid']))
 }
 $stid = $title = $fname = $ininame = $gender = $civil = $img = $email = $nic = $dob = $phone = $address = $zip = $district = $division = $province = $blood = $mode = $depth = $level =
 $ename = $eaddress = $ephone = $id =$erelation = $enstatus = $coid = $year = $enroll = $exit = $qutype = $index = $yoe = $subject = $results = $pass = $npass = $cpass = $updatedAt = null;
+$nationality = $whatsapp = null;
 $docPath = null;
 
 // (removed duplicate POST handler; handled at the top before any output)
@@ -299,7 +323,7 @@ if(isset($_GET['Sid']))
  // Build base query with optional gender condition for wardens
  $baseSql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,
 `student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,
-`student_em_phone`,`student_em_relation`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
+`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
 `student_enroll_status`,`user_password_hash`" . ($hasUpdatedAt ? ", `student_updated_at`" : "") . " FROM `student` as s, student_enroll as e, user as u, course as c, department as d ";
  $baseSql .= "WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and c.department_id=d.department_id and `student_enroll_status`='Following' and user_name=?";
  if ($isWarden && $wardenGender) {
@@ -340,6 +364,8 @@ if(isset($_GET['Sid']))
     $eaddress = $row['student_em_address'];
     $ephone = $row['student_em_phone'];
     $erelation = $row['student_em_relation'];
+    if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
+    if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
     $coid = $row['course_name'];
     $depth = $row['department_name'];
     $level = $row['course_nvq_level'];
@@ -364,7 +390,7 @@ $username = $_SESSION['user_name'];
 
 $sql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,
 `student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,
-`student_em_phone`,`student_em_relation`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
+`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
 `student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id 
  and e.course_id=c.course_id and  c.department_id=d.department_id and `student_enroll_status`='Following' and user_name='$username'";
 $result = mysqli_query($con,$sql);
@@ -620,6 +646,10 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars(($title? $title.'.' : '').$ininame); ?></span>
                 </div>
                 <div class="py-1 border-bottom">
+                  <small class="text-muted d-block">Nationality</small>
+                  <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($nationality ?: '—'); ?></span>
+                </div>
+                <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Gender</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($gender ?: '—'); ?></span>
                 </div>
@@ -668,6 +698,10 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Phone No</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($phone ?: '—'); ?></span>
+                </div>
+                <div class="py-1 border-bottom">
+                  <small class="text-muted d-block">WhatsApp</small>
+                  <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($whatsapp ?: '—'); ?></span>
                 </div>
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Address</small>
@@ -816,6 +850,12 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             </div>
             <div class="form-row">
               <div class="form-group col-md-4">
+                <label>Nationality</label>
+                <input type="text" class="form-control" name="nationality" value="<?php echo htmlspecialchars($nationality); ?>" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-4">
                 <label>Blood Group</label>
                 <input type="text" class="form-control" name="blood" value="<?php echo htmlspecialchars($blood); ?>" />
               </div>
@@ -830,6 +870,12 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
               <div class="form-group col-md-6">
                 <label>Phone</label>
                 <input type="text" class="form-control" name="phone" value="<?php echo htmlspecialchars($phone); ?>" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group col-md-6">
+                <label>WhatsApp</label>
+                <input type="text" class="form-control" name="whatsapp" value="<?php echo htmlspecialchars($whatsapp); ?>" />
               </div>
             </div>
             <div class="form-group">

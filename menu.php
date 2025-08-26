@@ -655,19 +655,12 @@ if ($u_t === 'STU') {
             </a>
             <div class="sidebar-submenu">
               <ul> 
-                <?php if(($_SESSION['user_type']=='ACC') || ($_SESSION['user_type']=='ADM')) { ?>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/Payments.php">Payments Info</a>
-                </li>
-                <li> 
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/Payment.php">Make a Payment</a>
-                  <hr>
-                </li>           
+                <?php if($_SESSION['user_type']=='FIN') { ?>
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentApproval.php">Registration Payment Approval</a>
                 </li>
                 <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/PaymentsReport.php">Payments Report</a>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentReport.php">Registration Payment Report</a>
                 </li>
                 <?php } ?> 
               </ul>
