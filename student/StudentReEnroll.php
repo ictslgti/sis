@@ -295,8 +295,9 @@ if(isset($_GET['delete'])) {
                             <td>'.$row["student_enroll_exit_date"].'</td>
                             <td>'.$row["student_enroll_status"].'</td>
                             <td>
-                                <a href="StudentReEnroll.php?stid='.$row["student_id"].'&&coid='.$row["course_id"].'&&ayear='.$row["academic_year"].'" class="btn btn-sm btn-success"><i class="far fa-edit"></i></a> |
-                                <a href="Student_profile.php?Sid='.$row["student_id"].'" class="btn btn-info "><i class="fas fa-angle-double-right"></i></a>
+                                <a href="StudentReEnroll.php?stid='.$row["student_id"].'&&coid='.$row["course_id"].'&&ayear='.$row["academic_year"].'" class="btn btn-sm btn-success" title="Edit Re-Enrollment"><i class="far fa-edit"></i></a> |
+                                <a href="ChangeEnrollment.php?stid='.$row["student_id"].'&&coid='.$row["course_id"].'&&ayear='.$row["academic_year"].'" class="btn btn-sm btn-warning" title="Change Course/Reg No"><i class="fas fa-exchange-alt"></i></a> |
+                                <a href="Student_profile.php?Sid='.$row["student_id"].'" class="btn btn-info " title="View Profile"><i class="fas fa-angle-double-right"></i></a>
                             </td>
                         </tr>';
                     $num++;
