@@ -113,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
         if ($ok) {
           // table => column
           $tables = [
+            // Core and common modules
             'attendance' => 'student_id',
             'pays' => 'student_id',
             'hostel_student_details' => 'student_id',
@@ -122,7 +123,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
             'hik_user_map' => 'student_id',
             'manage_final_place' => 'student_id',
             'ojt' => 'student_id',
-            // Different column name in qualifications
+            // Assessments & Feedback
+            'assessments_marks' => 'student_id',
+            'feedback_done' => 'student_id',
+            // Library (uses member_id for students)
+            'issued_books' => 'member_id',
+            'issued_books_deleted' => 'member_id',
+            // Qualifications
             'student_qualification' => 'qualification_student_id',
           ];
           foreach ($tables as $table => $col) {
