@@ -44,11 +44,12 @@ if ($dept !== '') {
 // Build listing only if department selected
 if ($dept !== '') {
   // Latest active enrollment per student in the selected department (optionally by course and ay)
-  $where = " WHERE c.department_id=? AND se.student_enroll_status IN ('Following')";
+  // Note: subquery aliases are se1 for student_enroll and c1 for course
+  $where = " WHERE c1.department_id=? AND se1.student_enroll_status IN ('Following')";
   $types = 's';
   $params = [$dept];
-  if ($course !== '') { $where .= " AND se.course_id=?"; $types .= 's'; $params[] = $course; }
-  if ($ay !== '') { $where .= " AND se.academic_year=?"; $types .= 's'; $params[] = $ay; }
+  if ($course !== '') { $where .= " AND se1.course_id=?"; $types .= 's'; $params[] = $course; }
+  if ($ay !== '') { $where .= " AND se1.academic_year=?"; $types .= 's'; $params[] = $ay; }
 
   $sql = "
     SELECT s.student_id, s.student_fullname, se.course_id, c.course_name, sip.id_photo
