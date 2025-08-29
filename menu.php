@@ -180,27 +180,28 @@ if ($u_t === 'STU') {
             </a>
           </li>
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/Student.php">
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">
               <i class="fas fa-user-graduate"></i>
               <span>Students Info</span>
             </a>
           </li>
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/gender_pie.php">
+              <i class="fas fa-chart-pie"></i>
+              <span>Gender Pie by Department</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">
               <i class="far fa-building"></i>
               <span>Hostels Info</span>
             </a>
           </li>
-          <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/PaymentsReport.php">
-              <i class="fas fa-chart-pie"></i>
-              <span>Payments Report</span>
-            </a>
-          </li>
+          
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/ConductReport.php">
               <i class="fas fa-check-circle"></i>
-              <span>Conduct Acceptance</span>
+              <span>Department Wise Conduct Acceptance</span>
             </a>
           </li>
         </ul>
@@ -213,12 +214,7 @@ if ($u_t === 'STU') {
               <span>Dashboard</span>
             </a>
           </li>
-          <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/HostelPayments.php">
-              <i class="fab fa-amazon-pay"></i>
-              <span>Hostel Payments</span>
-            </a>
-          </li>
+          
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/StudentBankDetails.php">
               <i class="fas fa-university"></i>
