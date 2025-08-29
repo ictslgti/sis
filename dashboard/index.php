@@ -308,6 +308,12 @@ $total_students = 0;
 
 
 
+<div class="row mt-4">
+    <div class="col-12">
+        <?php include 'gender_distribution.php'; ?>
+    </div>
+</div>
+
 <div class="row">
     <div class="col-md-4 col-sm-12">
         <!-- <button type="button" class="btn btn-primary btn-sm btn-block mb-2">Small button</button> -->

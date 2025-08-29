@@ -8,14 +8,8 @@ if (mysqli_connect_errno()) {
   die('Failed to connect to MySQL: ' . mysqli_connect_error());
 }
 
-// Session and access control (Admins only by default)
+// Session (no admin restriction required)
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
-$userType = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : null;
-if (!$userType || !in_array($userType, ['ADM'])) { // adjust roles if needed
-  http_response_code(403);
-  echo '<div style="padding:20px; color:#b00;">Access denied.</div>';
-  exit;
-}
 
 $title = 'Code of Conduct Acceptance Report | SLGTI';
 include_once __DIR__ . '/../head.php';

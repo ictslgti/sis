@@ -220,6 +220,20 @@ if ($u_t === 'STU') {
               <!-- <span class="badge badge-pill badge-primary">Beta</span> -->
             </a>
           </li>
+          <?php if($_SESSION['user_type'] === 'ADM') { ?>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/gender_distribution.php">
+              <i class="fas fa-chart-bar"></i>
+              <span>Gender Distribution Report</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/gender_pie.php">
+              <i class="fas fa-chart-pie"></i>
+              <span>Gender Pie by Department</span>
+            </a>
+          </li>
+          <?php } ?>
           <?php } ?>
 
           <li class="sidebar-dropdown">
