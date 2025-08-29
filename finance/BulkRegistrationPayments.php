@@ -29,6 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_create'])) {
   $amount = isset($_POST['pays_amount']) ? (float)$_POST['pays_amount'] : 0.0;
   $qty = isset($_POST['pays_qty']) ? (int)$_POST['pays_qty'] : 1;
   $method = isset($_POST['payment_method']) ? trim($_POST['payment_method']) : '';
+  $course = isset($_POST['pays_course']) ? trim($_POST['pays_course']) : '';
 
   // Fixed fields per request
   $paymentType = 'Other Charges';
@@ -57,9 +58,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_create'])) {
     } else {
       // Optional: verify selected students belong to department and are Following
       $safeDept = mysqli_real_escape_string($con, $dept);
+      $safeCourse = $course !== '' ? mysqli_real_escape_string($con, $course) : '';
       $idPlaceholders = implode(',', array_fill(0, count($studentIds), '?'));
       $types = str_repeat('s', count($studentIds));
-      $verifySql = "SELECT s.student_id FROM student s\n                     JOIN student_enroll se ON se.student_id=s.student_id\n                     JOIN course c ON c.course_id = se.course_id\n                     WHERE c.department_id = '$safeDept'\n                       AND s.student_conduct_accepted_at IS NOT NULL\n                       AND s.student_id IN (" . str_repeat('?,', count($studentIds)-1) . "?)";
+      $verifySql = "SELECT s.student_id FROM student s\n                     JOIN student_enroll se ON se.student_id=s.student_id\n                     JOIN course c ON c.course_id = se.course_id\n                     WHERE c.department_id = '$safeDept'" .
+                   ($safeCourse!=='' ? " AND c.course_id = '$safeCourse'" : '') .
+                   "\n                       AND s.student_conduct_accepted_at IS NOT NULL\n                       AND s.student_id IN (" . str_repeat('?,', count($studentIds)-1) . "?)";
       $verifyStmt = mysqli_prepare($con, $verifySql);
       if ($verifyStmt) {
         mysqli_stmt_bind_param($verifyStmt, $types, ...$studentIds);
@@ -110,10 +114,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_create'])) {
 
 // Page data
 $selDept = isset($_GET['dept']) ? trim($_GET['dept']) : (isset($_POST['pays_department']) ? trim($_POST['pays_department']) : '');
+$selCourse = isset($_GET['course']) ? trim($_GET['course']) : (isset($_POST['pays_course']) ? trim($_POST['pays_course']) : '');
 $deptRes = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
+$courseRes = false;
 $studentsRes = false;
 if ($selDept !== '') {
-  $studentsSql = "SELECT DISTINCT s.student_id, s.student_fullname\n                  FROM student s\n                  JOIN student_enroll se ON se.student_id = s.student_id\n                  JOIN course c ON c.course_id = se.course_id\n                  WHERE c.department_id='".mysqli_real_escape_string($con,$selDept)."'\n                    AND s.student_conduct_accepted_at IS NOT NULL\n                    AND NOT EXISTS (SELECT 1 FROM pays p WHERE p.student_id = s.student_id)\n                  ORDER BY s.student_fullname";
+  $courseRes = mysqli_query($con, "SELECT course_id, course_name FROM course WHERE department_id='".mysqli_real_escape_string($con,$selDept)."' ORDER BY course_name");
+  $where = [];
+  $where[] = "c.department_id='".mysqli_real_escape_string($con,$selDept)."'";
+  if ($selCourse !== '') { $where[] = "c.course_id='".mysqli_real_escape_string($con,$selCourse)."'"; }
+  $studentsSql = "SELECT DISTINCT s.student_id, s.student_fullname\n                  FROM student s\n                  JOIN student_enroll se ON se.student_id = s.student_id\n                  JOIN course c ON c.course_id = se.course_id\n                  WHERE ".implode(' AND ', $where)."\n                    AND s.student_conduct_accepted_at IS NOT NULL\n                    AND NOT EXISTS (SELECT 1 FROM pays p WHERE p.student_id = s.student_id)\n                  ORDER BY s.student_fullname";
   $studentsRes = mysqli_query($con, $studentsSql);
 }
 
@@ -142,6 +152,16 @@ include_once(__DIR__ . '/../menu.php');
           <?php } } ?>
         </select>
       </div>
+      <div class="form-group col-md-4">
+        <label>Course</label>
+        <select name="course" class="form-control" <?php echo $selDept===''?'disabled':''; ?> onchange="this.form.submit()">
+          <option value="">-- Any Course --</option>
+          <?php if ($courseRes && mysqli_num_rows($courseRes)>0) { while($c=mysqli_fetch_assoc($courseRes)) { ?>
+            <option value="<?php echo esc($c['course_id']); ?>" <?php echo $selCourse===$c['course_id']?'selected':''; ?>><?php echo esc($c['course_name']); ?></option>
+          <?php } } ?>
+        </select>
+        <small class="form-text text-muted">Optional: filter students by a course in the selected department.</small>
+      </div>
     </div>
   </form>
 
@@ -150,6 +170,7 @@ include_once(__DIR__ . '/../menu.php');
     <div class="card-body">
       <input type="hidden" name="bulk_create" value="1">
       <input type="hidden" name="pays_department" value="<?php echo esc($selDept); ?>">
+      <input type="hidden" name="pays_course" value="<?php echo esc($selCourse); ?>">
 
       <div class="form-row">
         <div class="form-group col-md-3">
