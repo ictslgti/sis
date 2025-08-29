@@ -103,6 +103,9 @@ if ($u_t === 'STU') {
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Payments.php">Hostel Payments</a>
                 </li>
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a>
+                </li>
               </ul>
             </div>
           </li>
@@ -158,6 +161,46 @@ if ($u_t === 'STU') {
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentsApproved.php">
               <i class="fa fa-check"></i>
               <span>Approved Registration Payments</span>
+            </a>
+          </li>
+        </ul>
+        <?php } elseif ($u_t === 'DIR') { ?>
+        <ul>
+          <li class="header-menu"><span>Director</span></li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
+              <i class="fa fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/Department.php">
+              <i class="fas fa-university"></i>
+              <span>Departments Info</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/Student.php">
+              <i class="fas fa-user-graduate"></i>
+              <span>Students Info</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">
+              <i class="far fa-building"></i>
+              <span>Hostels Info</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/PaymentsReport.php">
+              <i class="fas fa-chart-pie"></i>
+              <span>Payments Report</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/ConductReport.php">
+              <i class="fas fa-check-circle"></i>
+              <span>Conduct Acceptance</span>
             </a>
           </li>
         </ul>
@@ -543,6 +586,9 @@ if ($u_t === 'STU') {
                   </li>
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Payments.php">Hostel Payments</a>
+                  </li>
+                  <li>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a>
                   </li>
                 <?php } ?>
               </ul>

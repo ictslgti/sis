@@ -1,6 +1,7 @@
 <?php
 // hostel/blocks_api.php - returns JSON blocks for a hostel
 require_once(__DIR__ . '/../config.php');
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 header('Content-Type: application/json');
 if (!isset($_GET['hostel_id'])) { echo json_encode([]); exit; }
 $hid = (int)$_GET['hostel_id'];
@@ -36,22 +37,27 @@ $types  = 'i';
 $condParts = [];
 $condParts[] = "b.hostel_id=?";
 
-// Always allow Mixed explicitly in SQL OR chain
-$genderConds = ["h.gender='Mixed'"];
-
+// Build gender conditions only if we have any gender context
 $want = [];
 foreach ([$wardenGender, $studentGender] as $g) { foreach ($expand($g) as $v) { $want[$v] = true; } }
 $wantList = array_keys($want);
+
 if (!empty($wantList)) {
+  // If we have a desired gender context, allow those and also Mixed
   $place = implode(',', array_fill(0, count($wantList), '?'));
-  $genderConds[] = "h.gender IN ($place)";
-  foreach ($wantList as $v) { $params[] = $v; $types .= 's'; }
+  $genderConds = ["h.gender='Mixed'", "h.gender IN ($place)"];
+  $sql = "SELECT b.id, b.name FROM hostel_blocks b INNER JOIN hostels h ON h.id=b.hostel_id WHERE ".implode(' AND ', $condParts)." AND (".implode(' OR ', $genderConds).") ORDER BY b.name";
+  $stmt = mysqli_prepare($con, $sql);
+  if ($stmt) {
+    foreach ($wantList as $v) { $params[] = $v; $types .= 's'; }
+    mysqli_stmt_bind_param($stmt, $types, ...$params);
+  }
+} else {
+  // No gender filtering -> return all blocks for the hostel
+  $sql = "SELECT b.id, b.name FROM hostel_blocks b INNER JOIN hostels h ON h.id=b.hostel_id WHERE ".implode(' AND ', $condParts)." ORDER BY b.name";
+  $stmt = mysqli_prepare($con, $sql);
+  if ($stmt) { mysqli_stmt_bind_param($stmt, $types, ...$params); }
 }
-
-$sql = "SELECT b.id, b.name FROM hostel_blocks b INNER JOIN hostels h ON h.id=b.hostel_id WHERE ".implode(' AND ', $condParts)." AND (".implode(' OR ', $genderConds).") ORDER BY b.name";
-
-$stmt = mysqli_prepare($con, $sql);
-if ($stmt) { mysqli_stmt_bind_param($stmt, $types, ...$params); }
 
 $out = [];
 if ($stmt) {
