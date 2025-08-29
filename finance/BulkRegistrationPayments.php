@@ -59,7 +59,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_create'])) {
       $safeDept = mysqli_real_escape_string($con, $dept);
       $idPlaceholders = implode(',', array_fill(0, count($studentIds), '?'));
       $types = str_repeat('s', count($studentIds));
-      $verifySql = "SELECT s.student_id FROM student s\n                     JOIN student_enroll se ON se.student_id=s.student_id\n                     JOIN course c ON c.course_id = se.course_id\n                     WHERE c.department_id = '$safeDept' AND s.student_id IN (" . str_repeat('?,', count($studentIds)-1) . "?)";
+      $verifySql = "SELECT s.student_id FROM student s\n                     JOIN student_enroll se ON se.student_id=s.student_id\n                     JOIN course c ON c.course_id = se.course_id\n                     WHERE c.department_id = '$safeDept'\n                       AND s.student_conduct_accepted_at IS NOT NULL\n                       AND s.student_id IN (" . str_repeat('?,', count($studentIds)-1) . "?)";
       $verifyStmt = mysqli_prepare($con, $verifySql);
       if ($verifyStmt) {
         mysqli_stmt_bind_param($verifyStmt, $types, ...$studentIds);
@@ -113,7 +113,7 @@ $selDept = isset($_GET['dept']) ? trim($_GET['dept']) : (isset($_POST['pays_depa
 $deptRes = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
 $studentsRes = false;
 if ($selDept !== '') {
-  $studentsSql = "SELECT DISTINCT s.student_id, s.student_fullname\n                  FROM student s\n                  JOIN student_enroll se ON se.student_id = s.student_id\n                  JOIN course c ON c.course_id = se.course_id\n                  WHERE c.department_id='".mysqli_real_escape_string($con,$selDept)."'\n                    AND NOT EXISTS (SELECT 1 FROM pays p WHERE p.student_id = s.student_id)\n                  ORDER BY s.student_fullname";
+  $studentsSql = "SELECT DISTINCT s.student_id, s.student_fullname\n                  FROM student s\n                  JOIN student_enroll se ON se.student_id = s.student_id\n                  JOIN course c ON c.course_id = se.course_id\n                  WHERE c.department_id='".mysqli_real_escape_string($con,$selDept)."'\n                    AND s.student_conduct_accepted_at IS NOT NULL\n                    AND NOT EXISTS (SELECT 1 FROM pays p WHERE p.student_id = s.student_id)\n                  ORDER BY s.student_fullname";
   $studentsRes = mysqli_query($con, $studentsSql);
 }
 
