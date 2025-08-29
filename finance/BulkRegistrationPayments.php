@@ -71,11 +71,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_create'])) {
         $studentIds = array_values(array_filter($studentIds, function($id) use ($validIds){ return isset($validIds[$id]); }));
       }
 
-      // Exclude students who already have a Register note in pays
+      // Exclude students who already exist in pays (any note)
       if (!empty($studentIds)) {
         $inPlaceholders = str_repeat('?,', count($studentIds)-1) . '?';
         $types2 = str_repeat('s', count($studentIds));
-        $existSql = "SELECT DISTINCT student_id FROM pays WHERE pays_note='Register' AND student_id IN ($inPlaceholders)";
+        $existSql = "SELECT DISTINCT student_id FROM pays WHERE student_id IN ($inPlaceholders)";
         if ($existStmt = mysqli_prepare($con, $existSql)) {
           mysqli_stmt_bind_param($existStmt, $types2, ...$studentIds);
           mysqli_stmt_execute($existStmt);
@@ -113,7 +113,7 @@ $selDept = isset($_GET['dept']) ? trim($_GET['dept']) : (isset($_POST['pays_depa
 $deptRes = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
 $studentsRes = false;
 if ($selDept !== '') {
-  $studentsSql = "SELECT DISTINCT s.student_id, s.student_fullname\n                  FROM student s\n                  JOIN student_enroll se ON se.student_id = s.student_id\n                  JOIN course c ON c.course_id = se.course_id\n                  WHERE c.department_id='".mysqli_real_escape_string($con,$selDept)."'\n                    AND NOT EXISTS (SELECT 1 FROM pays p WHERE p.student_id = s.student_id AND p.pays_note='Register')\n                  ORDER BY s.student_fullname";
+  $studentsSql = "SELECT DISTINCT s.student_id, s.student_fullname\n                  FROM student s\n                  JOIN student_enroll se ON se.student_id = s.student_id\n                  JOIN course c ON c.course_id = se.course_id\n                  WHERE c.department_id='".mysqli_real_escape_string($con,$selDept)."'\n                    AND NOT EXISTS (SELECT 1 FROM pays p WHERE p.student_id = s.student_id)\n                  ORDER BY s.student_fullname";
   $studentsRes = mysqli_query($con, $studentsSql);
 }
 
