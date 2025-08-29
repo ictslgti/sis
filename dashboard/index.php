@@ -310,7 +310,7 @@ $total_students = 0;
 
 <div class="row mt-4">
     <div class="col-12">
-        <?php include 'gender_distribution.php'; ?>
+        <?php include __DIR__ . '/gender_pie.php'; ?>
     </div>
 </div>
 

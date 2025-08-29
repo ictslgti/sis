@@ -394,6 +394,102 @@ function esc($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
         </table>
       </div>
     </div>
+
+      <?php
+        // Students who accepted Conduct but have NO Registration payment in pays
+        if ($selectedCourseId) {
+          $sqlNoPay = "
+            SELECT
+              s.student_id,
+              s.student_fullname,
+              s.student_conduct_accepted_at,
+              c.course_name
+            FROM student s
+            JOIN (
+              SELECT se.student_id, MAX(se.student_enroll_date) AS max_enroll_date
+              FROM student_enroll se
+              GROUP BY se.student_id
+            ) le ON le.student_id = s.student_id
+            JOIN student_enroll e
+              ON e.student_id = le.student_id AND e.student_enroll_date = le.max_enroll_date
+            JOIN course c ON c.course_id = e.course_id
+            JOIN department d ON d.department_id = c.department_id
+            WHERE e.student_enroll_status = 'Following'
+              AND d.department_id = ?
+              AND c.course_id = ?
+              AND s.student_conduct_accepted_at IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM pays p
+                WHERE p.student_id = s.student_id
+                  AND (p.payment_type = 'Registration' OR p.payment_reason LIKE '%Registration%')
+              )
+            ORDER BY s.student_fullname ASC
+          ";
+          $stNoPay = mysqli_prepare($con, $sqlNoPay);
+          mysqli_stmt_bind_param($stNoPay, 'ss', $selectedDeptId, $selectedCourseId);
+        } else {
+          $sqlNoPay = "
+            SELECT
+              s.student_id,
+              s.student_fullname,
+              s.student_conduct_accepted_at,
+              c.course_name
+            FROM student s
+            JOIN (
+              SELECT se.student_id, MAX(se.student_enroll_date) AS max_enroll_date
+              FROM student_enroll se
+              GROUP BY se.student_id
+            ) le ON le.student_id = s.student_id
+            JOIN student_enroll e
+              ON e.student_id = le.student_id AND e.student_enroll_date = le.max_enroll_date
+            JOIN course c ON c.course_id = e.course_id
+            JOIN department d ON d.department_id = c.department_id
+            WHERE e.student_enroll_status = 'Following'
+              AND d.department_id = ?
+              AND s.student_conduct_accepted_at IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM pays p
+                WHERE p.student_id = s.student_id
+                  AND (p.payment_type = 'Registration' OR p.payment_reason LIKE '%Registration%')
+              )
+            ORDER BY s.student_fullname ASC
+          ";
+          $stNoPay = mysqli_prepare($con, $sqlNoPay);
+          mysqli_stmt_bind_param($stNoPay, 's', $selectedDeptId);
+        }
+        mysqli_stmt_execute($stNoPay);
+        $noPayRs = mysqli_stmt_get_result($stNoPay);
+      ?>
+
+      <div class="card shadow-sm mt-3">
+        <div class="card-body table-responsive">
+          <h5 class="mb-3">Accepted Conduct but No Registration Payment</h5>
+          <table class="table table-sm table-hover align-middle">
+            <thead class="thead-light">
+              <tr>
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Course</th>
+                <th>Accepted At</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php if ($noPayRs && mysqli_num_rows($noPayRs) > 0): ?>
+                <?php while ($np = mysqli_fetch_assoc($noPayRs)): ?>
+                  <tr>
+                    <td><?php echo esc($np['student_id']); ?></td>
+                    <td><?php echo esc($np['student_fullname']); ?></td>
+                    <td><?php echo esc($np['course_name']); ?></td>
+                    <td><?php echo esc($np['student_conduct_accepted_at']); ?></td>
+                  </tr>
+                <?php endwhile; ?>
+              <?php else: ?>
+                <tr><td colspan="4" class="text-center text-muted">No matching students</td></tr>
+              <?php endif; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
   <?php endif; ?>
 </div>
 
