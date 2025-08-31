@@ -10,58 +10,7 @@ include_once("../menu.php");
 
 
 <?php
-// echo $_SESSION['user_table'];
-// echo $_SESSION['user_name'];
-if($_SESSION['user_type']  == 'STU'){
-   $u_type= $_SESSION['user_name'];
-   $table = $_SESSION['user_table'];
-    $sql ="SELECT course_id from student_enroll where  student_id= '$u_type'";
-
-    $result = mysqli_query($con,$sql);
-    if (mysqli_num_rows($result)>0) {
-         while($row=mysqli_fetch_assoc($result)){
-            $course=$row["course_id"];
-            $sql1="SELECT module_id from module where course_id='$course'";
-            $result4 = mysqli_query($con,$sql1);
-            if (mysqli_num_rows($result4)>0) {
-                 while($row=mysqli_fetch_assoc($result4)){
-                      $module=$row["module_id"];
-                     $sql2="SELECT survey_id FROM feedback_survey where  course_id='$course' and module_id='$module' and end_date > curdate() and start_date <= curdate()";
-                     $result5 = mysqli_query($con,$sql2);
-                     if (mysqli_num_rows($result5)>0) {
-                          while($row=mysqli_fetch_assoc($result5)){
-                           $survey_id=$row["survey_id"];
-                           $sql3="SELECT survey_id,student_id FROM feedback_done where survey_id='$survey_id' and student_id='$u_type'";
-                           $result6 = mysqli_query($con,$sql3);
-                           if (mysqli_num_rows($result6)==0) {
-
-                           echo '
-                           <div class="alert alert-success alert-dismissible fade show" role="alert">
-                            <strong > New Notification! <span style="font-size:20px;">&#129335;</span> </strong> New Survey Added For <strong> '.$module.' </strong>&nbsp;Pleace Give Your Feedback &nbsp;
-                            <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                            <span aria-hidden="true">&times;</span>
-                                </button>
-                            <a href="Addfbdetail.php?id='. $row["survey_id"].'" class="btn btn-sm btn-warning float-right mr-5"><i class="fas fa-eye"></i></a> 
-                                </div>
-                           ';
-                     
-                          }}
-                        }else{
-                           
-                        }
-                     
-                 }
-                }else{
-                   
-                }
-
-    }}else{
-       
-    }
-}else{
-   // echo 'your not a student'.$_SESSION['user_type'];
-}
-
+// Legacy student survey notification block removed to prevent syntax and path errors.
 ?>
 
 <!--BLOCK#2 START YOUR CODE HERE -->
@@ -161,7 +110,7 @@ $total_students = 0;
                 <h5 class="card-title">Departments</h5>
                 <p class="card-text display-2 ">
                     <?php          
-                    $sql = "SELECT COUNT(`department_id`) AS `d_count` FROM `department`";
+                    $sql = "SELECT COUNT(`department_id`) AS `d_count` FROM `department` WHERE LOWER(TRIM(`department_name`)) NOT IN ('admin','administration')";
                     $result = mysqli_query($con, $sql);
                     if (mysqli_num_rows($result) > 0) {
                     $row = mysqli_fetch_assoc($result);
@@ -169,7 +118,6 @@ $total_students = 0;
                     }
                 ?>
                 </p>
-                <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
             </div>
         </div>
     </div>
@@ -188,28 +136,10 @@ $total_students = 0;
                     }
                 ?>
                 </p>
-                <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
             </div>
         </div>
     </div>
-    <div class="col-md-2 col-sm-12">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Modules</h5>
-                <p class="card-text display-2 ">
-                    <?php          
-                    $sql = "SELECT COUNT(`module_id`) AS `d_count` FROM `module`";
-                    $result = mysqli_query($con, $sql);
-                    if (mysqli_num_rows($result) > 0) {
-                    $row = mysqli_fetch_assoc($result);
-                        echo $row['d_count'];
-                    }
-                ?>
-                </p>
-                <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
-            </div>
-        </div>
-    </div>
+    <!-- Modules card removed as requested -->
     <div class="col-md-2 col-sm-12">
         <div class="card mb-3">
             <div class="card-body">
@@ -224,45 +154,28 @@ $total_students = 0;
                     }
                 ?>
                 </p>
-                <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
+                
             </div>
         </div>
     </div>
 
-    <div class="col-md-2 col-sm-12">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Staff</h5>
-                <p class="card-text display-2 ">
-                    <?php          
-                    $sql = "SELECT COUNT(`staff_id`) AS `d_count` FROM `staff`";
-                    $result = mysqli_query($con, $sql);
-                    if (mysqli_num_rows($result) > 0) {
-                    $row = mysqli_fetch_assoc($result);
-                        echo $row['d_count'];
-                    }
-                ?>
-                </p>
-                <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
-            </div>
-        </div>
-    </div>
+    <!-- Students card removed as requested -->
+
     <div class="col-md-2 col-sm-12">
         <div class="card mb-3">
             <div class="card-body">
                 <h5 class="card-title">Students</h5>
-                <p class="card-text display-2 font-weight-lighter">
+                <p class="card-text display-2 ">
                     <?php          
-                    $sql = "SELECT COUNT(`student_id`) AS `d_count` FROM `student`";
+                    // Students who accepted the Code of Conduct
+                    $sql = "SELECT COUNT(`student_id`) AS `d_count` FROM `student` WHERE `student_conduct_accepted_at` IS NOT NULL";
                     $result = mysqli_query($con, $sql);
-                    if (mysqli_num_rows($result) > 0) {
-                    $row = mysqli_fetch_assoc($result);
-                        echo $row['d_count'];
-                        $total_students = $row['d_count'];
-                    }
-                ?>
+                    if ($result && mysqli_num_rows($result) > 0) {
+                        $row = mysqli_fetch_assoc($result);
+                        echo (int)$row['d_count'];
+                    } else { echo 0; }
+                    ?>
                 </p>
-                <p class="card-text"><small class="text-muted">Last updated 3 mins ago</small></p>
             </div>
         </div>
     </div>
@@ -272,36 +185,7 @@ $total_students = 0;
 
 
 
-<div class="row">
-<div class="col-md-2">
-    Academic Year is : 
-                </div>
-    <div class="col-md-3">
-        <select class="mb-2 selectpicker show-tick custom-select-sm" required onchange="showStudent(this.value)" data-live-search="true" data-width="100%">
-            <option value="ALL" selected>ALL</option>
-            <?php
-            $sql = "SELECT * FROM `academic` ORDER BY `academic_year`  DESC ";
-            $result = mysqli_query($con, $sql);
-            if (mysqli_num_rows($result) > 0) {
-            while($row = mysqli_fetch_assoc($result)){
-            echo '<option  value="'.$row ['academic_year'].'" data-subtext="'.$row ['academic_year_status'].'">'.$row ['academic_year'].'</option>';
-            }
-            }
-            ?>
-        </select>
-    </div>
-</div>
-<div class="text-center loading">
-  <div class="spinner-border text-primary" role="completed">
-    <span class="sr-only">Loading...</span>
-  </div>
-</div>
-<div class="row m-2">
-    <div class="col-md-12">
-        <canvas id="myChart1"></canvas>
-    </div>
-</div>
-<hr>
+<!-- Removed academic year dropdown and bar chart as requested -->
 
 
 
@@ -310,194 +194,19 @@ $total_students = 0;
 
 <div class="row mt-4">
     <div class="col-12">
-        <?php include __DIR__ . '/gender_pie.php'; ?>
+        <?php
+        // Embed gender charts widget directly on dashboard
+        $genderWidget = __DIR__ . '/partials/gender_widget.php';
+        if (file_exists($genderWidget)) {
+            include $genderWidget;
+        } else {
+            echo '<div class="alert alert-warning">Gender widget not found.</div>';
+        }
+        ?>
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-4 col-sm-12">
-        <!-- <button type="button" class="btn btn-primary btn-sm btn-block mb-2">Small button</button> -->
-
-        <div class="card overflow-auto mh-20">
-            <h6 class="card-header font-weight-lighter">Students Course Enrollment Distribution</h6>
-            <div class="card-body">
-                <?php
-$sql = "SELECT * FROM `course` ORDER BY `course_name` ASC ";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result) > 0) {
-while($row = mysqli_fetch_assoc($result)){
-
-    $cid = $row['course_id'];
-    $cname = $row['course_name'];
-    $sql_c = "SELECT COUNT(`student_id`) AS `c_count` FROM `student_enroll` WHERE `course_id` = '$cid' ";
-    $result_c = mysqli_query($con, $sql_c);
-    $row_c = mysqli_fetch_assoc($result_c);
-    $course_count =  $row_c['c_count'];
-    $student_percentage = 0;
-    $student_percentage = round ( ($course_count/$total_students)*100); 
-    // echo $total_students;
-    echo '
-    <h6 class="card-title font-weight-lighter"><small>'.$cname.'</small></h6>
-    <p class="card-text">
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: '.$student_percentage.'%;" aria-valuenow="'.$student_percentage.'"
-                aria-valuemin="0" aria-valuemax="100">'.$student_percentage.'%</div>
-        </div>
-    </p>
-    ';
-}
-}
-?>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- COL-1 END -->
-
-    <div class="col-md-4 col-sm-12">
-        <div class="card">
-            <h6 class="card-header font-weight-lighter">Students Course Dropout Distribution </h6>
-            <div class="card-body">
-                <?php
-$sql = "SELECT * FROM `course` ORDER BY `course_name` ASC ";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result) > 0) {
-while($row = mysqli_fetch_assoc($result)){
-
-    $cid = $row['course_id'];
-    $cname = $row['course_name'];
-    $sql_c = "SELECT COUNT(`student_id`) AS `c_count` FROM `student_enroll` WHERE `course_id` = '$cid' AND `student_enroll_status` = 'Dropout' ";
-    $result_c = mysqli_query($con, $sql_c);
-    $row_c = mysqli_fetch_assoc($result_c);
-    $course_count =  $row_c['c_count'];
-    $student_percentage = 0;
-    $student_percentage = round ( ($course_count/$total_students)*100); 
-    // echo $total_students;
-    echo '
-    <h6 class="card-title font-weight-lighter"><small>'.$cname.'</small></h6>
-    <p class="card-text">
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped bg-danger progress-bar-animated" role="progressbar" style="width: '.$student_percentage.'%;" aria-valuenow="'.$student_percentage.'"
-                aria-valuemin="0" aria-valuemax="100">'.$student_percentage.'%</div>
-        </div>
-    </p>
-    ';
-}
-}
-?>
-            </div>
-        </div>
-    </div>
-    <!-- <col2-end -->
-        <div class="col-md-4 col-sm-12">
-        <div class="card">
-            <h6 class="card-header font-weight-lighter">Students Course Following Distribution </h6>
-            <div class="card-body">
-                <?php
-$sql = "SELECT * FROM `course` ORDER BY `course_name` ASC ";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result) > 0) {
-while($row = mysqli_fetch_assoc($result)){
-
-    $cid = $row['course_id'];
-    $cname = $row['course_name'];
-    $sql_c = "SELECT COUNT(`student_id`) AS `c_count` FROM `student_enroll` WHERE `course_id` = '$cid' AND `student_enroll_status` = 'Following' ";
-    $result_c = mysqli_query($con, $sql_c);
-    $row_c = mysqli_fetch_assoc($result_c);
-    $course_count =  $row_c['c_count'];
-    $student_percentage = 0;
-    $student_percentage = round ( ($course_count/$total_students)*100); 
-    // echo $total_students;
-    echo '
-    <h6 class="card-title font-weight-lighter"><small>'.$cname.'</small></h6>
-    <p class="card-text">
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped bg-danger progress-bar-animated" role="progressbar" style="width: '.$student_percentage.'%;" aria-valuenow="'.$student_percentage.'"
-                aria-valuemin="0" aria-valuemax="100">'.$student_percentage.'%</div>
-        </div>
-    </p>
-    ';
-}
-}
-?>
-            </div>
-        </div>
-    </div>
-    <!-- <col2-end -->
-    <div class="col-md-4 col-sm-12">
-        <div class="card">
-            <h6 class="card-header font-weight-lighter">Students Course Completion Distribution</h6>
-            <div class="card-body">
-                <?php
-$sql = "SELECT * FROM `course` ORDER BY `course_name` ASC ";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result) > 0) {
-while($row = mysqli_fetch_assoc($result)){
-
-    $cid = $row['course_id'];
-    $cname = $row['course_name'];
-    $sql_c = "SELECT COUNT(`student_id`) AS `c_count` FROM `student_enroll` WHERE `course_id` = '$cid' AND `student_enroll_status` = 'Completed'";
-    $result_c = mysqli_query($con, $sql_c);
-    $row_c = mysqli_fetch_assoc($result_c);
-    $course_count =  $row_c['c_count'];
-    $student_percentage = 0;
-    $student_percentage = round ( ($course_count/$total_students)*100); 
-    // echo $total_students;
-    echo '
-    <h6 class="card-title font-weight-lighter"><small>'.$cname.'</small></h6>
-    <p class="card-text">
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped bg-success progress-bar-animated" role="progressbar" style="width: '.$student_percentage.'%;" aria-valuenow="'.$student_percentage.'"
-                aria-valuemin="0" aria-valuemax="100">'.$student_percentage.'%</div>
-        </div>
-    </p>
-    ';
-}
-}
-?>
-            </div>
-        </div>
-    </div>
-    <!-- COL-3 END -->
-
-    <div class="col-md-4 col-sm-12">
-        <div class="card">
-            <h6 class="card-header font-weight-lighter">Students Course Dropout Distribution </h6>
-            <div class="card-body">
-                <?php
-$sql = "SELECT * FROM `course` ORDER BY `course_name` ASC ";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result) > 0) {
-while($row = mysqli_fetch_assoc($result)){
-
-    $cid = $row['course_id'];
-    $cname = $row['course_name'];
-    $sql_c = "SELECT COUNT(`student_id`) AS `c_count` FROM `student_enroll` WHERE `course_id` = '$cid' AND `student_enroll_status` = 'Dropout' ";
-    $result_c = mysqli_query($con, $sql_c);
-    $row_c = mysqli_fetch_assoc($result_c);
-    $course_count =  $row_c['c_count'];
-    $student_percentage = 0;
-    $student_percentage = round ( ($course_count/$total_students)*100); 
-    // echo $total_students;
-    echo '
-    <h6 class="card-title font-weight-lighter"><small>'.$cname.'</small></h6>
-    <p class="card-text">
-        <div class="progress">
-            <div class="progress-bar progress-bar-striped bg-danger progress-bar-animated" role="progressbar" style="width: '.$student_percentage.'%;" aria-valuenow="'.$student_percentage.'"
-                aria-valuemin="0" aria-valuemax="100">'.$student_percentage.'%</div>
-        </div>
-    </p>
-    ';
-}
-}
-?>
-            </div>
-        </div>
-    </div>
-    <!-- <col2-end -->
-</div>
-<hr>
+<!-- Removed progress bar cards row (Completion & Dropout) as requested -->
 
 
 
@@ -559,77 +268,7 @@ function showTeacher() {
  -->
 
 
-<script>
-showStudent('ALL');
-
-function showStudent(val) {
-    var course_id_label = [];
-    var course_total_count = [];
-    var course_completed_count = [];
-    var course_droupout_count = [];
-    var course_following_count = [];
-
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            var data_students_count = JSON.parse(this.responseText);
-            for (var i in data_students_count) {
-                course_id_label.push(data_students_count[i].course_id);
-                course_total_count.push(data_students_count[i].t_count);
-                course_completed_count.push(data_students_count[i].c_count);
-                course_droupout_count.push(data_students_count[i].d_count);
-                course_following_count.push(data_students_count[i].d_count);
-            }
-            
-            var ctx = document.getElementById('myChart1');
-            var myChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: course_id_label,
-                    datasets: [{
-                        label: "Total Students ",
-                        backgroundColor: "#5a407d",
-                        data: course_total_count
-                    }, {
-                        label: "Dropout Students ",
-                        backgroundColor: "#dc3545",
-                        data: course_droupout_count
-                    }, {
-                        label: "Completed Students ",
-                        backgroundColor: "#28a745",
-                        data: course_completed_count
-                    },{
-                        label: "Following Students ",
-                        backgroundColor: "#007bff",
-                        data: course_droupout_count
-                    },{
-                        label: "LongAbsent Students",
-                        backgroundColor: "#deb647",
-                        data: course_droupout_count
-                    }]
-                },
-                options: {
-                    title: {
-                        display: true,
-                        text: 'Course vs Students Enrollments Distribution'
-                    },
-                    legend: {
-                        display: true,
-                        labels: {
-                            fontColor: 'rgb(0, 0, 0)'
-                        }
-                    }
-                }
-            });
-
-            document.getElementsByClassName('loading')[0].style.visibility = 'hidden';
-        }
-    };
-    xmlhttp.open("POST", "controller/StudentsCourseDistribution", true);
-    xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xmlhttp.send("AcademicYear=" + val);
-}
-</script>
+<!-- Chart and script removed -->
 <!--BLOCK#3 START DON'T CHANGE THE ORDER-->
 <?php include_once("../footer.php"); ?>
 <!--END DON'T CHANGE THE ORDER-->

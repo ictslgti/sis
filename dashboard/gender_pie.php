@@ -12,25 +12,10 @@ include_once("../menu.php");
     <div class="col-md-6 col-sm-12 mb-3">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Gender Pie by Department</h5>
-                <div class="small text-muted">Select a department to view Male vs Female</div>
+                <h5 class="mb-0">Overall Gender (All Departments)</h5>
+                <div class="small text-muted">Male vs Female totals</div>
             </div>
             <div class="card-body">
-                <div class="form-group">
-                    <label for="departmentSelect" class="small mb-1">Department</label>
-                    <select id="departmentSelect" class="custom-select">
-                        <option value="ALL" selected>All Departments</option>
-                        <?php
-                        $dept_q = "SELECT department_id, department_name FROM department ORDER BY department_name";
-                        $dept_r = mysqli_query($con, $dept_q);
-                        if ($dept_r && mysqli_num_rows($dept_r) > 0) {
-                            while ($d = mysqli_fetch_assoc($dept_r)) {
-                                echo '<option value="' . htmlspecialchars($d['department_name']) . '">' . htmlspecialchars($d['department_name']) . "</option>"; // use name to match existing endpoint response
-                            }
-                        }
-                        ?>
-                    </select>
-                </div>
                 <div class="chart-container" style="position: relative; height:320px;">
                     <canvas id="genderPieChart"></canvas>
                     <div id="genderPieEmpty" class="text-center text-muted" style="position:absolute;top:0;left:0;right:0;bottom:0;display:none;align-items:center;justify-content:center;">
@@ -52,24 +37,7 @@ include_once("../menu.php");
                 <div class="small text-muted">All departments overview</div>
             </div>
             <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-sm table-bordered mb-0" id="genderPieTable">
-                        <thead class="thead-light">
-                            <tr>
-                                <th>Department</th>
-                                <th class="text-right">Male</th>
-                                <th class="text-right">Female</th>
-                                <th class="text-right">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody id="genderPieTbody">
-                        </tbody>
-                    </table>
-                </div>
-                <hr>
-                <div>
-                    <div id="deptCharts" class="row"></div>
-                </div>
+                <div id="deptCharts" class="row"></div>
             </div>
         </div>
     </div>
@@ -78,6 +46,10 @@ include_once("../menu.php");
 <script>
     let genderPieChart;
     let genderDeptData = [];
+    function isAdminDepartment(name){
+        var n = String(name||'').trim().toLowerCase();
+        return n === 'admin' || n === 'administration' || /(^|\s)admin(istration)?(\s|$)/.test(n);
+    }
 
     function fetchGenderData() {
         // Absolute app-root path avoids base href issues
@@ -92,6 +64,7 @@ include_once("../menu.php");
             female = 0;
         if (selection === 'ALL') {
             genderDeptData.forEach(it => {
+                if (isAdminDepartment(it.department)) return; // exclude admin dept
                 male += (it.male || 0);
                 female += (it.female || 0);
             });
@@ -184,36 +157,8 @@ include_once("../menu.php");
             try {
                 console.debug('GenderPie: loaded rows', genderDeptData.length);
             } catch (e) {}
-            // Populate department dropdown from data to ensure exact matching
-            try {
-                var sel = document.getElementById('departmentSelect');
-                var current = sel.value;
-                // Clear and rebuild
-                sel.innerHTML = '';
-                var optAll = document.createElement('option');
-                optAll.value = 'ALL';
-                optAll.textContent = 'All Departments';
-                sel.appendChild(optAll);
-                genderDeptData.forEach(function(it) {
-                    var o = document.createElement('option');
-                    o.value = it.department;
-                    o.textContent = it.department;
-                    sel.appendChild(o);
-                });
-                // Try reselect previous if present
-                var found = Array.from(sel.options).some(function(o) {
-                    if (o.value === current) {
-                        sel.value = current;
-                        return true;
-                    }
-                    return false;
-                });
-                if (!found) {
-                    sel.value = 'ALL';
-                }
-            } catch (e) {}
-            // Render details table
-            renderDeptTable();
+            // Render department mini-charts (no table)
+            renderDeptCharts();
             // Ensure Chart library is available before rendering
             (function ensureChartReady() {
                 if (window.Chart) {
@@ -230,46 +175,10 @@ include_once("../menu.php");
             renderPie('ALL');
         });
 
-        document.getElementById('departmentSelect').addEventListener('change', (e) => {
-            try {
-                console.debug('GenderPie: selection', e.target.value);
-            } catch (e) {}
-            renderPie(e.target.value);
-        });
+        // No dropdown; always showing ALL in left chart.
     }
 
-    function renderDeptTable() {
-        var tbody = document.getElementById('genderPieTbody');
-        if (!tbody) return;
-        var rows = '';
-        var totalM = 0,
-            totalF = 0,
-            totalT = 0;
-        genderDeptData.forEach(function(it) {
-            var m = Number(it.male || 0),
-                f = Number(it.female || 0),
-                t = Number(it.total || (m + f));
-            totalM += m;
-            totalF += f;
-            totalT += t;
-            rows += '<tr>' +
-                '<td>' + escapeHtml(it.department || '') + '</td>' +
-                '<td class="text-right">' + m + '</td>' +
-                '<td class="text-right">' + f + '</td>' +
-                '<td class="text-right">' + t + '</td>' +
-                '</tr>';
-        });
-        // Footer row
-        rows += '<tr class="font-weight-bold">' +
-            '<td>Total</td>' +
-            '<td class="text-right">' + totalM + '</td>' +
-            '<td class="text-right">' + totalF + '</td>' +
-            '<td class="text-right">' + totalT + '</td>' +
-            '</tr>';
-        tbody.innerHTML = rows;
-        // Also render department mini-charts
-        renderDeptCharts();
-    }
+    // Table removed per requirement; only rendering department mini-charts.
 
     function escapeHtml(s) {
         return String(s).replace(/[&<>"']/g, function(c) {
@@ -289,6 +198,7 @@ include_once("../menu.php");
         if(!container) return;
         container.innerHTML = '';
         genderDeptData.forEach(function(it){
+            if (isAdminDepartment(it.department)) return; // skip admin dept card
             var col = document.createElement('div');
             col.className = 'col-sm-6 col-md-4 col-lg-3 mb-3';
             var card = document.createElement('div');
