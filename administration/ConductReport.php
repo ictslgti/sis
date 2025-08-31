@@ -198,7 +198,7 @@ function esc($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
           WHERE e.student_enroll_status = 'Following'
             AND d.department_id = ?
             AND c.course_id = ?
-          ORDER BY (s.student_conduct_accepted_at IS NULL) ASC, s.student_fullname ASC
+          ORDER BY s.student_id ASC
         ";
         $stmt = mysqli_prepare($con, $sqlDetail);
         mysqli_stmt_bind_param($stmt, 'ss', $selectedDeptId, $selectedCourseId);
@@ -229,7 +229,7 @@ function esc($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
             ON d.department_id = c.department_id
           WHERE e.student_enroll_status = 'Following'
             AND d.department_id = ?
-          ORDER BY (s.student_conduct_accepted_at IS NULL) ASC, s.student_fullname ASC
+          ORDER BY s.student_id ASC
         ";
         $stmt = mysqli_prepare($con, $sqlDetail);
         mysqli_stmt_bind_param($stmt, 's', $selectedDeptId);
@@ -423,7 +423,7 @@ function esc($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
                 WHERE p.student_id = s.student_id
                   AND (p.payment_type = 'Registration' OR p.payment_reason LIKE '%Registration%')
               )
-            ORDER BY s.student_fullname ASC
+            ORDER BY s.student_id ASC
           ";
           $stNoPay = mysqli_prepare($con, $sqlNoPay);
           mysqli_stmt_bind_param($stNoPay, 'ss', $selectedDeptId, $selectedCourseId);
@@ -452,7 +452,7 @@ function esc($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
                 WHERE p.student_id = s.student_id
                   AND (p.payment_type = 'Registration' OR p.payment_reason LIKE '%Registration%')
               )
-            ORDER BY s.student_fullname ASC
+            ORDER BY s.student_id ASC
           ";
           $stNoPay = mysqli_prepare($con, $sqlNoPay);
           mysqli_stmt_bind_param($stNoPay, 's', $selectedDeptId);

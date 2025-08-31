@@ -109,11 +109,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
           mysqli_stmt_close($u);
         } else { $ok = false; $errors[] = 'DB error preparing student update.'; }
 
-        // 2) Cascade student_id change to other modules/tables that reference student_id
+        // 2) Cascade student_id change across all referencing tables
         if ($ok) {
-          // table => column
-          $tables = [
-            // Core and common modules
+          // Discover referencing tables/columns dynamically to avoid missing any
+          $targets = [];
+          $iq = "SELECT TABLE_NAME, COLUMN_NAME
+                 FROM INFORMATION_SCHEMA.COLUMNS
+                 WHERE TABLE_SCHEMA = DATABASE()
+                   AND COLUMN_NAME IN ('student_id','member_id','qualification_student_id')";
+          if ($ir = mysqli_query($con, $iq)) {
+            while ($row = mysqli_fetch_assoc($ir)) {
+              $t = $row['TABLE_NAME'];
+              $c = $row['COLUMN_NAME'];
+              // Exclude core tables handled separately or irrelevant
+              if (in_array($t, ['student','student_enroll'], true)) { continue; }
+              $targets[$t] = $c; // last one wins if duplicates, acceptable here
+            }
+            mysqli_free_result($ir);
+          }
+
+          // Add known aliases not always present in INFORMATION_SCHEMA (older installs) as fallback
+          $fallbacks = [
             'attendance' => 'student_id',
             'pays' => 'student_id',
             'hostel_student_details' => 'student_id',
@@ -123,26 +139,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
             'hik_user_map' => 'student_id',
             'manage_final_place' => 'student_id',
             'ojt' => 'student_id',
-            // Assessments & Feedback
             'assessments_marks' => 'student_id',
             'feedback_done' => 'student_id',
-            // Library (uses member_id for students)
             'issued_books' => 'member_id',
             'issued_books_deleted' => 'member_id',
-            // Qualifications
             'student_qualification' => 'qualification_student_id',
           ];
-          foreach ($tables as $table => $col) {
+          foreach ($fallbacks as $ft => $fc) { if (!isset($targets[$ft])) { $targets[$ft] = $fc; } }
+
+          foreach ($targets as $table => $col) {
             if (!$ok) break;
-            $sql = "UPDATE `$table` SET `$col`=? WHERE `$col`=?";
+            $sql = "UPDATE `".$table."` SET `".$col."`=? WHERE `".$col."`=?";
             $stU = mysqli_prepare($con, $sql);
             if ($stU) {
               mysqli_stmt_bind_param($stU, 'ss', $new_stid, $old_stid);
               if (!mysqli_stmt_execute($stU)) {
-                $ok = false; $errors[] = 'Failed to update ' . $table . ' table for new student_id.';
+                $ok = false; $errors[] = 'Failed to update ' . $table . ' (' . $col . ') for new student_id.';
               }
               mysqli_stmt_close($stU);
-            } // silently skip if table is absent in this installation
+            }
           }
         }
       }
