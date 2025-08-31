@@ -27,8 +27,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   // Collect fields
   $fields = [
     'student_title','student_fullname','student_ininame','student_gender','student_email','student_nic','student_dob','student_phone','student_address',
-    'student_zip','student_district','student_division','student_province','student_blood','student_mode',
-    'student_em_name','student_em_relation','student_em_phone','student_status'
+    'student_zip','student_district','student_divisions','student_provice','student_blood','student_civil',
+    'student_em_name','student_em_address','student_em_phone','student_em_relation','student_status'
   ];
   $data = [];
   foreach ($fields as $f) { $data[$f] = isset($_POST[$f]) ? trim($_POST[$f]) : null; }
@@ -37,12 +37,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   $new_dept = isset($_POST['new_dept']) ? trim($_POST['new_dept']) : '';
   $new_coid = isset($_POST['new_coid']) ? trim($_POST['new_coid']) : '';
 
-  $sql = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_email=?, student_nic=?, student_dob=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_division=?, student_province=?, student_blood=?, student_mode=?, student_em_name=?, student_em_relation=?, student_em_phone=?, student_status=? WHERE student_id=?";
+  $sql = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_email=?, student_nic=?, student_dob=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_blood=?, student_civil=?, student_em_name=?, student_em_address=?, student_em_phone=?, student_em_relation=?, student_status=? WHERE student_id=?";
   $stmt = mysqli_prepare($con, $sql);
   if ($stmt) {
-    // 19 fields to update + 1 for WHERE student_id => 20 's'
-    mysqli_stmt_bind_param($stmt, 'ssssssssssssssssssss',
-      $data['student_title'],$data['student_fullname'],$data['student_ininame'],$data['student_gender'],$data['student_email'],$data['student_nic'],$data['student_dob'],$data['student_phone'],$data['student_address'],$data['student_zip'],$data['student_district'],$data['student_division'],$data['student_province'],$data['student_blood'],$data['student_mode'],$data['student_em_name'],$data['student_em_relation'],$data['student_em_phone'],$data['student_status'],$sid
+    // 20 fields to update + 1 for WHERE student_id => 21 's'
+    mysqli_stmt_bind_param($stmt, 'sssssssssssssssssssss',
+      $data['student_title'],$data['student_fullname'],$data['student_ininame'],$data['student_gender'],$data['student_email'],$data['student_nic'],$data['student_dob'],$data['student_phone'],$data['student_address'],$data['student_zip'],$data['student_district'],$data['student_divisions'],$data['student_provice'],$data['student_blood'],$data['student_civil'],$data['student_em_name'],$data['student_em_address'],$data['student_em_phone'],$data['student_em_relation'],$data['student_status'],$sid
     );
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
@@ -79,13 +79,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
               mysqli_stmt_execute($up);
               mysqli_stmt_close($up);
             } else {
-              $errors[] = 'Failed to prepare enrollment update.';
+              $errors[] = 'Failed to prepare enrollment update: '.mysqli_error($con);
             }
           } else {
             $errors[] = 'No enrollment found to update course.';
           }
         } else {
-          $errors[] = 'Failed to query current enrollment.';
+          $errors[] = 'Failed to query current enrollment: '.mysqli_error($con);
         }
       }
     }
@@ -99,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
       $_SESSION['flash_errors'] = $errors;
     }
   } else {
-    $errors[] = 'Database error while preparing update';
+    $errors[] = 'Database error while preparing student update: '.mysqli_error($con);
   }
 }
 
@@ -153,7 +153,7 @@ include_once __DIR__ . '/../menu.php';
               <div class="form-group col-md-3">
                 <label>Gender</label>
                 <select name="student_gender" class="form-control">
-                  <?php foreach (['Male','Female','Other'] as $g): ?>
+                  <?php foreach (['Male','Female'] as $g): ?>
                     <option value="<?php echo h($g); ?>" <?php echo ((($student['student_gender'] ?? '')===$g)?'selected':''); ?>><?php echo h($g); ?></option>
                   <?php endforeach; ?>
                 </select>
@@ -192,11 +192,11 @@ include_once __DIR__ . '/../menu.php';
               </div>
               <div class="form-group col-md-3">
                 <label>Division</label>
-                <input type="text" name="student_division" class="form-control" value="<?php echo h($student['student_division'] ?? ''); ?>">
+                <input type="text" name="student_divisions" class="form-control" value="<?php echo h($student['student_divisions'] ?? ''); ?>">
               </div>
               <div class="form-group col-md-2">
                 <label>Province</label>
-                <input type="text" name="student_province" class="form-control" value="<?php echo h($student['student_province'] ?? ''); ?>">
+                <input type="text" name="student_provice" class="form-control" value="<?php echo h($student['student_provice'] ?? ''); ?>">
               </div>
               <div class="form-group col-md-2">
                 <label>Blood Group</label>
@@ -205,8 +205,8 @@ include_once __DIR__ . '/../menu.php';
             </div>
             <div class="form-row">
               <div class="form-group col-md-3">
-                <label>Mode</label>
-                <input type="text" name="student_mode" class="form-control" value="<?php echo h($student['student_mode'] ?? ''); ?>">
+                <label>Civil Status</label>
+                <input type="text" name="student_civil" class="form-control" value="<?php echo h($student['student_civil'] ?? ''); ?>">
               </div>
               <div class="form-group col-md-3">
                 <label>Status</label>
@@ -276,9 +276,15 @@ include_once __DIR__ . '/../menu.php';
                 <input type="text" name="student_em_name" class="form-control" value="<?php echo h($student['student_em_name'] ?? ''); ?>">
               </div>
               <div class="form-group col-md-4">
+                <label>Address</label>
+                <input type="text" name="student_em_address" class="form-control" value="<?php echo h($student['student_em_address'] ?? ''); ?>">
+              </div>
+              <div class="form-group col-md-4">
                 <label>Relation</label>
                 <input type="text" name="student_em_relation" class="form-control" value="<?php echo h($student['student_em_relation'] ?? ''); ?>">
               </div>
+            </div>
+            <div class="form-row">
               <div class="form-group col-md-4">
                 <label>Phone</label>
                 <input type="text" name="student_em_phone" class="form-control" value="<?php echo h($student['student_em_phone'] ?? ''); ?>">
