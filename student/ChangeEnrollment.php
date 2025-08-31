@@ -55,7 +55,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   $old_ayear = trim($_POST['old_ayear'] ?? '');
 
   $new_stid = trim($_POST['new_stid'] ?? '');
-  $new_coid = trim($_POST['new_coid'] ?? '');
+  $new_dept = trim($_POST['new_dept'] ?? '');
+$new_coid = trim($_POST['new_coid'] ?? '');
   $new_ayear = trim($_POST['new_ayear'] ?? '');
   $course_mode = trim($_POST['course_mode'] ?? 'Full');
   $edate = trim($_POST['student_enroll_date'] ?? '');
@@ -67,6 +68,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   if ($new_stid === '' || $new_coid === '' || $new_ayear === '') { $errors[] = 'New Student, Course and Academic Year are required.'; }
   if ($edate === '') { $errors[] = 'Enroll date is required.'; }
   if ($exdate === '') { $exdate = $edate; }
+
+  // Validate course belongs to selected/new department (if provided)
+  if ($new_coid !== '') {
+    if ($cs = mysqli_prepare($con, 'SELECT department_id FROM course WHERE course_id=?')) {
+      mysqli_stmt_bind_param($cs, 's', $new_coid);
+      mysqli_stmt_execute($cs);
+      $cr = mysqli_stmt_get_result($cs);
+      $courseDept = ($cr && ($rowc = mysqli_fetch_assoc($cr))) ? $rowc['department_id'] : null;
+      mysqli_stmt_close($cs);
+      if (!$courseDept) {
+        $errors[] = 'Selected course not found.';
+      } elseif ($new_dept !== '' && $courseDept !== $new_dept) {
+        $errors[] = 'Selected course does not belong to the chosen department.';
+      } else {
+        // Align new_dept with course's actual department
+        $new_dept = $courseDept;
+      }
+    } else {
+      $errors[] = 'Database error while validating course.';
+    }
+  }
 
   // Check duplicates
   $will_replace = (isset($_POST['replace_if_exists']) && $_POST['replace_if_exists'] === '1');
@@ -312,14 +334,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
                 <input type="text" name="new_stid" class="form-control" value="<?php echo h($enroll['student_id']); ?>" required>
               </div>
               <div class="form-group col-md-4">
+                <label>New Department</label>
+                <select name="new_dept" id="new_dept" class="form-control">
+                  <option value="">Select department</option>
+                  <?php
+                  $current_dept = null;
+                  if (!empty($enroll['course_id'])) {
+                    if ($cd = mysqli_prepare($con, 'SELECT department_id FROM course WHERE course_id=?')) {
+                      mysqli_stmt_bind_param($cd, 's', $enroll['course_id']);
+                      mysqli_stmt_execute($cd);
+                      $cdr = mysqli_stmt_get_result($cd);
+                      if ($cdr && ($cdrx = mysqli_fetch_assoc($cdr))) { $current_dept = $cdrx['department_id']; }
+                      mysqli_stmt_close($cd);
+                    }
+                  }
+                  $rd = mysqli_query($con, 'SELECT department_id, department_name FROM department ORDER BY department_name');
+                  while ($d = mysqli_fetch_assoc($rd)) {
+                    $sel = ($d['department_id'] === ($current_dept ?? '')) ? 'selected' : '';
+                    echo '<option value="'.h($d['department_id']).'" '.$sel.'>'.h($d['department_name']).' ('.h($d['department_id']).')</option>';
+                  }
+                  ?>
+                </select>
+              </div>
+              <div class="form-group col-md-4">
                 <label>New Course</label>
-                <select name="new_coid" class="form-control" required>
+                <select name="new_coid" id="new_coid" class="form-control" required>
                   <option value="">Select course</option>
                   <?php
-                  $rq = mysqli_query($con, 'SELECT course_id, course_name FROM course ORDER BY course_name');
+                  $rq = mysqli_query($con, 'SELECT course_id, course_name, department_id FROM course ORDER BY course_name');
                   while ($r = mysqli_fetch_assoc($rq)) {
                     $sel = ($r['course_id'] === ($enroll['course_id'] ?? '')) ? 'selected' : '';
-                    echo '<option value="'.h($r['course_id']).'" '.$sel.'>'.h($r['course_name']).' ('.h($r['course_id']).')</option>';
+                    echo '<option value="'.h($r['course_id']).'" data-dept="'.h($r['department_id']).'" '.$sel.'>'.h($r['course_name']).' ('.h($r['course_id']).')</option>';
                   }
                   ?>
                 </select>
@@ -383,3 +428,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   </div>
 </div>
 <?php include_once __DIR__ . '/../footer.php'; ?>
+
+<script>
+  // Client-side: Filter courses by chosen department in New Enrollment
+  (function(){
+    var dept = document.getElementById('new_dept');
+    var course = document.getElementById('new_coid');
+    if (!dept || !course) return;
+    var all = Array.prototype.slice.call(course.options).map(function(o){ return {value:o.value, text:o.text, dept:o.getAttribute('data-dept')}; });
+    function apply(){
+      var d = dept.value;
+      var keepSelected = course.value;
+      while (course.options.length) course.remove(0);
+      var opt = document.createElement('option'); opt.value=''; opt.text='Select course'; course.add(opt);
+      all.forEach(function(it){
+        if (!it.value) return;
+        if (!d || it.dept === d){ var o = document.createElement('option'); o.value=it.value; o.text=it.text; o.setAttribute('data-dept', it.dept); course.add(o); }
+      });
+      if (keepSelected) {
+        for (var i=0;i<course.options.length;i++){ if (course.options[i].value===keepSelected){ course.selectedIndex=i; break; } }
+      }
+    }
+    dept.addEventListener('change', apply);
+    // Initialize on load
+    apply();
+  })();
+</script>

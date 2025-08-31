@@ -33,6 +33,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   $data = [];
   foreach ($fields as $f) { $data[$f] = isset($_POST[$f]) ? trim($_POST[$f]) : null; }
 
+  // New Department/Course from form
+  $new_dept = isset($_POST['new_dept']) ? trim($_POST['new_dept']) : '';
+  $new_coid = isset($_POST['new_coid']) ? trim($_POST['new_coid']) : '';
+
   $sql = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_email=?, student_nic=?, student_dob=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_division=?, student_province=?, student_blood=?, student_mode=?, student_em_name=?, student_em_relation=?, student_em_phone=?, student_status=? WHERE student_id=?";
   $stmt = mysqli_prepare($con, $sql);
   if ($stmt) {
@@ -42,9 +46,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
     );
     mysqli_stmt_execute($stmt);
     mysqli_stmt_close($stmt);
+
+    // If course selected, validate and update student's current enrollment
+    if ($new_coid !== '') {
+      // Validate course belongs to department if provided; also fetch its department
+      $courseDept = null;
+      if ($cs = mysqli_prepare($con, 'SELECT department_id FROM course WHERE course_id=?')) {
+        mysqli_stmt_bind_param($cs, 's', $new_coid);
+        mysqli_stmt_execute($cs);
+        $cr = mysqli_stmt_get_result($cs);
+        $courseDept = ($cr && ($rowc = mysqli_fetch_assoc($cr))) ? $rowc['department_id'] : null;
+        mysqli_stmt_close($cs);
+      }
+      if (!$courseDept) {
+        $errors[] = 'Selected course not found.';
+      } elseif ($new_dept !== '' && $new_dept !== $courseDept) {
+        $errors[] = 'Selected course does not belong to the chosen department.';
+      } else {
+        // Determine current enrollment row to update: prefer Following/Active, else latest by academic year
+        $enq = mysqli_prepare($con, "SELECT student_id, course_id, academic_year FROM student_enroll WHERE student_id=? ORDER BY (student_enroll_status IN ('Following','Active')) DESC, academic_year DESC LIMIT 1");
+        if ($enq) {
+          mysqli_stmt_bind_param($enq, 's', $sid);
+          mysqli_stmt_execute($enq);
+          $enr = mysqli_stmt_get_result($enq);
+          $cur = $enr ? mysqli_fetch_assoc($enr) : null;
+          mysqli_stmt_close($enq);
+          if ($cur) {
+            // Update the course_id in that enrollment
+            $up = mysqli_prepare($con, 'UPDATE student_enroll SET course_id=? WHERE student_id=? AND course_id=? AND academic_year=?');
+            if ($up) {
+              mysqli_stmt_bind_param($up, 'ssss', $new_coid, $cur['student_id'], $cur['course_id'], $cur['academic_year']);
+              mysqli_stmt_execute($up);
+              mysqli_stmt_close($up);
+            } else {
+              $errors[] = 'Failed to prepare enrollment update.';
+            }
+          } else {
+            $errors[] = 'No enrollment found to update course.';
+          }
+        } else {
+          $errors[] = 'Failed to query current enrollment.';
+        }
+      }
+    }
+
+    if (!$errors) {
     $_SESSION['flash_messages'] = ['Student updated successfully'];
     header('Location: '.$base.'/student/ManageStudents.php');
     exit;
+    } else {
+      // Persist errors and fall through to render
+      $_SESSION['flash_errors'] = $errors;
+    }
   } else {
     $errors[] = 'Database error while preparing update';
   }
@@ -167,6 +220,53 @@ include_once __DIR__ . '/../menu.php';
           </div>
         </div>
 
+        <?php
+        // Determine current enrollment to preselect department/course
+        $curEnroll = null; $curDept = null;
+        $qe = mysqli_prepare($con, "SELECT se.course_id, se.academic_year, se.student_enroll_status, c.department_id FROM student_enroll se LEFT JOIN course c ON c.course_id=se.course_id WHERE se.student_id=? ORDER BY (se.student_enroll_status IN ('Following','Active')) DESC, se.academic_year DESC LIMIT 1");
+        if ($qe) {
+          mysqli_stmt_bind_param($qe, 's', $sid);
+          mysqli_stmt_execute($qe);
+          $qr = mysqli_stmt_get_result($qe);
+          if ($qr) { $curEnroll = mysqli_fetch_assoc($qr); $curDept = $curEnroll['department_id'] ?? null; }
+          mysqli_stmt_close($qe);
+        }
+        ?>
+        <div class="card mb-3">
+          <div class="card-header">Enrollment</div>
+          <div class="card-body">
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>Department</label>
+                <select name="new_dept" id="new_dept" class="form-control">
+                  <option value="">Select department</option>
+                  <?php
+                  $rd = mysqli_query($con, 'SELECT department_id, department_name FROM department ORDER BY department_name');
+                  while ($d = mysqli_fetch_assoc($rd)) {
+                    $sel = ($d['department_id'] === ($curDept ?? '')) ? 'selected' : '';
+                    echo '<option value="'.h($d['department_id']).'" '.$sel.'>'.h($d['department_name']).' ('.h($d['department_id']).')</option>';
+                  }
+                  ?>
+                </select>
+              </div>
+              <div class="form-group col-md-8">
+                <label>Course</label>
+                <select name="new_coid" id="new_coid" class="form-control">
+                  <option value="">Select course</option>
+                  <?php
+                  $rq = mysqli_query($con, 'SELECT course_id, course_name, department_id FROM course ORDER BY course_name');
+                  while ($r = mysqli_fetch_assoc($rq)) {
+                    $sel = ($r['course_id'] === ($curEnroll['course_id'] ?? '')) ? 'selected' : '';
+                    echo '<option value="'.h($r['course_id']).'" data-dept="'.h($r['department_id']).'" '.$sel.'>'.h($r['course_name']).' ('.h($r['course_id']).')</option>';
+                  }
+                  ?>
+                </select>
+                <small class="form-text text-muted">Changing course will update the student's current enrollment.</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card mb-3">
           <div class="card-header">Emergency Contact</div>
           <div class="card-body">
@@ -196,3 +296,26 @@ include_once __DIR__ . '/../menu.php';
   </div>
 </div>
 <?php include_once __DIR__ . '/../footer.php'; ?>
+
+<script>
+  // Filter courses by selected department
+  (function(){
+    var dept = document.getElementById('new_dept');
+    var course = document.getElementById('new_coid');
+    if (!dept || !course) return;
+    var all = Array.prototype.slice.call(course.options).map(function(o){ return {value:o.value, text:o.text, dept:o.getAttribute('data-dept')}; });
+    function apply(){
+      var d = dept.value;
+      var keep = course.value;
+      while (course.options.length) course.remove(0);
+      var opt = document.createElement('option'); opt.value=''; opt.text='Select course'; course.add(opt);
+      all.forEach(function(it){
+        if (!it.value) return;
+        if (!d || it.dept === d){ var o=document.createElement('option'); o.value=it.value; o.text=it.text; o.setAttribute('data-dept', it.dept); course.add(o); }
+      });
+      if (keep){ for (var i=0;i<course.options.length;i++){ if (course.options[i].value===keep){ course.selectedIndex=i; break; } } }
+    }
+    dept.addEventListener('change', apply);
+    apply();
+  })();
+</script>
