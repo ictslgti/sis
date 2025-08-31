@@ -79,7 +79,7 @@ if (mysqli_num_rows($result)>0){
         <td><span class="badge badge-success">' . $row ["academic_year_status"].'</span></td>
         <td>';?>
         <?php if(($_SESSION['user_type'] =='ADM')) { ?><?php echo'
-        <a href="AddAcademicYear.php?edit='.$row["academic_year"].'" class="btn btn-sm btn-warning"><i class="far fa-edit"></i></a>
+        <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/academic/AddAcademicYear.php?edit='.rawurlencode($row["academic_year"]).'" class="btn btn-sm btn-warning"><i class="far fa-edit"></i></a>
     <button class="btn btn-sm btn-danger" data-href="?delete='.$row["academic_year"].'" data-toggle="modal" data-target="#confirm-delete"><i class="fas fa-trash"></i> </button>
     ';?>
          <?php }?>

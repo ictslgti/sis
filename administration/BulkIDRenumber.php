@@ -21,6 +21,8 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 // Inputs
 $dept   = isset($_GET['dept']) && $_GET['dept'] !== '' ? $_GET['dept'] : '';
 $course = isset($_GET['course']) && $_GET['course'] !== '' ? $_GET['course'] : '';
+$conduct = isset($_GET['conduct']) && $_GET['conduct'] !== '' ? $_GET['conduct'] : 'accepted';
+$conduct = in_array($conduct, ['accepted','not_accepted','all'], true) ? $conduct : 'accepted';
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 
 // Config for renumber
@@ -29,11 +31,13 @@ $start  = isset($_POST['start']) ? (int)$_POST['start'] : 1;
 $width  = isset($_POST['width']) ? (int)$_POST['width'] : 3;
 $orderBy= isset($_POST['order_by']) ? $_POST['order_by'] : 'student_id'; // or 'fullname', 'enroll_date'
 
-// Build student list: accepted conduct, current Following/Active enrollment, filtered by dept/course
+// Build student list: conduct filter, current Following/Active enrollment, filtered by dept/course
 $filterJoin = "JOIN (SELECT se.student_id, MAX(se.student_enroll_date) AS max_enroll_date FROM student_enroll se GROUP BY se.student_id) le ON le.student_id = s.student_id
               JOIN student_enroll e ON e.student_id = le.student_id AND e.student_enroll_date = le.max_enroll_date
               JOIN course c ON c.course_id = e.course_id";
-$where = "s.student_conduct_accepted_at IS NOT NULL AND e.student_enroll_status IN ('Following','Active')";
+$where = "e.student_enroll_status IN ('Following','Active')";
+if ($conduct === 'accepted') { $where .= " AND s.student_conduct_accepted_at IS NOT NULL"; }
+if ($conduct === 'not_accepted') { $where .= " AND s.student_conduct_accepted_at IS NULL"; }
 $params = [];
 $types = '';
 if ($dept !== '')   { $where .= " AND c.department_id = ?"; $params[] = $dept; $types .= 's'; }
@@ -252,8 +256,8 @@ include_once __DIR__ . '/../menu.php';
 <div class="container-fluid mt-3">
   <div class="card shadow-sm mb-3">
     <div class="card-body">
-      <h3 class="mb-0">Bulk Renumber Student IDs (Accepted Conduct)</h3>
-      <small class="text-muted">Filters by Department/Course. Generates new IDs with your prefix and sequential numbers. Updates across all tables.</small>
+      <h3 class="mb-0">Bulk Renumber Student IDs</h3>
+      <small class="text-muted">Filters by Department/Course/Conduct. Generates new IDs with your prefix and sequential numbers. Updates across all tables.</small>
     </div>
   </div>
 
@@ -288,6 +292,12 @@ include_once __DIR__ . '/../menu.php';
             echo '<option value="'.h($c['course_id']).'" '.$sel.'>'.h($c['course_name']).' ('.h($c['course_id']).')</option>';
           }
           ?>
+        </select>
+        <label class="mr-2">Conduct</label>
+        <select name="conduct" class="form-control mr-3">
+          <option value="accepted" <?php echo $conduct==='accepted'?'selected':''; ?>>Accepted</option>
+          <option value="not_accepted" <?php echo $conduct==='not_accepted'?'selected':''; ?>>Not Accepted</option>
+          <option value="all" <?php echo $conduct==='all'?'selected':''; ?>>All</option>
         </select>
         <button type="submit" class="btn btn-outline-primary">Apply Filters</button>
       </form>
