@@ -36,33 +36,111 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   // New Department/Course from form
   $new_dept = isset($_POST['new_dept']) ? trim($_POST['new_dept']) : '';
   $new_coid = isset($_POST['new_coid']) ? trim($_POST['new_coid']) : '';
+  // New Student ID (optional)
+  $new_sid = isset($_POST['new_student_id']) ? trim($_POST['new_student_id']) : '';
+  // New Academic Year (optional)
+  $new_ayear = isset($_POST['new_ayear']) ? trim($_POST['new_ayear']) : '';
 
   $sql = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_email=?, student_nic=?, student_dob=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_blood=?, student_civil=?, student_em_name=?, student_em_address=?, student_em_phone=?, student_em_relation=?, student_status=? WHERE student_id=?";
+  // Begin transaction to ensure atomicity when changing student_id
+  mysqli_begin_transaction($con);
+  $ok = true;
+
   $stmt = mysqli_prepare($con, $sql);
   if ($stmt) {
     // 20 fields to update + 1 for WHERE student_id => 21 's'
     mysqli_stmt_bind_param($stmt, 'sssssssssssssssssssss',
       $data['student_title'],$data['student_fullname'],$data['student_ininame'],$data['student_gender'],$data['student_email'],$data['student_nic'],$data['student_dob'],$data['student_phone'],$data['student_address'],$data['student_zip'],$data['student_district'],$data['student_divisions'],$data['student_provice'],$data['student_blood'],$data['student_civil'],$data['student_em_name'],$data['student_em_address'],$data['student_em_phone'],$data['student_em_relation'],$data['student_status'],$sid
     );
-    mysqli_stmt_execute($stmt);
+    if (!mysqli_stmt_execute($stmt)) { $ok = false; $errors[] = 'Failed to update student core fields: '.mysqli_error($con); }
     mysqli_stmt_close($stmt);
 
-    // If course selected, validate and update student's current enrollment
-    if ($new_coid !== '') {
+    // If changing Student ID, validate uniqueness then cascade
+    if ($ok && $new_sid !== '' && $new_sid !== $sid) {
+      // Check duplicate
+      $chk = mysqli_prepare($con, 'SELECT 1 FROM student WHERE student_id=? LIMIT 1');
+      if ($chk) {
+        mysqli_stmt_bind_param($chk, 's', $new_sid);
+        mysqli_stmt_execute($chk);
+        mysqli_stmt_store_result($chk);
+        $exists = mysqli_stmt_num_rows($chk) > 0;
+        mysqli_stmt_close($chk);
+        if ($exists) { $ok = false; $errors[] = 'New Student ID already exists.'; }
+      } else { $ok = false; $errors[] = 'DB error while checking Student ID: '.mysqli_error($con); }
+
+      // Update primary key in student
+      if ($ok) {
+        $us = mysqli_prepare($con, 'UPDATE student SET student_id=? WHERE student_id=?');
+        if ($us) {
+          mysqli_stmt_bind_param($us, 'ss', $new_sid, $sid);
+          if (!mysqli_stmt_execute($us) || mysqli_stmt_affected_rows($us) < 1) { $ok = false; $errors[] = 'Failed to update Student ID in student table.'; }
+          mysqli_stmt_close($us);
+        } else { $ok = false; $errors[] = 'DB error preparing Student ID update: '.mysqli_error($con); }
+      }
+
+      // Cascade update across referencing tables
+      if ($ok) {
+        $iq = "SELECT TABLE_NAME, COLUMN_NAME FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND COLUMN_NAME IN ('student_id','member_id','qualification_student_id')";
+        $targets = [];
+        if ($ir = mysqli_query($con, $iq)) {
+          while ($row = mysqli_fetch_assoc($ir)) {
+            $t = $row['TABLE_NAME'];
+            $c = $row['COLUMN_NAME'];
+            if ($t === 'student') continue; // already handled
+            $targets[] = [$t,$c];
+          }
+          mysqli_free_result($ir);
+        } else {
+          $ok = false; $errors[] = 'Failed to discover referencing tables: '.mysqli_error($con);
+        }
+        foreach ($targets as $tc) {
+          if (!$ok) break;
+          list($t,$c) = $tc;
+          $sqlu = "UPDATE `".$t."` SET `".$c."`=? WHERE `".$c."`=?";
+          if ($ps = mysqli_prepare($con, $sqlu)) {
+            mysqli_stmt_bind_param($ps, 'ss', $new_sid, $sid);
+            if (!mysqli_stmt_execute($ps)) { $ok = false; $errors[] = 'Failed to update ' . $t . '.' . $c . ': ' . mysqli_error($con); }
+            mysqli_stmt_close($ps);
+          } else {
+            $ok = false; $errors[] = 'Prepare failed for ' . $t . '.' . $c . ': ' . mysqli_error($con);
+          }
+        }
+        // After cascade, use new ID henceforth
+        if ($ok) { $sid = $new_sid; }
+      }
+    }
+
+    // If course or academic year provided, validate and update student's current enrollment
+    if ($ok && ($new_coid !== '' || $new_ayear !== '')) {
       // Validate course belongs to department if provided; also fetch its department
       $courseDept = null;
-      if ($cs = mysqli_prepare($con, 'SELECT department_id FROM course WHERE course_id=?')) {
-        mysqli_stmt_bind_param($cs, 's', $new_coid);
-        mysqli_stmt_execute($cs);
-        $cr = mysqli_stmt_get_result($cs);
-        $courseDept = ($cr && ($rowc = mysqli_fetch_assoc($cr))) ? $rowc['department_id'] : null;
-        mysqli_stmt_close($cs);
+      if ($new_coid !== '') {
+        if ($cs = mysqli_prepare($con, 'SELECT department_id FROM course WHERE course_id=?')) {
+          mysqli_stmt_bind_param($cs, 's', $new_coid);
+          mysqli_stmt_execute($cs);
+          $cr = mysqli_stmt_get_result($cs);
+          $courseDept = ($cr && ($rowc = mysqli_fetch_assoc($cr))) ? $rowc['department_id'] : null;
+          mysqli_stmt_close($cs);
+        }
+        if (!$courseDept) {
+          $errors[] = 'Selected course not found.';
+        } elseif ($new_dept !== '' && $new_dept !== $courseDept) {
+          $errors[] = 'Selected course does not belong to the chosen department.';
+        }
       }
-      if (!$courseDept) {
-        $errors[] = 'Selected course not found.';
-      } elseif ($new_dept !== '' && $new_dept !== $courseDept) {
-        $errors[] = 'Selected course does not belong to the chosen department.';
-      } else {
+      // Validate academic year if provided
+      if ($ok && $new_ayear !== '') {
+        $ayok = false;
+        if ($ay = mysqli_prepare($con, 'SELECT 1 FROM academic WHERE academic_year=?')) {
+          mysqli_stmt_bind_param($ay, 's', $new_ayear);
+          mysqli_stmt_execute($ay);
+          mysqli_stmt_store_result($ay);
+          $ayok = mysqli_stmt_num_rows($ay) > 0;
+          mysqli_stmt_close($ay);
+        }
+        if (!$ayok) { $errors[] = 'Selected academic year not found.'; }
+      }
+      if ($ok && !$errors) {
         // Determine current enrollment row to update: prefer Following/Active, else latest by academic year
         $enq = mysqli_prepare($con, "SELECT student_id, course_id, academic_year FROM student_enroll WHERE student_id=? ORDER BY (student_enroll_status IN ('Following','Active')) DESC, academic_year DESC LIMIT 1");
         if ($enq) {
@@ -72,14 +150,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
           $cur = $enr ? mysqli_fetch_assoc($enr) : null;
           mysqli_stmt_close($enq);
           if ($cur) {
-            // Update the course_id in that enrollment
-            $up = mysqli_prepare($con, 'UPDATE student_enroll SET course_id=? WHERE student_id=? AND course_id=? AND academic_year=?');
-            if ($up) {
-              mysqli_stmt_bind_param($up, 'ssss', $new_coid, $cur['student_id'], $cur['course_id'], $cur['academic_year']);
-              mysqli_stmt_execute($up);
-              mysqli_stmt_close($up);
-            } else {
-              $errors[] = 'Failed to prepare enrollment update: '.mysqli_error($con);
+            // Determine new values
+            $target_course = ($new_coid !== '') ? $new_coid : $cur['course_id'];
+            $target_ayear = ($new_ayear !== '') ? $new_ayear : $cur['academic_year'];
+            // Duplicate check for composite PK
+            $chk = mysqli_prepare($con, 'SELECT 1 FROM student_enroll WHERE student_id=? AND course_id=? AND academic_year=?');
+            if ($chk) {
+              mysqli_stmt_bind_param($chk, 'sss', $sid, $target_course, $target_ayear);
+              mysqli_stmt_execute($chk);
+              mysqli_stmt_store_result($chk);
+              $exists_target = mysqli_stmt_num_rows($chk) > 0;
+              mysqli_stmt_close($chk);
+              if ($exists_target && ($target_course !== $cur['course_id'] || $target_ayear !== $cur['academic_year'])) {
+                $ok = false; $errors[] = 'An enrollment already exists for the selected course and academic year.';
+              }
+            }
+            if ($ok) {
+              // Update both fields as needed
+              $up = mysqli_prepare($con, 'UPDATE student_enroll SET course_id=?, academic_year=? WHERE student_id=? AND course_id=? AND academic_year=?');
+              if ($up) {
+                mysqli_stmt_bind_param($up, 'sssss', $target_course, $target_ayear, $cur['student_id'], $cur['course_id'], $cur['academic_year']);
+                if (!mysqli_stmt_execute($up)) { $ok = false; $errors[] = 'Failed to update enrollment: '.mysqli_error($con); }
+                mysqli_stmt_close($up);
+              } else {
+                $errors[] = 'Failed to prepare enrollment update: '.mysqli_error($con);
+              }
             }
           } else {
             $errors[] = 'No enrollment found to update course.';
@@ -90,16 +185,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
       }
     }
 
-    if (!$errors) {
-    $_SESSION['flash_messages'] = ['Student updated successfully'];
-    header('Location: '.$base.'/student/ManageStudents.php');
-    exit;
+    if ($ok && !$errors) {
+      mysqli_commit($con);
+      $_SESSION['flash_messages'] = ['Student updated successfully'];
+      header('Location: '.$base.'/student/ManageStudents.php');
+      exit;
     } else {
+      mysqli_rollback($con);
       // Persist errors and fall through to render
       $_SESSION['flash_errors'] = $errors;
     }
   } else {
     $errors[] = 'Database error while preparing student update: '.mysqli_error($con);
+    mysqli_rollback($con);
   }
 }
 
@@ -136,6 +234,11 @@ include_once __DIR__ . '/../menu.php';
           <div class="card-header">Basic Info</div>
           <div class="card-body">
             <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>New Registration Number (Student ID)</label>
+                <input type="text" name="new_student_id" class="form-control" value="<?php echo h($sid); ?>">
+                <small class="form-text text-muted">Leave unchanged to keep current ID.</small>
+              </div>
               <div class="form-group col-md-2">
                 <label>Title</label>
                 <input type="text" name="student_title" class="form-control" value="<?php echo h($student['student_title'] ?? ''); ?>">
@@ -262,6 +365,20 @@ include_once __DIR__ . '/../menu.php';
                   ?>
                 </select>
                 <small class="form-text text-muted">Changing course will update the student's current enrollment.</small>
+              </div>
+              <div class="form-group col-md-4 mt-3">
+                <label>Academic Year</label>
+                <select name="new_ayear" id="new_ayear" class="form-control">
+                  <option value="">Keep current (<?php echo h($curEnroll['academic_year'] ?? ''); ?>)</option>
+                  <?php
+                  $rq2 = mysqli_query($con, 'SELECT academic_year, academic_year_status FROM academic ORDER BY academic_year DESC');
+                  while ($r2 = mysqli_fetch_assoc($rq2)) {
+                    $sel = ($r2['academic_year'] === ($curEnroll['academic_year'] ?? '')) ? 'selected' : '';
+                    echo '<option value="'.h($r2['academic_year']).'" '.$sel.'>'.h($r2['academic_year']).' - '.h($r2['academic_year_status'])."</option>";
+                  }
+                  ?>
+                </select>
+                <small class="form-text text-muted">Changing year will move the current enrollment to the selected academic year (if no duplicate exists).</small>
               </div>
             </div>
           </div>
