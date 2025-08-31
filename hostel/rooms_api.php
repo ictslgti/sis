@@ -1,6 +1,7 @@
 <?php
 // hostel/rooms_api.php - returns JSON rooms for a block including occupancy
 require_once(__DIR__ . '/../config.php');
+if (session_status() === PHP_SESSION_NONE) { session_start(); }
 header('Content-Type: application/json');
 if (!isset($_GET['block_id'])) { echo json_encode([]); exit; }
 $bid = (int)$_GET['block_id'];

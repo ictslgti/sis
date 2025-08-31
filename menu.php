@@ -106,6 +106,12 @@ if ($u_t === 'STU') {
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a>
                 </li>
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManualAllocate.php">Manual Allocate</a>
+                </li>
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/SwapRooms.php">Swap Rooms</a>
+                </li>
               </ul>
             </div>
           </li>
@@ -259,6 +265,7 @@ if ($u_t === 'STU') {
               <!-- <span class="badge badge-pill badge-primary">Beta</span> -->
             </a>
           </li>
+          <?php } ?>
           <?php if($_SESSION['user_type'] === 'ADM') { ?>
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/gender_distribution.php">
@@ -273,8 +280,27 @@ if ($u_t === 'STU') {
             </a>
           </li>
           <?php } ?>
-          <?php } ?>
 
+          <?php if(isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN1','IN2','LE1','LE2','ADM'])) { ?>
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-users"></i>
+              <span>Groups</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <?php if($_SESSION['user_type']==='HOD') { ?>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Groups.php">Groups</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/AddGroup.php">Add Group</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Reports.php">Reports</a></li>
+                <?php } else { ?>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Groups.php">My Groups</a></li>
+                <?php } ?>
+              </ul>
+            </div>
+          </li>
+          <?php } ?>
+          <?php if(isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN1','IN2','LE1','LE2','ADM'])) { ?>
           <li class="sidebar-dropdown">
           
 
@@ -289,22 +315,25 @@ if ($u_t === 'STU') {
                 <a  href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/Department.php">Departments Info</a>
                 </li>
                 <li>
-                <?php if(($_SESSION['user_type'] =='ADM')) { ?>  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/AddDepartment.php">Add a Department<?php }?>
-                </a>
+                <?php if(($_SESSION['user_type'] =='ADM')) { ?>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/AddDepartment.php">Add a Department</a>
+                <?php }?>
                 </li>
                 <li>
                 <a  href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AcademicYear.php">Academic Years Info</a>
                 </li>
                 <li>
-                <?php if(($_SESSION['user_type'] =='ADM')) { ?>  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AddAcademicYear.php">Add a Academic Year<?php }?>
-                </a>
+                <?php if(($_SESSION['user_type'] =='ADM')) { ?>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AddAcademicYear.php">Add a Academic Year</a>
+                <?php }?>
                 </li>
                 <li>
                 <a  href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses Info</a>
                 </li>
                 <li>
-                <?php if(($_SESSION['user_type'] =='ADM') || ($_SESSION['user_type'] =='HOD')) { ?><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add a Course<?php }?>
-                </a>
+                <?php if(($_SESSION['user_type'] =='ADM') || ($_SESSION['user_type'] =='HOD')) { ?>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add a Course</a>
+                <?php }?>
                 </li>
                 <li>
                 <?php if(($_SESSION['user_type'] =='ADM') || ($_SESSION['user_type'] =='HOD')) { ?><a  href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules Info</a><?php }?>
@@ -317,7 +346,7 @@ if ($u_t === 'STU') {
               </ul>
             </div>
           </li>
-
+          <?php } ?>
           <?php if($_SESSION['user_type'] == 'STU') { ?>
           <li class="sidebar-dropdown">
             <a href="#">
@@ -586,6 +615,12 @@ if ($u_t === 'STU') {
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a>
                   </li>
+                  <li>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManualAllocate.php">Manual Allocate</a>
+                  </li>
+                  <li>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/SwapRooms.php">Swap Rooms</a>
+                  </li>
                 <?php } ?>
               </ul>
             </div>
@@ -593,7 +628,8 @@ if ($u_t === 'STU') {
           <?php } ?>
 
 
-          <li class="sidebar-dropdown"><?php if($_SESSION['user_type']=='ADM' && !is_role('IN2')){ ?> 
+          <?php if($_SESSION['user_type']=='ADM' && !is_role('IN2')){ ?>
+          <li class="sidebar-dropdown">
             <a href="#">
               <i class="far fa-grin"></i>
               <span>Feedbacks</span>
@@ -622,10 +658,12 @@ if ($u_t === 'STU') {
                 </li>
               </ul>
             </div>
-          </li><?php } ?>
+          </li>
+          <?php } ?>
 
 
-          <li class="sidebar-dropdown"><?php if($_SESSION['user_type']!='STU' && !is_role('IN2')){ ?>
+          <?php if($_SESSION['user_type']!='STU' && !is_role('IN2')){ ?>
+          <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-file-alt"></i>
               <span>Inventory</span>
@@ -651,10 +689,12 @@ if ($u_t === 'STU') {
                 </li>
               </ul>
             </div>
-          </li><?php } ?>   
+          </li>
+          <?php } ?>   
 
 
-          <li class="sidebar-dropdown"><?php if($_SESSION['user_type']=='ADM' && !is_role('IN2')){ ?> 
+          <?php if($_SESSION['user_type']=='ADM' && !is_role('IN2')){ ?>
+          <li class="sidebar-dropdown"> 
             <a href="#">
               <i class="fas fa-book-open"></i>
               <span>Library</span>
@@ -679,7 +719,8 @@ if ($u_t === 'STU') {
                 </li>
               </ul>
             </div>
-          </li><?php } ?>  
+          </li>
+          <?php } ?>  
 
           <?php if(!is_role('IN2')){ ?>
           <li class="sidebar-dropdown">
@@ -907,3 +948,7 @@ if ($u_t === 'STU') {
 
   <main class="page-content">
     <div class="container-fluid">
+      <!-- NOTE: The <div class="container-fluid"> and enclosing <main> are intentionally left open here.
+           They are closed in footer.php to wrap each page's main content. -->
+
+<?php // EOF safeguard ?>
