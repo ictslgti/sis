@@ -447,7 +447,7 @@ if ($u_t === 'STU') {
               </ul>
             </div>
           </li>  <?php } ?>
-          <?php if(can_view(['HOD','IN2'])){ ?>
+          <?php if(can_view(['HOD'])){ ?>
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/DepartmentStudents.php">
               <i class="fas fa-user-graduate"></i>

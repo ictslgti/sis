@@ -2,8 +2,8 @@
 <?php 
 $title = "Department Students | SLGTI";
 include_once("../config.php");
-// Allow ADM, HOD, IN2
-require_roles(['ADM','HOD','IN2']);
+// Allow only HOD
+require_roles(['HOD']);
 include_once("../head.php");
 include_once("../menu.php");
 ?>
@@ -22,24 +22,17 @@ include_once("../menu.php");
 
 <?php
 // Role and scoping
-$isADM = is_role('ADM');
 $isHOD = is_role('HOD');
-$isIN2 = is_role('IN2');
 $deptCode = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : null;
 
 // Determine department scope
 $deptFilter = null;
 if ($isHOD && !empty($deptCode)) {
     $deptFilter = mysqli_real_escape_string($con, $deptCode);
-} elseif ($isIN2 && !empty($deptCode)) {
-    // IN2 strictly limited to their own department; no override
-    $deptFilter = mysqli_real_escape_string($con, $deptCode);
-} elseif ($isADM && isset($_GET['dept'])) {
-    $deptFilter = mysqli_real_escape_string($con, $_GET['dept']);
 }
 
-// Fallback: if HOD/IN2 don't have department_code in session, resolve from staff table
-if ($deptFilter === null && ($isHOD || $isIN2) && isset($_SESSION['user_name']) && $_SESSION['user_name'] !== '') {
+// Fallback: if HOD doesn't have department_code in session, resolve from staff table
+if ($deptFilter === null && $isHOD && isset($_SESSION['user_name']) && $_SESSION['user_name'] !== '') {
     $uid = mysqli_real_escape_string($con, $_SESSION['user_name']);
     $q   = "SELECT department_id FROM staff WHERE staff_id='$uid' LIMIT 1";
     if ($rs = mysqli_query($con, $q)) {
@@ -53,28 +46,16 @@ if ($deptFilter === null && ($isHOD || $isIN2) && isset($_SESSION['user_name']) 
 }
 
 if ($deptFilter === null) {
-    echo '<div class="alert alert-info">Please select a department to view students.</div>';
-    // Simple selector for Admins only
-    if ($isADM) {
-        $dres = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
-        echo '<form method="get" class="form-inline mb-3">';
-        echo '  <label class="mr-2">Department</label>';
-        echo '  <select name="dept" class="form-control mr-2">';
-        if ($dres) {
-            while ($dr = mysqli_fetch_assoc($dres)) {
-                echo '<option value="'.htmlspecialchars($dr['department_id']).'">'.htmlspecialchars($dr['department_name']).'</option>';
-            }
-        }
-        echo '  </select>';
-        echo '  <button type="submit" class="btn btn-primary">View</button>';
-        echo '</form>';
-    }
+    echo '<div class="alert alert-warning">Department not configured for your account. Please contact admin.</div>';
 } else {
         // Optional academic year filter
         $year = isset($_GET['year']) ? mysqli_real_escape_string($con, $_GET['year']) : '';
         $yearCond = $year !== '' ? " AND se.academic_year = '$year'" : '';
 
-        // Build query (department scoped)
+        // Ensure conduct acceptance column exists (no-op if already there)
+        @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_conduct_accepted_at` DATETIME NULL");
+
+        // Build query (department scoped) - only students with accepted conduct and Following status
         $sql = "SELECT se.student_id,
                        s.student_fullname,
                        se.course_id,
@@ -86,6 +67,8 @@ if ($deptFilter === null) {
                 JOIN course c ON c.course_id = se.course_id
                 JOIN student s ON s.student_id = se.student_id
                 WHERE c.department_id = '$deptFilter' $yearCond
+                  AND se.student_enroll_status = 'Following'
+                  AND s.student_conduct_accepted_at IS NOT NULL
                 ORDER BY se.academic_year DESC, se.course_id, s.student_fullname";
 
         $res = mysqli_query($con, $sql);
