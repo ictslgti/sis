@@ -12,6 +12,9 @@ $is_dir   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
+// Ensure conduct column exists (no-op if already there)
+@mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_conduct_accepted_at` DATETIME NULL");
+
 // Handle actions
 $messages = [];
 $errors = [];
@@ -22,6 +25,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     http_response_code(403);
     echo 'Forbidden: View-only access';
     exit;
+  }
+  // Mark conduct as accepted (single)
+  if (isset($_POST['mark_accept_sid'])) {
+    $sid = $_POST['mark_accept_sid'];
+    $stmt = mysqli_prepare($con, "UPDATE student SET student_conduct_accepted_at = NOW() WHERE student_id = ?");
+    if ($stmt) {
+      mysqli_stmt_bind_param($stmt, 's', $sid);
+      mysqli_stmt_execute($stmt);
+      $affected = mysqli_stmt_affected_rows($stmt);
+      mysqli_stmt_close($stmt);
+      if ($affected > 0) { $messages[] = "Marked conduct accepted for $sid"; }
+      else { $errors[] = "No changes for $sid"; }
+    } else {
+      $errors[] = 'DB error (mark accept)';
+    }
+  }
+  // Clear conduct acceptance (single)
+  if (isset($_POST['clear_accept_sid'])) {
+    $sid = $_POST['clear_accept_sid'];
+    $stmt = mysqli_prepare($con, "UPDATE student SET student_conduct_accepted_at = NULL WHERE student_id = ?");
+    if ($stmt) {
+      mysqli_stmt_bind_param($stmt, 's', $sid);
+      mysqli_stmt_execute($stmt);
+      $affected = mysqli_stmt_affected_rows($stmt);
+      mysqli_stmt_close($stmt);
+      if ($affected > 0) { $messages[] = "Cleared conduct acceptance for $sid"; }
+      else { $errors[] = "No changes for $sid"; }
+    } else {
+      $errors[] = 'DB error (clear accept)';
+    }
   }
   // Single delete
   if (isset($_POST['delete_sid'])) {
@@ -75,6 +108,8 @@ if (!empty($_SESSION['flash_errors'])) { $errors = $_SESSION['flash_errors']; un
 // Filters
 $fid = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
 $fstatus = isset($_GET['status']) ? $_GET['status'] : '';
+// Conduct acceptance filter: '', 'accepted', 'pending'
+$fconduct = isset($_GET['conduct']) ? trim($_GET['conduct']) : '';
 
 // New filters: department, course, gender
 $fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
@@ -90,6 +125,7 @@ $where = [];
 $params = [];
 // Join with enrollment/course/department to support department/course filtering
 $sql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
+               s.student_conduct_accepted_at,
                e.course_id, c.course_name, d.department_id, d.department_name
         FROM student s
         LEFT JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')
@@ -109,6 +145,11 @@ if ($fcourse !== '') {
 }
 if ($fgender !== '') {
   $where[] = "s.student_gender = '" . mysqli_real_escape_string($con, $fgender) . "'";
+}
+if ($fconduct === 'accepted') {
+  $where[] = "s.student_conduct_accepted_at IS NOT NULL";
+} elseif ($fconduct === 'pending') {
+  $where[] = "s.student_conduct_accepted_at IS NULL";
 }
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 $sql .= ' ORDER BY s.student_id ASC LIMIT 500';
@@ -189,6 +230,14 @@ include_once __DIR__ . '/../menu.php';
             <input type="hidden" name="status" value="Active">
           <?php endif; ?>
         </div>
+        <div class="form-group mr-2">
+          <label for="fconduct" class="mr-2">Conduct</label>
+          <select id="fconduct" name="conduct" class="form-control">
+            <option value="">-- Any --</option>
+            <option value="accepted" <?php echo ($fconduct==='accepted'?'selected':''); ?>>Accepted</option>
+            <option value="pending" <?php echo ($fconduct==='pending'?'selected':''); ?>>Pending</option>
+          </select>
+        </div>
         <button type="submit" class="btn btn-primary">Filter</button>
       </form>
       <script>
@@ -237,6 +286,7 @@ include_once __DIR__ . '/../menu.php';
                 <th>Email</th>
                 <th>Phone</th>
                 <th>Status</th>
+                <th>Conduct</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -252,6 +302,14 @@ include_once __DIR__ . '/../menu.php';
                   <td><?php echo h($row['student_phone']); ?></td>
                   <td><?php echo h($row['student_status']); ?></td>
                   <td>
+                    <?php if (!empty($row['student_conduct_accepted_at'])): ?>
+                      <span class="badge badge-success">Accepted</span>
+                      <small class="text-muted d-block"><?php echo h($row['student_conduct_accepted_at']); ?></small>
+                    <?php else: ?>
+                      <span class="badge badge-warning">Pending</span>
+                    <?php endif; ?>
+                  </td>
+                  <td>
                     <?php 
                       $viewUrl = $base.'/student/Student_profile.php?Sid='.urlencode($row['student_id']);
                       $editUrl = $base.'/student/StudentEditAdmin.php?Sid='.urlencode($row['student_id']);
@@ -261,12 +319,17 @@ include_once __DIR__ . '/../menu.php';
                     <?php endif; ?>
                     <a class="btn btn-sm btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
                     <?php if ($is_admin): ?>
+                      <?php if (empty($row['student_conduct_accepted_at'])): ?>
+                        <button type="submit" name="mark_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-sm btn-primary" onclick="return confirm('Mark conduct as accepted for <?php echo h($row['student_id']); ?>?');">Accept</button>
+                      <?php else: ?>
+                        <button type="submit" name="clear_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-sm btn-secondary" onclick="return confirm('Clear conduct acceptance for <?php echo h($row['student_id']); ?>?');">Clear</button>
+                      <?php endif; ?>
                       <button type="submit" name="delete_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-sm btn-danger" onclick="return confirm('Inactivate <?php echo h($row['student_id']); ?>?');"><i class="far fa-trash-alt"></i></button>
                     <?php endif; ?>
                   </td>
                 </tr>
               <?php endwhile; else: ?>
-                <tr><td colspan="<?php echo $is_admin ? 7 : 6; ?>" class="text-center">No students found</td></tr>
+                <tr><td colspan="<?php echo $is_admin ? 8 : 7; ?>" class="text-center">No students found</td></tr>
               <?php endif; ?>
             </tbody>
           </table>
