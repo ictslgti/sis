@@ -38,6 +38,20 @@ if ($isHOD && !empty($deptCode)) {
     $deptFilter = mysqli_real_escape_string($con, $_GET['dept']);
 }
 
+// Fallback: if HOD/IN2 don't have department_code in session, resolve from staff table
+if ($deptFilter === null && ($isHOD || $isIN2) && isset($_SESSION['user_name']) && $_SESSION['user_name'] !== '') {
+    $uid = mysqli_real_escape_string($con, $_SESSION['user_name']);
+    $q   = "SELECT department_id FROM staff WHERE staff_id='$uid' LIMIT 1";
+    if ($rs = mysqli_query($con, $q)) {
+        if ($row = mysqli_fetch_assoc($rs)) {
+            if (!empty($row['department_id'])) {
+                $deptFilter = mysqli_real_escape_string($con, $row['department_id']);
+            }
+        }
+        mysqli_free_result($rs);
+    }
+}
+
 if ($deptFilter === null) {
     echo '<div class="alert alert-info">Please select a department to view students.</div>';
     // Simple selector for Admins only
