@@ -124,9 +124,6 @@ if (!empty($students)) {
                   <th>Student ID</th>
                   <th>Student Name</th>
                   <th>Course</th>
-                  <?php if ($hasConduct): ?>
-                  <th>Conduct</th>
-                  <?php endif; ?>
                   <th>Actions</th>
                 </tr>
               </thead>
@@ -140,16 +137,6 @@ if (!empty($students)) {
                       <td><?php echo htmlspecialchars($sid); ?></td>
                       <td><?php echo htmlspecialchars($s['student_fullname']); ?></td>
                       <td><?php echo htmlspecialchars($s['course_name']); ?></td>
-                      <?php if ($hasConduct): ?>
-                      <td>
-                        <?php if ($accepted): ?>
-                          <span class="badge badge-success">Accepted</span>
-                        <?php else: ?>
-                          <span class="badge badge-warning">Not accepted</span>
-                        <?php endif; ?>
-                      </td>
-                      <?php endif; ?>
-                      <td>
                         <a class="btn btn-sm btn-outline-primary" href="<?php echo APP_BASE; ?>/student/Student_profile.php?Sid=<?php echo urlencode($sid); ?>" target="_blank" rel="noopener">
                           <i class="fas fa-user"></i> View Profile
                         </a>
