@@ -35,6 +35,13 @@ if ($deptCode !== '') {
   if ($dq) { while($row=mysqli_fetch_assoc($dq)){ $courses[]=$row; } }
 }
 
+// Detect if optional conduct acceptance column exists
+$hasConduct = false;
+if ($chk = mysqli_query($con, "SHOW COLUMNS FROM `student` LIKE 'student_conduct_accepted_at'")) {
+  $hasConduct = (mysqli_num_rows($chk) === 1);
+  mysqli_free_result($chk);
+}
+
 // Load students (scoped to department and optional course)
 $students = [];
 if ($deptCode !== '') {
@@ -43,12 +50,9 @@ if ($deptCode !== '') {
   // Only active/following students
   $where .= " AND se.student_enroll_status IN ('Following','Active')";
 
-  $sql = "SELECT s.student_id, s.student_fullname, se.course_id, c.course_name
-          FROM student_enroll se
-          JOIN course c ON c.course_id = se.course_id
-          JOIN student s ON s.student_id = se.student_id
-          $where
-          ORDER BY s.student_id ASC";
+  $selectConduct = $hasConduct ? ", s.student_conduct_accepted_at" : "";
+  $sql = "SELECT s.student_id, s.student_fullname, se.course_id, c.course_name".$selectConduct.
+         "\n          FROM student_enroll se\n          JOIN course c ON c.course_id = se.course_id\n          JOIN student s ON s.student_id = se.student_id\n          $where\n          ORDER BY s.student_id ASC";
   $res = mysqli_query($con, $sql);
   if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
 }
@@ -119,19 +123,31 @@ if (!empty($students)) {
                   <th>Student ID</th>
                   <th>Student Name</th>
                   <th>Course</th>
+                  <?php if ($hasConduct): ?>
+                  <th>Conduct</th>
+                  <?php endif; ?>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 <?php if (!empty($students)): ?>
-                  <?php foreach($students as $s): $sid=$s['student_id']; $isP = isset($presentMap[$sid]) ? $presentMap[$sid] : false; ?>
+                  <?php foreach($students as $s): $sid=$s['student_id']; $isP = isset($presentMap[$sid]) ? $presentMap[$sid] : false; $accepted = ($hasConduct && !empty($s['student_conduct_accepted_at'])); ?>
                     <tr>
                       <td>
-                        <input type="checkbox" name="present[]" value="<?php echo htmlspecialchars($sid); ?>" <?php echo $isP?'checked':''; ?>>
+                        <input type="checkbox" name="present[]" value="<?php echo htmlspecialchars($sid); ?>" <?php echo $isP?'checked':''; ?> <?php echo ($hasConduct && !$accepted)?'disabled title="Not accepted"':''; ?>>
                       </td>
                       <td><?php echo htmlspecialchars($sid); ?></td>
                       <td><?php echo htmlspecialchars($s['student_fullname']); ?></td>
                       <td><?php echo htmlspecialchars($s['course_name']); ?></td>
+                      <?php if ($hasConduct): ?>
+                      <td>
+                        <?php if ($accepted): ?>
+                          <span class="badge badge-success">Accepted</span>
+                        <?php else: ?>
+                          <span class="badge badge-warning">Not accepted</span>
+                        <?php endif; ?>
+                      </td>
+                      <?php endif; ?>
                       <td>
                         <a class="btn btn-sm btn-outline-primary" href="<?php echo APP_BASE; ?>/student/Student_profile.php?Sid=<?php echo urlencode($sid); ?>" target="_blank" rel="noopener">
                           <i class="fas fa-user"></i> View Profile
