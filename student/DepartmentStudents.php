@@ -51,32 +51,35 @@ if ($deptFilter === null) {
         // Filters
         $year    = isset($_GET['year']) ? mysqli_real_escape_string($con, $_GET['year']) : '';
         $status  = isset($_GET['status']) ? mysqli_real_escape_string($con, $_GET['status']) : '';
-        $conduct = isset($_GET['conduct']) ? mysqli_real_escape_string($con, $_GET['conduct']) : '';
+        // conduct split will be handled by two queries below
         $course  = isset($_GET['course']) ? mysqli_real_escape_string($con, $_GET['course']) : '';
 
         // Ensure conduct acceptance column exists (no-op if already there)
         @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_conduct_accepted_at` DATETIME NULL");
 
-        // Build query (department scoped) with dynamic filters
-        $sql = "SELECT se.student_id,
-                       s.student_fullname,
-                       se.course_id,
-                       c.course_name,
-                       se.academic_year,
-                       se.student_enroll_date,
-                       se.student_enroll_status
-                FROM student_enroll se
-                JOIN course c ON c.course_id = se.course_id
-                JOIN student s ON s.student_id = se.student_id
-                WHERE c.department_id = '$deptFilter'";
-        if ($year !== '')   { $sql .= " AND se.academic_year = '$year'"; }
-        if ($status !== '') { $sql .= " AND se.student_enroll_status = '$status'"; }
-        if ($course !== '') { $sql .= " AND se.course_id = '$course'"; }
-        if ($conduct === 'accepted') { $sql .= " AND s.student_conduct_accepted_at IS NOT NULL"; }
-        if ($conduct === 'pending')  { $sql .= " AND s.student_conduct_accepted_at IS NULL"; }
-        $sql .= " ORDER BY se.academic_year DESC, se.course_id, s.student_fullname";
+        // Build base query (department scoped) with dynamic filters (without conduct condition)
+        $baseSql = "SELECT se.student_id,
+                           s.student_fullname,
+                           se.course_id,
+                           c.course_name,
+                           se.academic_year,
+                           se.student_enroll_date,
+                           se.student_enroll_status,
+                           s.student_conduct_accepted_at
+                    FROM student_enroll se
+                    JOIN course c ON c.course_id = se.course_id
+                    JOIN student s ON s.student_id = se.student_id
+                    WHERE c.department_id = '$deptFilter'";
+        if ($year !== '')   { $baseSql .= " AND se.academic_year = '$year'"; }
+        if ($status !== '') { $baseSql .= " AND se.student_enroll_status = '$status'"; }
+        if ($course !== '') { $baseSql .= " AND se.course_id = '$course'"; }
+        $orderBy = " ORDER BY se.academic_year DESC, se.course_id, s.student_fullname";
 
-        $res = mysqli_query($con, $sql);
+        $sqlAccepted = $baseSql . " AND s.student_conduct_accepted_at IS NOT NULL" . $orderBy;
+        $sqlPending  = $baseSql . " AND s.student_conduct_accepted_at IS NULL" . $orderBy;
+
+        $resA = mysqli_query($con, $sqlAccepted);
+        $resP = mysqli_query($con, $sqlPending);
 
         // Load department courses for filter
         $courses = [];
@@ -99,11 +102,7 @@ if ($deptFilter === null) {
         $statuses = [''=>"-- Any --", 'Following'=>'Following','Active'=>'Active','Completed'=>'Completed','Suspended'=>'Suspended','Inactive'=>'Inactive'];
         foreach ($statuses as $k=>$v) { echo '<option value="'.htmlspecialchars($k).'"'.($status===$k?' selected':'').'>'.htmlspecialchars($v).'</option>'; }
         echo '    </select>';
-        echo '    <label class="mr-2">Conduct</label>';
-        echo '    <select name="conduct" class="form-control mr-2">';
-        $conductOpts = [''=>"-- Any --", 'accepted'=>'Accepted','pending'=>'Pending'];
-        foreach ($conductOpts as $k=>$v) { echo '<option value="'.htmlspecialchars($k).'"'.($conduct===$k?' selected':'').'>'.htmlspecialchars($v).'</option>'; }
-        echo '    </select>';
+        // Conduct is shown as two separate tables below
         echo '    <label class="mr-2">Course</label>';
         echo '    <select name="course" class="form-control mr-2">';
         echo '      <option value="">-- Any --</option>';
@@ -113,6 +112,43 @@ if ($deptFilter === null) {
         echo '  </form>';
         echo '</div>';
 
+        // Accepted list
+        echo '<h5 class="mt-3">Accepted (Code of Conduct)</h5>';
+        echo '<div class="table-responsive">';
+        echo '  <table class="table table-hover">';
+        echo '    <thead class="thead-dark">';
+        echo '      <tr>';
+        echo '        <th>Student_ID</th>';
+        echo '        <th>Student Name</th>';
+        echo '        <th>Course</th>';
+        echo '        <th>Academic Year</th>';
+        echo '        <th>Enroll Date</th>';
+        echo '        <th>Status</th>';
+        echo '        <th>Accepted At</th>';
+        echo '      </tr>';
+        echo '    </thead>';
+        echo '    <tbody>';
+        if ($resA && mysqli_num_rows($resA) > 0) {
+            while ($r = mysqli_fetch_assoc($resA)) {
+                echo '<tr>';
+                echo '  <td>'.htmlspecialchars($r['student_id']).'</td>';
+                echo '  <td>'.htmlspecialchars($r['student_fullname']).'</td>';
+                echo '  <td>'.htmlspecialchars($r['course_id']).' - '.htmlspecialchars($r['course_name']).'</td>';
+                echo '  <td>'.htmlspecialchars($r['academic_year']).'</td>';
+                echo '  <td>'.htmlspecialchars($r['student_enroll_date']).'</td>';
+                echo '  <td>'.htmlspecialchars($r['student_enroll_status']).'</td>';
+                echo '  <td>'.htmlspecialchars($r['student_conduct_accepted_at']).'</td>';
+                echo '</tr>';
+            }
+        } else {
+            echo '<tr><td colspan="7">0 results</td></tr>';
+        }
+        echo '    </tbody>';
+        echo '  </table>';
+        echo '</div>';
+
+        // Not accepted list
+        echo '<h5 class="mt-4">Not Accepted (Pending)</h5>';
         echo '<div class="table-responsive">';
         echo '  <table class="table table-hover">';
         echo '    <thead class="thead-dark">';
@@ -126,8 +162,8 @@ if ($deptFilter === null) {
         echo '      </tr>';
         echo '    </thead>';
         echo '    <tbody>';
-        if ($res && mysqli_num_rows($res) > 0) {
-            while ($r = mysqli_fetch_assoc($res)) {
+        if ($resP && mysqli_num_rows($resP) > 0) {
+            while ($r = mysqli_fetch_assoc($resP)) {
                 echo '<tr>';
                 echo '  <td>'.htmlspecialchars($r['student_id']).'</td>';
                 echo '  <td>'.htmlspecialchars($r['student_fullname']).'</td>';
