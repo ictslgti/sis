@@ -967,9 +967,15 @@ if ($u_t === 'STU') {
             <div class="sidebar-submenu">
               <ul>
                 <li>  <?php if((($_SESSION['user_type'] =='WAR') || ($_SESSION['user_type'] =='HOD'))) { ?>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">Attendance Info</a>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendance Info</a>
                 </li> <?php } ?> 
-                    
+                <li><?php if((($_SESSION['user_type'] =='WAR') || ($_SESSION['user_type'] =='HOD'))) { ?>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">Attendance </a>
+                  <hr>
+                </li>  <?php } ?>             
+                <li><?php if($_SESSION['user_type'] =='ADM') { ?>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/ManageAttendance.php">Attendance (Admin)</a>
+                </li>  <?php } ?>         
               </ul>
             </div>
           </li>
