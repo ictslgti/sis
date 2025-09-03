@@ -133,7 +133,7 @@ if ($u_t === 'STU') {
             <div class="sidebar-submenu">
               <ul>
                 <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/Student.php">Students Info</a>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Students Info</a>
                 </li>
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/AddStudent.php">Add a Student</a>
@@ -346,21 +346,8 @@ if ($u_t === 'STU') {
             </div>
           </li>
 
-          <!-- Attendances -->
-          <li class="sidebar-dropdown">
-            <a href="#">
-              <i class="fas fa-chalkboard-teacher"></i>
-              <span>Attendances</span>
-            </a>
-            <div class="sidebar-submenu">
-              <ul>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendances Info</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MarkAttendance.php">Mark Attendance</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/AttendanceReport.php">Attendance Report</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/WarningsLetters.php">Warnings Letters</a></li>
-              </ul>
-            </div>
-          </li>
+          <!-- Attendances (hidden) -->
+          <!-- Removed per requirement: no attendance in menu -->
 
           <!-- On-the-job Training -->
           <li class="sidebar-dropdown">
@@ -466,8 +453,6 @@ if ($u_t === 'STU') {
           <?php } ?>
           <?php if(isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN1','IN2','LE1','LE2','ADM'])) { ?>
           <li class="sidebar-dropdown">
-          
-
             <a href="#">
               <i class="fas fa-university"></i>
               <span>Departments</span>
@@ -577,7 +562,7 @@ if ($u_t === 'STU') {
             <div class="sidebar-submenu">
               <ul>
                 <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/Student.php" onclick="myFunction()">Students Info</a><script>function myFunction() { alert("Welcome to SLGTI Active & Following Students Informations");}</script>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Students Info</a>
                 </li>
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/AddStudent.php">Add a Student</a>
@@ -685,32 +670,15 @@ if ($u_t === 'STU') {
           </li>
           <?php } ?>
 
-          <?php if($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>
+          <!-- Attendance menu hidden per requirement -->
+          <?php /* if($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-chalkboard-teacher"></i>
               <span>Attendances</span>
-              <!-- <span class="badge badge-pill badge-danger">3</span> -->
             </a>
-            <div class="sidebar-submenu">
-              <ul>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendances Info</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MarkAttendance.php">Mark Attendance</a>
-                  <hr>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/AttendanceReport.php">Attendance Report</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/WarningsLetters.php">Warnings Letters</a>
-                </li>
-              </ul>
-            </div>
           </li>
-          <?php } ?>
+          <?php } */ ?>
 
           <?php if($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>
           <li class="sidebar-dropdown">
@@ -999,15 +967,9 @@ if ($u_t === 'STU') {
             <div class="sidebar-submenu">
               <ul>
                 <li>  <?php if((($_SESSION['user_type'] =='WAR') || ($_SESSION['user_type'] =='HOD'))) { ?>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendance Info</a>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">Attendance Info</a>
                 </li> <?php } ?> 
-                <li><?php if((($_SESSION['user_type'] =='WAR') || ($_SESSION['user_type'] =='HOD'))) { ?>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendance </a>
-                  <hr>
-                </li>  <?php } ?>             
-                <li><?php if($_SESSION['user_type'] =='ADM') { ?>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/ManageAttendance.php">Attendance (Admin)</a>
-                </li>  <?php } ?>         
+                    
               </ul>
             </div>
           </li>
