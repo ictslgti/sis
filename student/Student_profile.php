@@ -7,12 +7,16 @@ if (!headers_sent()) { ob_start(); }
 require_once __DIR__ . '/../config.php';
 
 // One-time Student Code of Conduct acceptance handling (pre-render)
-// Applies only when the logged-in user is a student viewing their own profile (no Sid param)
+// Applies when the logged-in user is a student viewing their own profile
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $__requireConduct = false;
 $__conductChecked = false;
 $__loggedIsStudent = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU';
-$__loggedStudentId = ($__loggedIsStudent && empty($_GET['Sid']) && isset($_SESSION['user_name'])) ? $_SESSION['user_name'] : null;
+// Treat as "self-view" if no Sid OR Sid matches the logged-in student id
+$__selfId = ($__loggedIsStudent && isset($_SESSION['user_name'])) ? $_SESSION['user_name'] : null;
+$__viewSid = isset($_GET['Sid']) ? (string)$_GET['Sid'] : null;
+$__isSelfView = ($__selfId !== null) && (empty($__viewSid) || $__viewSid === $__selfId);
+$__loggedStudentId = $__isSelfView ? $__selfId : null;
 
 if ($__loggedStudentId) {
   // Ensure optional acceptance column exists once
@@ -40,10 +44,13 @@ if ($__loggedStudentId) {
         mysqli_stmt_execute($__st);
         mysqli_stmt_close($__st);
       }
+      // Redirect back to profile; preserve Sid=self if present
+      $qs = '?accepted=1';
+      if (!empty($__viewSid) && $__viewSid === $__selfId) { $qs .= '&Sid=' . urlencode($__selfId); }
       if (!headers_sent()) {
-        header('Location: /student/Student_profile.php?accepted=1');
+        header('Location: /student/Student_profile.php' . $qs);
       } else {
-        echo '<script>window.location.href = "/student/Student_profile.php?accepted=1";</script>';
+        echo '<script>window.location.href = "/student/Student_profile.php' . $qs . '";</script>';
       }
       exit;
     } elseif ($act === 'decline') {
