@@ -49,9 +49,10 @@ if ($deptCode !== '') {
   if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
   // Only active/following students
   $where .= " AND se.student_enroll_status IN ('Following','Active')";
+  // Exclude students who have NOT accepted conduct (when column exists)
+  if ($hasConduct) { $where .= " AND s.student_conduct_accepted_at IS NOT NULL"; }
 
-  $selectConduct = $hasConduct ? ", s.student_conduct_accepted_at" : "";
-  $sql = "SELECT s.student_id, s.student_fullname, se.course_id, c.course_name".$selectConduct.
+  $sql = "SELECT s.student_id, s.student_fullname, se.course_id, c.course_name".
          "\n          FROM student_enroll se\n          JOIN course c ON c.course_id = se.course_id\n          JOIN student s ON s.student_id = se.student_id\n          $where\n          ORDER BY s.student_id ASC";
   $res = mysqli_query($con, $sql);
   if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
