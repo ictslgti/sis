@@ -177,8 +177,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_pdf'])) {
       $type = mime_content_type($tmp);
       if ($size <= 0) {
         $errors[] = 'Empty file.';
-      } elseif ($size > 15*1024*1024) {
-        $errors[] = 'File too large (max 15MB).';
+      } elseif ($size > 50*1024*1024) {
+        $errors[] = 'File too large (max 50MB before compression).';
       } elseif (stripos($type, 'pdf') === false) {
         $errors[] = 'Only PDF files are accepted.';
       }
@@ -197,22 +197,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_pdf'])) {
       $errors[] = 'Destination directory is not writable: ' . htmlspecialchars($destDir);
     }
 
-    $destPath = $destDir . '/' . preg_replace('/[^A-Za-z0-9_-]/', '_', $studentId) . '.pdf';
+    $safeId = preg_replace('/[^A-Za-z0-9_-]/', '_', $studentId);
+    $origPath = $destDir . '/' . $safeId . '_orig.pdf';
+    $destPath = $destDir . '/' . $safeId . '.pdf';
     if (empty($errors)) {
-      if (!move_uploaded_file($tmp, $destPath)) {
+      // Save original upload to a temporary path first
+      if (!move_uploaded_file($tmp, $origPath)) {
         // Some servers require copy
         $data = @file_get_contents($tmp);
-        if ($data === false || @file_put_contents($destPath, $data) === false) {
+        if ($data === false || @file_put_contents($origPath, $data) === false) {
           $lastErr = error_get_last();
-          $errors[] = 'Failed to save file on server at ' . htmlspecialchars($destPath) .
+          $errors[] = 'Failed to save file on server at ' . htmlspecialchars($origPath) .
                       (isset($lastErr['message']) ? (' | Reason: ' . htmlspecialchars($lastErr['message'])) : '');
         }
       }
     }
 
     if (empty($errors)) {
+      // Try to compress to <= 10MB using Ghostscript, falling back gracefully
+      $targetBytes = 10 * 1024 * 1024; // 10MB
+      $gsAvailable = function_exists('exec');
+      $compressionSucceeded = false;
+
+      if ($gsAvailable) {
+        // Try multiple quality presets
+        $presets = ['/ebook', '/screen']; // ebook first (better quality), then screen (stronger compression)
+        foreach ($presets as $preset) {
+          $cmd = 'gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dQUIET -dBATCH '
+               . '-dPDFSETTINGS=' . escapeshellarg($preset) . ' '
+               . '-sOutputFile=' . escapeshellarg($destPath) . ' '
+               . escapeshellarg($origPath) . ' 2>&1';
+          $out = [];
+          $ret = 0;
+          @exec($cmd, $out, $ret);
+          if ($ret === 0 && is_file($destPath)) {
+            if (filesize($destPath) <= $targetBytes) { $compressionSucceeded = true; break; }
+          }
+        }
+        // As a last resort, try aggressive downsampling
+        if (!$compressionSucceeded) {
+          $cmd = 'gs -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dNOPAUSE -dQUIET -dBATCH '
+               . '-dColorImageDownsampleType=/Average -dColorImageResolution=100 '
+               . '-dGrayImageDownsampleType=/Average -dGrayImageResolution=100 '
+               . '-dMonoImageDownsampleType=/Subsample -dMonoImageResolution=200 '
+               . '-sOutputFile=' . escapeshellarg($destPath) . ' '
+               . escapeshellarg($origPath) . ' 2>&1';
+          $out = [];
+          $ret = 0;
+          @exec($cmd, $out, $ret);
+          if ($ret === 0 && is_file($destPath) && filesize($destPath) <= $targetBytes) {
+            $compressionSucceeded = true;
+          }
+        }
+      }
+
+      if (!$gsAvailable) {
+        // Ghostscript not available; keep original but enforce size
+        @rename($origPath, $destPath);
+        if (is_file($destPath) && filesize($destPath) > $targetBytes) {
+          $errors[] = 'Uploaded PDF is larger than 10MB and server compression is unavailable. Please upload a smaller file.';
+        }
+      } else {
+        if ($compressionSucceeded) {
+          @unlink($origPath);
+        } else {
+          // If compression failed or still too big, fall back to original
+          @rename($origPath, $destPath);
+          if (is_file($destPath) && filesize($destPath) > $targetBytes) {
+            $errors[] = 'Uploaded PDF exceeds 10MB after compression. Please reduce the file and try again.';
+          }
+        }
+      }
+    }
+
+    if (empty($errors)) {
       @chmod($destPath, 0664);
-      $relPath = 'student/documentation/' . preg_replace('/[^A-Za-z0-9_-]/', '_', $studentId) . '.pdf';
+      $relPath = 'student/documentation/' . $safeId . '.pdf';
 
       // Ensure column student_profile_doc exists; if not, add it
       $hasCol = false;
@@ -281,7 +341,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['upload_pdf'])) {
             <div class="form-group">
               <label for="doc_pdf">PDF File</label>
               <input type="file" class="form-control-file" id="doc_pdf" name="doc_pdf" accept="application/pdf" required>
-              <small class="form-text text-muted">Upload one consolidated PDF (max 15 MB) containing all scanned documents.</small>
+              <small class="form-text text-muted">Upload one consolidated PDF. Files up to 50 MB are accepted and will be auto-compressed to 10 MB. If compression cannot reduce below 10 MB, the upload will be rejected.</small>
             </div>
             <button type="submit" name="upload_pdf" value="1" class="btn btn-primary"><i class="fa fa-upload"></i> Upload</button>
           </form>
