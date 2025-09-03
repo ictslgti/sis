@@ -44,6 +44,36 @@
 
 jQuery(function ($) {
 
+// Restore active submenus from saved state before binding handlers
+function restoreActiveSubmenus() {
+  try {
+    var saved = localStorage.getItem('slgti_sidebar_active_idx');
+    if (!saved) return;
+    var idxs = JSON.parse(saved);
+    if (!Array.isArray(idxs)) return;
+    var all = $(".sidebar-dropdown");
+    idxs.forEach(function(i){
+      var li = all.eq(i);
+      if (li && li.length) {
+        li.addClass('active');
+        li.children('.sidebar-submenu').show();
+      }
+    });
+  } catch(e){}
+}
+
+function saveActiveSubmenus() {
+  try {
+    var idxs = [];
+    $(".sidebar-dropdown").each(function(i, el){
+      if ($(el).hasClass('active')) idxs.push(i);
+    });
+    localStorage.setItem('slgti_sidebar_active_idx', JSON.stringify(idxs));
+  } catch(e){}
+}
+
+restoreActiveSubmenus();
+
 $(".sidebar-dropdown > a").on('click', function(e) {
 e.preventDefault();
 $(".sidebar-submenu").slideUp(200);
@@ -65,15 +95,22 @@ $(this)
   .parent()
   .addClass("active");
 }
+ saveActiveSubmenus();
 });
+
+function saveSidebarOpenState(isOpen){
+  try { localStorage.setItem('slgti_sidebar_open', isOpen ? '1' : '0'); } catch(e){}
+}
 
 $("#close-sidebar").on('click', function(e) {
   e.preventDefault();
   $(".page-wrapper").removeClass("toggled");
+  saveSidebarOpenState(false);
 });
 $("#show-sidebar").on('click', function(e) {
   e.preventDefault();
   $(".page-wrapper").addClass("toggled");
+  saveSidebarOpenState(true);
 });
 
   // Responsive behavior: on mobile, start collapsed and auto-close after navigation
@@ -81,26 +118,35 @@ $("#show-sidebar").on('click', function(e) {
     return window.matchMedia('(max-width: 991.98px)').matches; // Bootstrap lg breakpoint
   }
 
-  // Initial state based on viewport: desktop open (fixed), mobile closed (click to open)
-  if (isMobile()) {
-    $(".page-wrapper").removeClass("toggled");
-  } else {
-    $(".page-wrapper").addClass("toggled");
-  }
-
-  // Update on resize
-  $(window).on('resize', function() {
-    if (isMobile()) {
+  // Initial state based on saved preference; if none, default: desktop open, mobile closed
+  (function(){
+    var saved = null; try { saved = localStorage.getItem('slgti_sidebar_open'); } catch(e){}
+    if (saved === '1') {
+      $(".page-wrapper").addClass("toggled");
+    } else if (saved === '0') {
       $(".page-wrapper").removeClass("toggled");
     } else {
-      $(".page-wrapper").addClass("toggled");
+      if (isMobile()) {
+        $(".page-wrapper").removeClass("toggled");
+      } else {
+        $(".page-wrapper").addClass("toggled");
+      }
     }
+  })();
+
+  // Update on resize, but respect saved preference if present
+  $(window).on('resize', function() {
+    var saved = null; try { saved = localStorage.getItem('slgti_sidebar_open'); } catch(e){}
+    if (saved === '1') { $(".page-wrapper").addClass("toggled"); return; }
+    if (saved === '0') { $(".page-wrapper").removeClass("toggled"); return; }
+    if (isMobile()) { $(".page-wrapper").removeClass("toggled"); } else { $(".page-wrapper").addClass("toggled"); }
   });
 
   // After clicking any sidebar link on mobile, hide the sidebar to show content
   $('#sidebar a').on('click', function(e) {
     if (isMobile()) {
       $(".page-wrapper").removeClass("toggled");
+      saveSidebarOpenState(false);
     }
   });
 

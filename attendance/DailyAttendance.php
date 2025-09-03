@@ -44,6 +44,8 @@ if ($chk = mysqli_query($con, "SHOW COLUMNS FROM `student` LIKE 'student_conduct
 
 // Load students (scoped to department and optional course)
 $students = [];
+// Track how many students were excluded due to not accepting conduct
+$excludedCount = 0;
 if ($deptCode !== '') {
   $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
   if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
@@ -52,10 +54,25 @@ if ($deptCode !== '') {
   // Exclude students who have NOT accepted conduct (when column exists)
   if ($hasConduct) { $where .= " AND s.student_conduct_accepted_at IS NOT NULL"; }
 
-  $sql = "SELECT s.student_id, s.student_fullname, se.course_id, c.course_name".
-         "\n          FROM student_enroll se\n          JOIN course c ON c.course_id = se.course_id\n          JOIN student s ON s.student_id = se.student_id\n          $where\n          ORDER BY s.student_id ASC";
+  // Build SELECT list conditionally based on conduct column availability
+  $selectCols = "s.student_id, s.student_fullname, se.course_id, c.course_name";
+  if ($hasConduct) { $selectCols .= ", s.student_conduct_accepted_at"; }
+  $sql = "SELECT $selectCols".
+          "\n          FROM student_enroll se\n          JOIN course c ON c.course_id = se.course_id\n          JOIN student s ON s.student_id = se.student_id\n          $where\n          ORDER BY s.student_id ASC";
   $res = mysqli_query($con, $sql);
   if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
+
+  // Compute excluded count for info badge
+  if ($hasConduct) {
+    $whereBase = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
+    if ($course !== '') { $whereBase .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
+    $whereBase .= " AND se.student_enroll_status IN ('Following','Active') AND s.student_conduct_accepted_at IS NULL";
+    $cntSql = "SELECT COUNT(*) AS cnt\n              FROM student_enroll se\n              JOIN course c ON c.course_id = se.course_id\n              JOIN student s ON s.student_id = se.student_id\n              $whereBase";
+    if ($cres = mysqli_query($con, $cntSql)) {
+      if ($crow = mysqli_fetch_assoc($cres)) { $excludedCount = (int)$crow['cnt']; }
+      mysqli_free_result($cres);
+    }
+  }
 }
 
 // Load already marked attendance for this date+slot for quick pre-check
@@ -112,6 +129,11 @@ if (!empty($students)) {
           <input type="hidden" name="date" value="<?php echo htmlspecialchars($date); ?>">
           <!-- Single slot only; no slot field needed -->
           <input type="hidden" name="course" value="<?php echo htmlspecialchars($course); ?>">
+          <?php if ($hasConduct): ?>
+            <div class="mb-2">
+              <span class="badge badge-info">Excluded <?php echo (int)$excludedCount; ?> not accepted Code of Conduct</span>
+            </div>
+          <?php endif; ?>
           <div class="mb-2">
             <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAll(true)">Mark All Present</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAll(false)">Unmark All</button>
@@ -129,10 +151,10 @@ if (!empty($students)) {
               </thead>
               <tbody>
                 <?php if (!empty($students)): ?>
-                  <?php foreach($students as $s): $sid=$s['student_id']; $isP = isset($presentMap[$sid]) ? $presentMap[$sid] : false; $accepted = ($hasConduct && !empty($s['student_conduct_accepted_at'])); ?>
+                  <?php foreach($students as $s): $sid=$s['student_id']; $isP = isset($presentMap[$sid]) ? $presentMap[$sid] : false; ?>
                     <tr>
                       <td>
-                        <input type="checkbox" name="present[]" value="<?php echo htmlspecialchars($sid); ?>" <?php echo $isP?'checked':''; ?> <?php echo ($hasConduct && !$accepted)?'disabled title="Not accepted"':''; ?>>
+                        <input type="checkbox" name="present[]" value="<?php echo htmlspecialchars($sid); ?>" <?php echo $isP?'checked':''; ?> >
                       </td>
                       <td><?php echo htmlspecialchars($sid); ?></td>
                       <td><?php echo htmlspecialchars($s['student_fullname']); ?></td>

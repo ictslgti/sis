@@ -9,6 +9,25 @@ require_once __DIR__ . '/../config.php';
 // One-time Student Code of Conduct acceptance handling (pre-render)
 // Applies when the logged-in user is a student viewing their own profile
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
+$__dbName_global = null;
+// Ensure optional columns for allowance and leaving certificate exist (globally, once per request)
+if ($__resDb = mysqli_query($con, 'SELECT DATABASE() as db')) { $__rowDb = mysqli_fetch_assoc($__resDb); $__dbName_global = $__rowDb ? $__rowDb['db'] : null; }
+if ($__dbName_global) {
+  $__colsToEnsure = [
+    'allowance_eligible' => "ALTER TABLE student ADD COLUMN allowance_eligible TINYINT(1) NOT NULL DEFAULT 0",
+    'leaving_certificate_confirmed_at' => "ALTER TABLE student ADD COLUMN leaving_certificate_confirmed_at DATETIME NULL"
+  ];
+  foreach ($__colsToEnsure as $__colName => $__ddl) {
+    if ($__chk = mysqli_prepare($con, "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='student' AND COLUMN_NAME=? LIMIT 1")) {
+      mysqli_stmt_bind_param($__chk, 'ss', $__dbName_global, $__colName);
+      mysqli_stmt_execute($__chk);
+      $__cres = mysqli_stmt_get_result($__chk);
+      $__exists = ($__cres && mysqli_num_rows($__cres) === 1);
+      mysqli_stmt_close($__chk);
+      if (!($__exists)) { @mysqli_query($con, $__ddl); }
+    }
+  }
+}
 $__requireConduct = false;
 $__conductChecked = false;
 $__loggedIsStudent = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU';
@@ -98,6 +117,38 @@ if ($isWarden && !empty($_SESSION['user_name'])) {
       if ($__row && isset($__row['staff_gender'])) { $wardenGender = $__row['staff_gender']; }
     }
     mysqli_stmt_close($__st);
+  }
+}
+
+// Handle ADMIN/HOD updates for allowance eligibility and leaving certificate confirmation
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_flags') {
+  $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
+  if (in_array($role, ['ADM','HOD','SAO'], true)) {
+    $targetId = isset($_POST['target_id']) ? trim($_POST['target_id']) : null;
+    if ($targetId !== null && $targetId !== '') {
+      // Update allowance eligible if provided
+      if (isset($_POST['allowance_eligible'])) {
+        $ae = ($_POST['allowance_eligible'] == '1') ? 1 : 0;
+        if ($stA = mysqli_prepare($con, "UPDATE student SET allowance_eligible=? WHERE student_id=? LIMIT 1")) {
+          mysqli_stmt_bind_param($stA, 'is', $ae, $targetId);
+          mysqli_stmt_execute($stA);
+          mysqli_stmt_close($stA);
+        }
+      }
+      // Update leaving certificate confirmation
+      if (isset($_POST['lc_action'])) {
+        if ($_POST['lc_action'] === 'confirm') {
+          @mysqli_query($con, "UPDATE student SET leaving_certificate_confirmed_at=NOW() WHERE student_id='" . mysqli_real_escape_string($con, $targetId) . "' LIMIT 1");
+        } elseif ($_POST['lc_action'] === 'clear') {
+          @mysqli_query($con, "UPDATE student SET leaving_certificate_confirmed_at=NULL WHERE student_id='" . mysqli_real_escape_string($con, $targetId) . "' LIMIT 1");
+        }
+      }
+      // Redirect back to view with flash
+      $qs = '?flags=1';
+      if (isset($_GET['Sid'])) { $qs .= '&Sid=' . urlencode($_GET['Sid']); }
+      if (!headers_sent()) { header('Location: /student/Student_profile.php' . $qs); } else { echo '<script>window.location.href = "/student/Student_profile.php' . $qs . '";</script>'; }
+      exit;
+    }
   }
 }
 
@@ -328,13 +379,17 @@ if ($showTopNav && (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_
 <!---START YOUR CODER HERE----->
 <!-----END YOUR CODE----->
 <?php
-// Show flash message after redirects (PRG pattern)
+// Show flash messages after redirects (PRG pattern)
 if (isset($_GET['updated']) && $_GET['updated'] === '1' && !isset($_GET['Sid'])) {
   echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile updated successfully.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+}
+if (isset($_GET['flags']) && $_GET['flags'] === '1') {
+  echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Student status updated.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
 }
 $stid = $title = $fname = $ininame = $gender = $civil = $img = $email = $nic = $dob = $phone = $address = $zip = $district = $division = $province = $blood = $mode = $depth = $level =
 $ename = $eaddress = $ephone = $id =$erelation = $enstatus = $coid = $year = $enroll = $exit = $qutype = $index = $yoe = $subject = $results = $pass = $npass = $cpass = $updatedAt = null;
 $nationality = $whatsapp = null;
+$allowanceEligible = 0; $leavingCertAt = null;
 $religion = null;
 $docPath = null;
 
@@ -388,7 +443,7 @@ if(isset($_GET['Sid']))
  // Build base query with optional gender condition for wardens
  $baseSql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,
 `student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,
-`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
+`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`, s.`allowance_eligible`, s.`leaving_certificate_confirmed_at`, `student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
 `student_enroll_status`,`user_password_hash`" . ($hasUpdatedAt ? ", `student_updated_at`" : "") . " FROM `student` as s, student_enroll as e, user as u, course as c, department as d ";
  $baseSql .= "WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and c.department_id=d.department_id and `student_enroll_status`='Following' and user_name=?";
  if ($isWarden && $wardenGender) {
@@ -409,7 +464,7 @@ if(isset($_GET['Sid']))
 
  // Fallback: if no row due to status filter, try again without `student_enroll_status='Following'`
  if ($result && mysqli_num_rows($result) === 0) {
-   $fallbackSql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash`" . ($hasUpdatedAt ? ", `student_updated_at`" : "") . " FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and c.department_id=d.department_id and user_name=?";
+   $fallbackSql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`, s.`allowance_eligible`, s.`leaving_certificate_confirmed_at`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash`" . ($hasUpdatedAt ? ", `student_updated_at`" : "") . " FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and c.department_id=d.department_id and user_name=?";
    if ($isWarden && $wardenGender) { $fallbackSql .= " AND s.student_gender=?"; }
    if ($st2 = mysqli_prepare($con, $fallbackSql)) {
      if ($isWarden && $wardenGender) { mysqli_stmt_bind_param($st2, 'ss', $username, $wardenGender); } else { mysqli_stmt_bind_param($st2, 's', $username); }
@@ -421,7 +476,7 @@ if(isset($_GET['Sid']))
 
  // Final fallback: no enroll record, fetch directly from student table
  if ($result && mysqli_num_rows($result) === 0) {
-   if ($st3 = mysqli_prepare($con, "SELECT `student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,\n`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`, `student_status`, `student_nationality`, `student_whatsapp`, `student_religion` FROM student WHERE student_id=? LIMIT 1")) {
+   if ($st3 = mysqli_prepare($con, "SELECT `student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,\n`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`, `student_status`, `student_nationality`, `student_whatsapp`, `student_religion`, `allowance_eligible`, `leaving_certificate_confirmed_at` FROM student WHERE student_id=? LIMIT 1")) {
      mysqli_stmt_bind_param($st3, 's', $username);
      mysqli_stmt_execute($st3);
      $r3 = mysqli_stmt_get_result($st3);
@@ -450,6 +505,8 @@ if(isset($_GET['Sid']))
        if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
        if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
        if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+       if (isset($row['allowance_eligible'])) { $allowanceEligible = (int)$row['allowance_eligible']; }
+       if (isset($row['leaving_certificate_confirmed_at'])) { $leavingCertAt = $row['leaving_certificate_confirmed_at']; }
      }
      mysqli_stmt_close($st3);
    }
@@ -493,6 +550,8 @@ if(isset($_GET['Sid']))
     $pass=$row['user_password_hash'];
     $img=$row['student_profile_img'];
     if ($hasUpdatedAt) { $updatedAt = $row['student_updated_at']; }
+    if (isset($row['allowance_eligible'])) { $allowanceEligible = (int)$row['allowance_eligible']; }
+    if (isset($row['leaving_certificate_confirmed_at'])) { $leavingCertAt = $row['leaving_certificate_confirmed_at']; }
   }
   else if ($isWarden && ($result === false || mysqli_num_rows($result) === 0))
   {
@@ -503,7 +562,7 @@ else
 
 $username = $_SESSION['user_name'];
 
- $sql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id \n and e.course_id=c.course_id and  c.department_id=d.department_id and `student_enroll_status`='Following' and user_name='$username'";
+ $sql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`, s.`allowance_eligible`, s.`leaving_certificate_confirmed_at`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id \n and e.course_id=c.course_id and  c.department_id=d.department_id and `student_enroll_status`='Following' and user_name='$username'";
  $result = mysqli_query($con,$sql);
 
   if($result && mysqli_num_rows($result)==1)
@@ -544,11 +603,13 @@ $username = $_SESSION['user_name'];
     if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
     if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
     if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+    if (isset($row['allowance_eligible'])) { $allowanceEligible = (int)$row['allowance_eligible']; }
+    if (isset($row['leaving_certificate_confirmed_at'])) { $leavingCertAt = $row['leaving_certificate_confirmed_at']; }
   }
 else
 {
-  // Fallback without status filter (prepared)
-  $sql2 = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and  c.department_id=d.department_id and user_name=?";
+  // Fallback: if no row due to status filter, try again without `student_enroll_status='Following'`
+  $sql2 = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`, s.`allowance_eligible`, s.`leaving_certificate_confirmed_at`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and  c.department_id=d.department_id and user_name=?";
   $result2 = false;
   if ($st2 = mysqli_prepare($con, $sql2)) {
     mysqli_stmt_bind_param($st2, 's', $username);
@@ -591,10 +652,12 @@ else
     if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
     if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
     if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+    if (isset($row['allowance_eligible'])) { $allowanceEligible = (int)$row['allowance_eligible']; }
+    if (isset($row['leaving_certificate_confirmed_at'])) { $leavingCertAt = $row['leaving_certificate_confirmed_at']; }
   }
   // Final fallback: only student table
   else {
-    if ($stS = mysqli_prepare($con, "SELECT `student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,\n`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`, `student_status`, `student_nationality`, `student_whatsapp`, `student_religion` FROM student WHERE student_id=? LIMIT 1")) {
+    if ($stS = mysqli_prepare($con, "SELECT `student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,\n`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`, `student_status`, `student_nationality`, `student_whatsapp`, `student_religion`, `allowance_eligible`, `leaving_certificate_confirmed_at` FROM student WHERE student_id=? LIMIT 1")) {
       mysqli_stmt_bind_param($stS, 's', $username);
       mysqli_stmt_execute($stS);
       $rS = mysqli_stmt_get_result($stS);
@@ -623,6 +686,8 @@ else
         if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
         if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
         if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+        if (isset($row['allowance_eligible'])) { $allowanceEligible = (int)$row['allowance_eligible']; }
+        if (isset($row['leaving_certificate_confirmed_at'])) { $leavingCertAt = $row['leaving_certificate_confirmed_at']; }
       }
       mysqli_stmt_close($stS);
     }
@@ -631,7 +696,7 @@ else
 
 // Fetch uploaded documentation path and bank details now that $username is known
 if (!empty($username)) {
-  $__docStmt = mysqli_prepare($con, "SELECT student_profile_doc, bank_name, bank_account_no, bank_branch, bank_frontsheet_path FROM student WHERE student_id=? LIMIT 1");
+  $__docStmt = mysqli_prepare($con, "SELECT student_profile_doc, bank_name, bank_account_no, bank_branch, bank_frontsheet_path, allowance_eligible, leaving_certificate_confirmed_at FROM student WHERE student_id=? LIMIT 1");
   if ($__docStmt) {
     mysqli_stmt_bind_param($__docStmt, 's', $username);
     if (mysqli_stmt_execute($__docStmt)) {
@@ -642,6 +707,8 @@ if (!empty($username)) {
         $bankAcc    = isset($__docRow['bank_account_no']) ? $__docRow['bank_account_no'] : null;
         $bankBranch = isset($__docRow['bank_branch']) ? $__docRow['bank_branch'] : null;
         $bankFront  = isset($__docRow['bank_frontsheet_path']) ? $__docRow['bank_frontsheet_path'] : null;
+        $allowanceEligible = (int)($__docRow['allowance_eligible'] ?? 0);
+        $leavingCertAt = $__docRow['leaving_certificate_confirmed_at'] ?? null;
       }
     }
     mysqli_stmt_close($__docStmt);
@@ -993,6 +1060,34 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                   <a class="btn btn-sm btn-primary" href="/student/UploadDocumentation.php?Sid=<?php echo urlencode($username); ?>">
                     <i class="fa fa-upload"></i> Upload / Replace
                   </a>
+                <?php } ?>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 mb-4">
+            <div class="card h-100">
+              <div class="card-header bg-info text-white">Status & Eligibility</div>
+              <div class="card-body">
+                <div class="mb-2">
+                  <small class="text-muted d-block">Allowance Eligible</small>
+                  <span class="text-dark font-weight-bold"><?php echo $allowanceEligible ? 'Yes' : 'No'; ?></span>
+                </div>
+                <div class="mb-3">
+                  <small class="text-muted d-block">Leaving Certificate Confirmation</small>
+                  <span class="text-dark font-weight-bold"><?php echo $leavingCertAt ? date('Y-m-d H:i', strtotime($leavingCertAt)) : 'Not confirmed'; ?></span>
+                </div>
+                <?php $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : ''; if (in_array($role, ['ADM','HOD','SAO'], true)) { ?>
+                  <form method="post" class="form-inline">
+                    <input type="hidden" name="action" value="update_flags" />
+                    <input type="hidden" name="target_id" value="<?php echo htmlspecialchars($username); ?>" />
+                    <div class="form-check mr-3">
+                      <input class="form-check-input" type="checkbox" id="allowanceEligible" name="allowance_eligible" value="1" <?php echo $allowanceEligible ? 'checked' : ''; ?> />
+                      <label class="form-check-label" for="allowanceEligible">Allowance eligible</label>
+                    </div>
+                    <button type="submit" class="btn btn-sm btn-success mr-2">Save</button>
+                    <button type="submit" name="lc_action" value="confirm" class="btn btn-sm btn-outline-primary mr-2">Confirm Certificate</button>
+                    <button type="submit" name="lc_action" value="clear" class="btn btn-sm btn-outline-secondary">Clear</button>
+                  </form>
                 <?php } ?>
               </div>
             </div>

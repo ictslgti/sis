@@ -36,6 +36,21 @@ if ($u_t === 'STU') {
 }
 
 ?>
+<style>
+  /* Mobile spacing and alignment improvements */
+  @media (max-width: 575.98px) {
+    .page-content .container-fluid { padding: 0.75rem 0.75rem; }
+    #sidebar .sidebar-header { padding: 0.75rem; }
+    #sidebar .sidebar-menu ul li a { padding-top: 0.6rem; padding-bottom: 0.6rem; }
+    #sidebar .sidebar-submenu ul li a { padding-left: 2.25rem; }
+    #show-sidebar.btn { top: 0.5rem; left: 0.5rem; position: sticky; z-index: 1030; }
+  }
+  @media (min-width: 576px) and (max-width: 991.98px) {
+    .page-content .container-fluid { padding: 1rem 1rem; }
+  }
+  /* Ensure content has breathing room when sidebar is closed */
+  .page-wrapper .page-content { padding-top: 0.5rem; }
+</style>
 <nav id="sidebar" class="sidebar-wrapper">
     <div class="sidebar-content">
       <div class="sidebar-brand">
@@ -518,7 +533,7 @@ if ($u_t === 'STU') {
             </a>
           </li>
           <?php } ?>
-          <?php if($_SESSION['user_type']!='STU' && !is_role('IN2')){ ?> <li class="sidebar-dropdown">
+          <?php if($_SESSION['user_type']!='STU' && $_SESSION['user_type']!=='SAO' && !is_role('IN2')){ ?> <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-user-tie"></i>
               <span>Staffs</span>
@@ -600,6 +615,7 @@ if ($u_t === 'STU') {
             </a>
           </li>
           <?php } ?>
+          <?php if($_SESSION['user_type']!=='SAO') { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-calendar-alt"></i>
@@ -629,7 +645,8 @@ if ($u_t === 'STU') {
               </ul>
             </div>
           </li>
-          <?php if($_SESSION['user_type'] != 'STU') { ?>
+          <?php } ?>
+          <?php if($_SESSION['user_type'] != 'STU' && $_SESSION['user_type']!=='SAO') { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-award"></i>
@@ -674,7 +691,7 @@ if ($u_t === 'STU') {
           </li>
           <?php } */ ?>
 
-          <?php if($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>
+          <?php if($_SESSION['user_type'] != 'STU' && $_SESSION['user_type']!=='SAO' && !is_role('IN2')) { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-briefcase"></i>
@@ -701,7 +718,7 @@ if ($u_t === 'STU') {
           </li>
           <?php } ?>
 
-          <?php if($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>
+          <?php if($_SESSION['user_type'] != 'STU' && $_SESSION['user_type']!=='SAO' && !is_role('IN2')) { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="far fa-building"></i>
@@ -790,7 +807,7 @@ if ($u_t === 'STU') {
           <?php } ?>
 
 
-          <?php if($_SESSION['user_type']!='STU' && !is_role('IN2')){ ?>
+          <?php if($_SESSION['user_type']!='STU' && $_SESSION['user_type']!=='SAO' && !is_role('IN2')){ ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-file-alt"></i>
@@ -850,7 +867,7 @@ if ($u_t === 'STU') {
           </li>
           <?php } ?>  
 
-          <?php if(!is_role('IN2')){ ?>
+          <?php if(!is_role('IN2') && $_SESSION['user_type']!=='SAO'){ ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-hamburger"></i>
@@ -905,6 +922,7 @@ if ($u_t === 'STU') {
           </li>
           <?php } ?>
 
+          <?php if($_SESSION['user_type']!=='SAO') { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-door-open"></i>
@@ -999,8 +1017,8 @@ if ($u_t === 'STU') {
           <?php } ?>
 
 
-
-          <?php if($_SESSION['user_type'] != 'STU') { ?>
+          <?php } ?>
+          <?php if($_SESSION['user_type'] != 'STU' && $_SESSION['user_type']!=='SAO') { ?>
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-network-wired"></i>
@@ -1053,12 +1071,14 @@ if ($u_t === 'STU') {
               <!-- <span class="badge badge-pill badge-primary">Beta</span> -->
             </a>
           </li>
+          <?php if($_SESSION['user_type']!=='SAO') { ?>
           <li>
             <a href="#">
               <i class="fa fa-calendar"></i>
               <span>Calendar</span>
             </a>
-          </li>        
+          </li>
+          <?php } ?>        
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/password/change_password.php">
               <i class="fa fa-key"></i>
@@ -1079,4 +1099,3 @@ if ($u_t === 'STU') {
       <!-- NOTE: The <div class="container-fluid"> and enclosing <main> are intentionally left open here.
            They are closed in footer.php to wrap each page's main content. -->
 
-<?php // EOF safeguard ?>

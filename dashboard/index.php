@@ -99,86 +99,89 @@ $isStudent = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU')
 <?php else: ?>
 
 <?php
-$total_course = 0;
-$total_students = 0;
+// Centralized counts for top stats
+$deptCount = 0; $courseCount = 0; $acadCount = 0; $studentCount = 0;
+// Departments (exclude admin/administration)
+if ($rs = mysqli_query($con, "SELECT COUNT(department_id) AS cnt FROM department WHERE LOWER(TRIM(department_name)) NOT IN ('admin','administration')")) {
+  if ($r = mysqli_fetch_assoc($rs)) { $deptCount = (int)$r['cnt']; }
+  mysqli_free_result($rs);
+}
+// Courses
+if ($rs = mysqli_query($con, "SELECT COUNT(course_id) AS cnt FROM course")) {
+  if ($r = mysqli_fetch_assoc($rs)) { $courseCount = (int)$r['cnt']; }
+  mysqli_free_result($rs);
+}
+// Academic years
+if ($rs = mysqli_query($con, "SELECT COUNT(academic_year) AS cnt FROM academic")) {
+  if ($r = mysqli_fetch_assoc($rs)) { $acadCount = (int)$r['cnt']; }
+  mysqli_free_result($rs);
+}
+// Students who accepted Code of Conduct
+if ($rs = mysqli_query($con, "SELECT COUNT(student_id) AS cnt FROM student WHERE student_conduct_accepted_at IS NOT NULL")) {
+  if ($r = mysqli_fetch_assoc($rs)) { $studentCount = (int)$r['cnt']; }
+  mysqli_free_result($rs);
+}
 ?>
 
+<style>
+  /* Lightweight gradients for stat cards */
+  .stat-card { border: 0; color: #fff; }
+  /* Requested palette: red, black, yellow, blue */
+  .bg-red    { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%); }
+  .bg-black  { background: linear-gradient(135deg, #343a40 0%, #000000 100%); }
+  .bg-yellow { background: linear-gradient(135deg, #f6c23e 0%, #e0a800 100%); color: #212529; }
+  .bg-blue   { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
+  .stat-card .icon { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.2); }
+  .bg-yellow .icon { background: rgba(0,0,0,0.15); }
+  .stat-label { opacity: .9; font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; }
+  .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+</style>
+
 <div class="row mt-3">
-    <div class="col-md-2 col-sm-12">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Departments</h5>
-                <p class="card-text display-2 ">
-                    <?php          
-                    $sql = "SELECT COUNT(`department_id`) AS `d_count` FROM `department` WHERE LOWER(TRIM(`department_name`)) NOT IN ('admin','administration')";
-                    $result = mysqli_query($con, $sql);
-                    if (mysqli_num_rows($result) > 0) {
-                    $row = mysqli_fetch_assoc($result);
-                        echo $row['d_count'];
-                    }
-                ?>
-                </p>
-            </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-red shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-building fa-lg"></i></div>
+        <div>
+          <div class="stat-label">Departments</div>
+          <div class="stat-value"><?php echo $deptCount; ?></div>
         </div>
+      </div>
     </div>
-    <div class="col-md-2 col-sm-12">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Courses</h5>
-                <p class="card-text display-2 ">
-                    <?php          
-                    $sql = "SELECT COUNT(`course_id`) AS `d_count` FROM `course`";
-                    $result = mysqli_query($con, $sql);
-                    if (mysqli_num_rows($result) > 0) {
-                    $row = mysqli_fetch_assoc($result);
-                        echo $row['d_count'];
-                        $total_course = $row['d_count'];
-                    }
-                ?>
-                </p>
-            </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-black shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-book-open fa-lg"></i></div>
+        <div>
+          <div class="stat-label">Courses</div>
+          <div class="stat-value"><?php echo $courseCount; ?></div>
         </div>
+      </div>
     </div>
-    <!-- Modules card removed as requested -->
-    <div class="col-md-2 col-sm-12">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Academic Years</h5>
-                <p class="card-text display-2 ">
-                    <?php          
-                    $sql = "SELECT COUNT(`academic_year`) AS `d_count` FROM `academic`";
-                    $result = mysqli_query($con, $sql);
-                    if (mysqli_num_rows($result) > 0) {
-                    $row = mysqli_fetch_assoc($result);
-                        echo $row['d_count'];
-                    }
-                ?>
-                </p>
-                
-            </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-yellow shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-calendar-alt fa-lg"></i></div>
+        <div>
+          <div class="stat-label">Academic Years</div>
+          <div class="stat-value"><?php echo $acadCount; ?></div>
         </div>
+      </div>
     </div>
-
-    <!-- Students card removed as requested -->
-
-    <div class="col-md-2 col-sm-12">
-        <div class="card mb-3">
-            <div class="card-body">
-                <h5 class="card-title">Students</h5>
-                <p class="card-text display-2 ">
-                    <?php          
-                    // Students who accepted the Code of Conduct
-                    $sql = "SELECT COUNT(`student_id`) AS `d_count` FROM `student` WHERE `student_conduct_accepted_at` IS NOT NULL";
-                    $result = mysqli_query($con, $sql);
-                    if ($result && mysqli_num_rows($result) > 0) {
-                        $row = mysqli_fetch_assoc($result);
-                        echo (int)$row['d_count'];
-                    } else { echo 0; }
-                    ?>
-                </p>
-            </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-blue shadow-sm">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-users fa-lg"></i></div>
+        <div>
+          <div class="stat-label">Students</div>
+          <div class="stat-value"><?php echo $studentCount; ?></div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 <hr>
 
