@@ -5,13 +5,13 @@
  </div>
  
  <ul class="nav nav-tabs">
+  
+   <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD') { ?>
    <li class="nav-item">
-     <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/Attendance.php">Home</a>
+     <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/DailyAttendance.php">Daily Attendance (HOD)</a>
    </li>
    <li class="nav-item">
-     <a class="nav-link" href="<?php echo APP_BASE; ?>/Session.php">Module</a>
+     <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report (HOD)</a>
    </li>
-   <li class="nav-item">
-     <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/MarkAttendance.php">Attendance</a>
-   </li>
+   <?php } ?>
  </ul>

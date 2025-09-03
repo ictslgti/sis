@@ -4,7 +4,6 @@ $title="Module details | SLGTI";
 include_once ("../config.php");
 include_once ("../head.php");
 include_once ("../menu.php");
-include_once ("../menu.php");
 ?>
 <!-- end dont change the order-->
 
@@ -26,7 +25,14 @@ $gcourse_id=$gcourse_i=$sum=$mid=$cid=null;
                 <select class="selectpicker mr-sm-2" id="search"  name="course_id" data-live-search="true" data-width="100%">
                     <option value="null" selected disabled>-- Select a Course --</option>
                     <?php
-                    $sql = "SELECT * FROM `course` ORDER BY `course_id` ASC";
+                    // Course list, scope to HOD's department if applicable
+                    $sql = "SELECT * FROM `course` WHERE 1=1";
+                    if (isset($_SESSION['user_type']) && $_SESSION['user_type']==='HOD' && !empty($_SESSION['department_code'])) {
+                      $dc = mysqli_real_escape_string($con, $_SESSION['department_code']);
+                      $sql .= " AND department_id='".$dc."'";
+                    }
+                    $sql .= " ORDER BY `course_id` ASC";
+
                     $result = mysqli_query($con, $sql);
                     if (mysqli_num_rows($result) > 0){
                     while($row = mysqli_fetch_assoc($result)){
@@ -117,11 +123,17 @@ $gcourse_id=$gcourse_i=$sum=$mid=$cid=null;
                     `module_practical_hours`,
                     `module_self_study_hours`,
                     course.course_name as course_name FROM `module` INNER JOIN `course`
-                    ON module.course_id = course.course_id";
+                    ON module.course_id = course.course_id WHERE 1=1";
+                     // Scope to HOD's department
+                     if (isset($_SESSION['user_type']) && $_SESSION['user_type']==='HOD' && !empty($_SESSION['department_code'])) {
+                       $dc = mysqli_real_escape_string($con, $_SESSION['department_code']);
+                       $sql .= " AND course.department_id='".$dc."'";
+                     }
                      if(isset($_GET['course_id'])){
-                      $gcourse_id=$_GET['course_id'];
-                      $sql.=" AND `module`.`course_id`= '$gcourse_id'";
+                      $gcourse_id = mysqli_real_escape_string($con, $_GET['course_id']);
+                      $sql .= " AND `module`.`course_id`= '".$gcourse_id."'";
                     }
+
                      $result = mysqli_query($con,$sql);
                      if(mysqli_num_rows($result)>0){
                      $count=1;

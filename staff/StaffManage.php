@@ -26,6 +26,9 @@ function flash($class, $msg){
      . '</button></div>';
 }
 
+$isHOD = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
+$deptCode = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : null;
+
 $mode = isset($_GET['edit']) ? 'edit' : 'add';
 $prefill = [
   'staff_id' => '', 'department_id' => '', 'staff_name' => '', 'staff_address' => '',
@@ -34,76 +37,110 @@ $prefill = [
   'staff_position' => '', 'staff_type' => '', 'staff_status' => ''
 ];
 
-// Load for edit mode
+// Load for edit mode with HOD ownership enforcement
 if ($mode === 'edit') {
   $sid = trim($_GET['edit']);
   $row = get_staff_by_id($con, $sid);
-  if ($row) { $prefill = $row; }
-  else { flash('alert-danger', 'Staff ID not found: '.$sid); $mode = 'add'; }
+  if ($row) {
+    if ($isHOD && $deptCode && $row['department_id'] !== $deptCode) {
+      flash('alert-danger', 'Not permitted. You can only edit staff in your department.');
+      $mode = 'add';
+    } else {
+      $prefill = $row;
+    }
+  } else {
+    flash('alert-danger', 'Staff ID not found: '.$sid);
+    $mode = 'add';
+  }
 }
 
-// Handle POST actions
+// Handle POST actions (block mutations for HOD)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $action = isset($_POST['action']) ? $_POST['action'] : '';
+
+  // Enforce HOD scoping on mutations
   if ($action === 'create') {
-    $data = [
-      'staff_id' => $_POST['staff_id'] ?? '',
-      'department_id' => $_POST['department_id'] ?? '',
-      'staff_name' => $_POST['staff_name'] ?? '',
-      'staff_address' => $_POST['staff_address'] ?? '',
-      'staff_dob' => $_POST['staff_dob'] ?? '',
-      'staff_nic' => $_POST['staff_nic'] ?? '',
-      'staff_email' => $_POST['staff_email'] ?? '',
-      'staff_pno' => $_POST['staff_pno'] ?? '',
-      'staff_date_of_join' => $_POST['staff_date_of_join'] ?? '',
-      'staff_gender' => $_POST['staff_gender'] ?? '',
-      'staff_epf' => $_POST['staff_epf'] ?? '',
-      'staff_position' => $_POST['staff_position'] ?? '',
-      'staff_type' => $_POST['staff_type'] ?? '',
-      'staff_status' => $_POST['staff_status'] ?? '',
-    ];
-    if (create_staff($con, $data, $err)) {
-      flash('alert-success', 'Staff created successfully.');
-      echo '<script>setTimeout(()=>location.replace(location.origin + "'.(defined('APP_BASE')?APP_BASE:'').'/staff/StaffManage.php"), 300);</script>';
-    } else {
-      flash('alert-danger', $err ?: 'Create failed');
+    if ($isHOD && $deptCode) {
+      // Force department to HOD's department
+      $_POST['department_id'] = $deptCode;
     }
-  } elseif ($action === 'update') {
-    $sid = $_POST['staff_id'] ?? '';
-    $data = [
-      'staff_id' => $sid,
-      'department_id' => $_POST['department_id'] ?? '',
-      'staff_name' => $_POST['staff_name'] ?? '',
-      'staff_address' => $_POST['staff_address'] ?? '',
-      'staff_dob' => $_POST['staff_dob'] ?? '',
-      'staff_nic' => $_POST['staff_nic'] ?? '',
-      'staff_email' => $_POST['staff_email'] ?? '',
-      'staff_pno' => $_POST['staff_pno'] ?? '',
-      'staff_date_of_join' => $_POST['staff_date_of_join'] ?? '',
-      'staff_gender' => $_POST['staff_gender'] ?? '',
-      'staff_epf' => $_POST['staff_epf'] ?? '',
-      'staff_position' => $_POST['staff_position'] ?? '',
-      'staff_type' => $_POST['staff_type'] ?? '',
-      'staff_status' => $_POST['staff_status'] ?? '',
-    ];
-    if (update_staff($con, $sid, $data, $err)) {
-      flash('alert-success', 'Staff updated successfully.');
-      echo '<script>setTimeout(()=>location.replace(location.origin + "'.(defined('APP_BASE')?APP_BASE:'').'/staff/StaffManage.php"), 300);</script>';
-    } else {
-      flash('alert-danger', $err ?: 'Update failed');
+  }
+  if (in_array($action, ['update','delete'], true) && $isHOD && $deptCode) {
+    $sidCheck = $_POST['staff_id'] ?? '';
+    $rowCheck = $sidCheck ? get_staff_by_id($con, $sidCheck) : null;
+    if (!$rowCheck || $rowCheck['department_id'] !== $deptCode) {
+      flash('alert-danger', 'Not permitted. You can only modify staff in your department.');
+      $action = '';
     }
-  } elseif ($action === 'delete') {
-    $sid = $_POST['staff_id'] ?? '';
-    if (delete_staff($con, $sid, $err)) {
-      flash('alert-success', 'Staff deleted successfully.');
-      echo '<script>setTimeout(()=>location.replace(location.origin + "'.(defined('APP_BASE')?APP_BASE:'').'/staff/StaffManage.php"), 300);</script>';
-    } else {
-      flash('alert-danger', $err ?: 'Delete failed');
+  }
+
+  {
+    if ($action === 'create') {
+      $data = [
+        'staff_id' => $_POST['staff_id'] ?? '',
+        // If HOD, this was forced above to HOD dept
+        'department_id' => $_POST['department_id'] ?? '',
+        'staff_name' => $_POST['staff_name'] ?? '',
+        'staff_address' => $_POST['staff_address'] ?? '',
+        'staff_dob' => $_POST['staff_dob'] ?? '',
+        'staff_nic' => $_POST['staff_nic'] ?? '',
+        'staff_email' => $_POST['staff_email'] ?? '',
+        'staff_pno' => $_POST['staff_pno'] ?? '',
+        'staff_date_of_join' => $_POST['staff_date_of_join'] ?? '',
+        'staff_gender' => $_POST['staff_gender'] ?? '',
+        'staff_epf' => $_POST['staff_epf'] ?? '',
+        'staff_position' => $_POST['staff_position'] ?? '',
+        'staff_type' => $_POST['staff_type'] ?? '',
+        'staff_status' => $_POST['staff_status'] ?? '',
+      ];
+      if (create_staff($con, $data, $err)) {
+        flash('alert-success', 'Staff created successfully.');
+        echo '<script>setTimeout(()=>location.replace(location.origin + "'.(defined('APP_BASE')?APP_BASE:'').'/staff/StaffManage.php"), 300);</script>';
+      } else {
+        flash('alert-danger', $err ?: 'Create failed');
+      }
+    } elseif ($action === 'update') {
+      $sid = $_POST['staff_id'] ?? '';
+      // For HOD, ensure department remains theirs
+      if ($isHOD && $deptCode) { $_POST['department_id'] = $deptCode; }
+      $data = [
+        'staff_id' => $sid,
+        'department_id' => $_POST['department_id'] ?? '',
+        'staff_name' => $_POST['staff_name'] ?? '',
+        'staff_address' => $_POST['staff_address'] ?? '',
+        'staff_dob' => $_POST['staff_dob'] ?? '',
+        'staff_nic' => $_POST['staff_nic'] ?? '',
+        'staff_email' => $_POST['staff_email'] ?? '',
+        'staff_pno' => $_POST['staff_pno'] ?? '',
+        'staff_date_of_join' => $_POST['staff_date_of_join'] ?? '',
+        'staff_gender' => $_POST['staff_gender'] ?? '',
+        'staff_epf' => $_POST['staff_epf'] ?? '',
+        'staff_position' => $_POST['staff_position'] ?? '',
+        'staff_type' => $_POST['staff_type'] ?? '',
+        'staff_status' => $_POST['staff_status'] ?? '',
+      ];
+      if (update_staff($con, $sid, $data, $err)) {
+        flash('alert-success', 'Staff updated successfully.');
+        echo '<script>setTimeout(()=>location.replace(location.origin + "'.(defined('APP_BASE')?APP_BASE:'').'/staff/StaffManage.php"), 300);</script>';
+      } else {
+        flash('alert-danger', $err ?: 'Update failed');
+      }
+    } elseif ($action === 'delete') {
+      $sid = $_POST['staff_id'] ?? '';
+      if (delete_staff($con, $sid, $err)) {
+        flash('alert-success', 'Staff deleted successfully.');
+        echo '<script>setTimeout(()=>location.replace(location.origin + "'.(defined('APP_BASE')?APP_BASE:'').'/staff/StaffManage.php"), 300);</script>';
+      } else {
+        flash('alert-danger', $err ?: 'Delete failed');
+      }
     }
   }
 }
 
-$staff_rows = list_staff($con, []);
+// Scope list to HOD's department
+$filters = [];
+if ($isHOD && !empty($deptCode)) { $filters['department_id'] = $deptCode; }
+$staff_rows = list_staff($con, $filters);
 ?>
 
 <div id="staff-mgr" class="container-fluid">
@@ -124,7 +161,9 @@ $staff_rows = list_staff($con, []);
                   <th>Dept</th>
                   <th>Position</th>
                   <th>Status</th>
+                  <?php if ($isHOD || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM')) { ?>
                   <th class="text-right">Actions</th>
+                  <?php } ?>
                 </tr>
               </thead>
               <tbody>
@@ -135,6 +174,7 @@ $staff_rows = list_staff($con, []);
                     <td><?php echo htmlspecialchars($r['department_id']); ?></td>
                     <td><?php echo htmlspecialchars($r['staff_position']); ?></td>
                     <td><?php echo htmlspecialchars($r['staff_status']); ?></td>
+                    <?php if ($isHOD && $r['department_id'] === $deptCode || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM')) { ?>
                     <td class="text-right actions">
                       <a class="btn btn-sm btn-primary" href="staff/StaffManage.php?edit=<?php echo urlencode($r['staff_id']); ?>">Edit</a>
                       <form method="POST" action="" class="d-inline" onsubmit="return confirm('Delete this staff?');">
@@ -143,6 +183,7 @@ $staff_rows = list_staff($con, []);
                         <button class="btn btn-sm btn-danger" type="submit">Delete</button>
                       </form>
                     </td>
+                    <?php } ?>
                   </tr>
                 <?php endforeach; else: ?>
                   <tr><td colspan="6" class="text-center text-muted">No staff found</td></tr>
@@ -154,11 +195,14 @@ $staff_rows = list_staff($con, []);
       </div>
     </div>
 
+    <?php if ($isHOD || (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM')) { ?>
     <div class="col-lg-5">
       <div class="card shadow-sm mb-4">
         <div class="card-header bg-light d-flex justify-content-between align-items-center">
           <strong><?php echo $mode === 'edit' ? 'Edit Staff' : 'Add Staff'; ?></strong>
-          <?php if ($mode === 'edit'): ?><a href="?" class="btn btn-sm btn-outline-secondary">Add New</a><?php endif; ?>
+          <?php if ($mode === 'edit') { ?>
+            <a href="?" class="btn btn-sm btn-outline-secondary">Add New</a>
+          <?php } ?>
         </div>
         <div class="card-body">
           <form method="POST" action="">
@@ -171,16 +215,25 @@ $staff_rows = list_staff($con, []);
               <div class="form-group col-md-6">
                 <label for="department_id">Department</label>
                 <select required id="department_id" name="department_id" class="custom-select">
-                  <option value="" disabled <?php echo $prefill['department_id']===''?'selected':''; ?>>-- Select --</option>
-                  <?php
-                    $q = mysqli_query($con, 'SELECT department_id, department_name FROM department ORDER BY department_name');
-                    if ($q) {
-                      while ($row = mysqli_fetch_assoc($q)) {
-                        $sel = ($row['department_id'] === $prefill['department_id']) ? 'selected' : '';
-                        echo '<option value="'.htmlspecialchars($row['department_id']).'" '.$sel.'>'.htmlspecialchars($row['department_name']).'</option>';
+                  <?php if ($isHOD && $deptCode) { 
+                    // Lock to HOD department only
+                    $dq = mysqli_query($con, "SELECT department_id, department_name FROM department WHERE department_id='".mysqli_real_escape_string($con, $deptCode)."'");
+                    $drow = $dq ? mysqli_fetch_assoc($dq) : null;
+                    $depName = $drow ? $drow['department_name'] : $deptCode;
+                    ?>
+                    <option value="<?php echo htmlspecialchars($deptCode); ?>" selected><?php echo htmlspecialchars($depName); ?></option>
+                  <?php } else { ?>
+                    <option value="" disabled <?php echo $prefill['department_id']===''?'selected':''; ?>>-- Select --</option>
+                    <?php
+                      $q = mysqli_query($con, 'SELECT department_id, department_name FROM department ORDER BY department_name');
+                      if ($q) {
+                        while ($row = mysqli_fetch_assoc($q)) {
+                          $sel = ($row['department_id'] === $prefill['department_id']) ? 'selected' : '';
+                          echo '<option value="'.htmlspecialchars($row['department_id']).'" '.$sel.'>'.htmlspecialchars($row['department_name']).'</option>';
+                        }
                       }
-                    }
-                  ?>
+                    ?>
+                  <?php } ?>
                 </select>
               </div>
             </div>
@@ -283,6 +336,7 @@ $staff_rows = list_staff($con, []);
         </div>
       </div>
     </div>
+    <?php } ?>
   </div>
 </div>
 

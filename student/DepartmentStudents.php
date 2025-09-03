@@ -1,6 +1,8 @@
-<!-- BLOCK#1 START DON'T CHANGE THE ORDER -->
 <?php 
+// BLOCK#1 START DON'T CHANGE THE ORDER
 $title = "Department Students | SLGTI";
+// Start output buffering to allow header() later for CSV export
+if (function_exists('ob_start')) { ob_start(); }
 include_once("../config.php");
 // Allow only HOD
 require_roles(['HOD']);
@@ -73,10 +75,46 @@ if ($deptFilter === null) {
         if ($year !== '')   { $baseSql .= " AND se.academic_year = '$year'"; }
         if ($status !== '') { $baseSql .= " AND se.student_enroll_status = '$status'"; }
         if ($course !== '') { $baseSql .= " AND se.course_id = '$course'"; }
-        $orderBy = " ORDER BY se.academic_year DESC, se.course_id, s.student_fullname";
+        // Order by Student ID as requested
+        $orderBy = " ORDER BY s.student_id ASC";
 
         $sqlAccepted = $baseSql . " AND s.student_conduct_accepted_at IS NOT NULL" . $orderBy;
         $sqlPending  = $baseSql . " AND s.student_conduct_accepted_at IS NULL" . $orderBy;
+
+        // CSV Export handler (Accepted/Pending) with current filters
+        if (isset($_GET['export']) && in_array($_GET['export'], ['accepted','pending'], true)) {
+            $mode = $_GET['export'];
+            $exportSql = $mode === 'accepted' ? $sqlAccepted : $sqlPending;
+            $exportRes = mysqli_query($con, $exportSql);
+
+            // Clean any previous output before sending headers
+            if (function_exists('ob_get_level')) {
+                while (ob_get_level() > 0) { ob_end_clean(); }
+            }
+            header('Content-Type: text/csv; charset=utf-8');
+            header('Content-Disposition: attachment; filename="department_students_' . $mode . '.csv"');
+
+            $out = fopen('php://output', 'w');
+            // Header row
+            fputcsv($out, ['Student_ID','Student Name','Course ID','Course Name','Academic Year','Enroll Date','Status','Accepted At']);
+            if ($exportRes && mysqli_num_rows($exportRes) > 0) {
+                while ($row = mysqli_fetch_assoc($exportRes)) {
+                    fputcsv($out, [
+                        $row['student_id'],
+                        $row['student_fullname'],
+                        $row['course_id'],
+                        $row['course_name'],
+                        $row['academic_year'],
+                        $row['student_enroll_date'],
+                        $row['student_enroll_status'],
+                        isset($row['student_conduct_accepted_at']) ? $row['student_conduct_accepted_at'] : ''
+                    ]);
+                }
+            }
+            if ($exportRes) { mysqli_free_result($exportRes); }
+            fclose($out);
+            exit;
+        }
 
         $resA = mysqli_query($con, $sqlAccepted);
         $resP = mysqli_query($con, $sqlPending);
@@ -112,8 +150,19 @@ if ($deptFilter === null) {
         echo '  </form>';
         echo '</div>';
 
+        // Build export URLs preserving filters
+        $qs = $_GET;
+        unset($qs['export']);
+        $accQs = $qs; $accQs['export'] = 'accepted';
+        $pendQs = $qs; $pendQs['export'] = 'pending';
+        $exportAccUrl = $_SERVER['PHP_SELF'] . '?' . http_build_query($accQs);
+        $exportPendUrl = $_SERVER['PHP_SELF'] . '?' . http_build_query($pendQs);
+
         // Accepted list
-        echo '<h5 class="mt-3">Accepted (Code of Conduct)</h5>';
+        echo '<div class="d-flex justify-content-between align-items-center mt-3">';
+        echo '  <h5 class="mb-0">Accepted (Code of Conduct)</h5>';
+        echo '  <a class="btn btn-sm btn-success" href="'.htmlspecialchars($exportAccUrl).'">Export CSV</a>';
+        echo '</div>';
         echo '<div class="table-responsive">';
         echo '  <table class="table table-hover">';
         echo '    <thead class="thead-dark">';
@@ -148,7 +197,10 @@ if ($deptFilter === null) {
         echo '</div>';
 
         // Not accepted list
-        echo '<h5 class="mt-4">Not Accepted (Pending)</h5>';
+        echo '<div class="d-flex justify-content-between align-items-center mt-4">';
+        echo '  <h5 class="mb-0">Not Accepted (Pending)</h5>';
+        echo '  <a class="btn btn-sm btn-success" href="'.htmlspecialchars($exportPendUrl).'">Export CSV</a>';
+        echo '</div>';
         echo '<div class="table-responsive">';
         echo '  <table class="table table-hover">';
         echo '    <thead class="thead-dark">';

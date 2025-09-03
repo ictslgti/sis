@@ -121,9 +121,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $u_nationality = isset($_POST['nationality']) ? trim($_POST['nationality']) : null;
     $u_whatsapp    = isset($_POST['whatsapp']) ? trim($_POST['whatsapp']) : null;
 
-    $sqlUpd = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_civil=?, student_dob=?, student_blood=?, student_email=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_em_name=?, student_em_phone=?, student_em_address=?, student_em_relation=? WHERE student_id=?";
+    // Normalize empty strings to NULL for nullable fields to avoid SQL strict mode errors (esp. DATE)
+    foreach ([
+      &$p_title, &$p_fname, &$p_ininame, &$p_gender, &$p_civil, &$p_dob, &$p_blood,
+      &$u_email, &$u_phone, &$u_address, &$u_zip, &$u_district, &$u_division, &$u_province,
+      &$u_ename, &$u_ephone, &$u_eaddress, &$u_erel, &$u_nationality, &$u_whatsapp
+    ] as &$__f) {
+      if ($__f !== null && $__f === '') { $__f = null; }
+    }
+    unset($__f);
+
+    // Validate DOB as YYYY-MM-DD; if invalid or empty, set to NULL
+    if ($p_dob !== null) {
+      $d = DateTime::createFromFormat('Y-m-d', $p_dob);
+      $errors = DateTime::getLastErrors();
+      if (!$d || $errors['warning_count'] > 0 || $errors['error_count'] > 0) {
+        $p_dob = null;
+      } else {
+        $p_dob = $d->format('Y-m-d');
+      }
+    }
+
+    // New field: religion
+    $p_religion = isset($_POST['religion']) ? trim($_POST['religion']) : null;
+    // Normalize empty strings to NULL for nullable fields to avoid SQL strict mode errors (esp. DATE)
+    foreach ([&$p_religion] as &$__f2) { if ($__f2 !== null && $__f2 === '') { $__f2 = null; } }
+    unset($__f2);
+
+    $sqlUpd = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_civil=?, student_dob=?, student_blood=?, student_religion=?, student_email=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_em_name=?, student_em_phone=?, student_em_address=?, student_em_relation=? WHERE student_id=?";
     if ($stmt = mysqli_prepare($con, $sqlUpd)) {
-      mysqli_stmt_bind_param($stmt, 'sssssssssssssssssss', $p_title, $p_fname, $p_ininame, $p_gender, $p_civil, $p_dob, $p_blood, $u_email, $u_phone, $u_address, $u_zip, $u_district, $u_division, $u_province, $u_ename, $u_ephone, $u_eaddress, $u_erel, $loggedUser);
+      mysqli_stmt_bind_param($stmt, 'ssssssssssssssssssss', $p_title, $p_fname, $p_ininame, $p_gender, $p_civil, $p_dob, $p_blood, $p_religion, $u_email, $u_phone, $u_address, $u_zip, $u_district, $u_division, $u_province, $u_ename, $u_ephone, $u_eaddress, $u_erel, $loggedUser);
       if (mysqli_stmt_execute($stmt)) {
         // Handle optional People's Bank details update as part of profile save
         $acc = isset($_POST['bank_account_no']) ? trim($_POST['bank_account_no']) : '';
@@ -161,13 +188,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if ($dbRes = mysqli_query($con, 'SELECT DATABASE() as db')) { $dbRow = mysqli_fetch_assoc($dbRes); $dbName = $dbRow ? $dbRow['db'] : null; }
         if ($dbName) {
           $needCols = [
+            // Banking
+            'bank_name' => "ALTER TABLE student ADD COLUMN bank_name VARCHAR(128) NULL",
             'bank_account_no' => "ALTER TABLE student ADD COLUMN bank_account_no VARCHAR(32) NULL",
             'bank_branch' => "ALTER TABLE student ADD COLUMN bank_branch VARCHAR(128) NULL",
             'bank_frontsheet_path' => "ALTER TABLE student ADD COLUMN bank_frontsheet_path VARCHAR(255) NULL",
-            'bank_name' => "ALTER TABLE student ADD COLUMN bank_name VARCHAR(64) NULL",
-            // New student fields
+
+            // Docs / status
+            'student_profile_doc' => "ALTER TABLE student ADD COLUMN student_profile_doc VARCHAR(255) NULL",
+            'student_conduct_accepted_at' => "ALTER TABLE student ADD COLUMN student_conduct_accepted_at DATETIME NULL",
+
+            // Contact / demographics
             'student_nationality' => "ALTER TABLE student ADD COLUMN student_nationality VARCHAR(64) NULL",
             'student_whatsapp' => "ALTER TABLE student ADD COLUMN student_whatsapp VARCHAR(20) NULL",
+            'student_religion' => "ALTER TABLE student ADD COLUMN student_religion VARCHAR(32) NULL",
           ];
           foreach ($needCols as $col=>$ddl) {
             if ($chk = mysqli_prepare($con, "SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=? AND TABLE_NAME='student' AND COLUMN_NAME=? LIMIT 1")) {
@@ -226,8 +260,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         exit;
       } else {
-        // fall-through to page render with error alert
-        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update profile. Please try again.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        // fall-through to page render with detailed error for diagnosis
+        $err = htmlspecialchars(mysqli_stmt_error($stmt) ?: mysqli_error($con));
+        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update profile. Please try again.'
+           . ($err ? ' <small class="text-monospace d-block mt-1">(' . $err . ')</small>' : '')
+           . '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
       }
       mysqli_stmt_close($stmt);
     }
@@ -283,6 +320,7 @@ if (isset($_GET['updated']) && $_GET['updated'] === '1' && !isset($_GET['Sid']))
 $stid = $title = $fname = $ininame = $gender = $civil = $img = $email = $nic = $dob = $phone = $address = $zip = $district = $division = $province = $blood = $mode = $depth = $level =
 $ename = $eaddress = $ephone = $id =$erelation = $enstatus = $coid = $year = $enroll = $exit = $qutype = $index = $yoe = $subject = $results = $pass = $npass = $cpass = $updatedAt = null;
 $nationality = $whatsapp = null;
+$religion = null;
 $docPath = null;
 
 // (removed duplicate POST handler; handled at the top before any output)
@@ -326,7 +364,7 @@ if(isset($_GET['Sid']))
  // Build base query with optional gender condition for wardens
  $baseSql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,
 `student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,
-`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
+`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
 `student_enroll_status`,`user_password_hash`" . ($hasUpdatedAt ? ", `student_updated_at`" : "") . " FROM `student` as s, student_enroll as e, user as u, course as c, department as d ";
  $baseSql .= "WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and c.department_id=d.department_id and `student_enroll_status`='Following' and user_name=?";
  if ($isWarden && $wardenGender) {
@@ -340,8 +378,57 @@ if(isset($_GET['Sid']))
    }
    mysqli_stmt_execute($stmt);
    $result = mysqli_stmt_get_result($stmt);
+   mysqli_stmt_close($stmt);
  } else {
    $result = false;
+ }
+
+ // Fallback: if no row due to status filter, try again without `student_enroll_status='Following'`
+ if ($result && mysqli_num_rows($result) === 0) {
+   $fallbackSql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash`" . ($hasUpdatedAt ? ", `student_updated_at`" : "") . " FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and c.department_id=d.department_id and user_name=?";
+   if ($isWarden && $wardenGender) { $fallbackSql .= " AND s.student_gender=?"; }
+   if ($st2 = mysqli_prepare($con, $fallbackSql)) {
+     if ($isWarden && $wardenGender) { mysqli_stmt_bind_param($st2, 'ss', $username, $wardenGender); } else { mysqli_stmt_bind_param($st2, 's', $username); }
+     mysqli_stmt_execute($st2);
+     $result = mysqli_stmt_get_result($st2);
+     mysqli_stmt_close($st2);
+   }
+ }
+
+ // Final fallback: no enroll record, fetch directly from student table
+ if ($result && mysqli_num_rows($result) === 0) {
+   if ($st3 = mysqli_prepare($con, "SELECT `student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,\n`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`, `student_status`, `student_nationality`, `student_whatsapp`, `student_religion` FROM student WHERE student_id=? LIMIT 1")) {
+     mysqli_stmt_bind_param($st3, 's', $username);
+     mysqli_stmt_execute($st3);
+     $r3 = mysqli_stmt_get_result($st3);
+     if ($r3 && ($row = mysqli_fetch_assoc($r3))) {
+       $title = $row['student_title'];
+       $fname = $row['student_fullname'];
+       $ininame = $row['student_ininame'];
+       $gender = $row['student_gender'];
+       $civil = $row['student_civil'];
+       $email = $row['student_email'];
+       $nic = $row['student_nic'];
+       $dob = $row['student_dob'];
+       $phone = $row['student_phone'];
+       $address = $row['student_address'];
+       $zip = $row['student_zip'];
+       $district = $row['student_district'];
+       $division = $row['student_divisions'];
+       $province = $row['student_provice'];
+       $blood = $row['student_blood'];
+       $ename = $row['student_em_name'];
+       $eaddress = $row['student_em_address'];
+       $ephone = $row['student_em_phone'];
+       $erelation = $row['student_em_relation'];
+       $enstatus = $row['student_status'];
+       $img = $row['student_profile_img'];
+       if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
+       if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
+       if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+     }
+     mysqli_stmt_close($st3);
+   }
  }
 
   if($result && mysqli_num_rows($result)==1)
@@ -369,6 +456,7 @@ if(isset($_GET['Sid']))
     $erelation = $row['student_em_relation'];
     if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
     if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+    if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
     $coid = $row['course_name'];
     $depth = $row['department_name'];
     $level = $row['course_nvq_level'];
@@ -380,7 +468,7 @@ if(isset($_GET['Sid']))
     $id=$row['course_id'];
     $pass=$row['user_password_hash'];
     $img=$row['student_profile_img'];
-    if ($hasUpdatedAt && isset($row['student_updated_at'])) { $updatedAt = $row['student_updated_at']; }
+    if ($hasUpdatedAt) { $updatedAt = $row['student_updated_at']; }
   }
   else if ($isWarden && ($result === false || mysqli_num_rows($result) === 0))
   {
@@ -388,17 +476,13 @@ if(isset($_GET['Sid']))
   }
 }
 else
-{
+
 $username = $_SESSION['user_name'];
 
-$sql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,
-`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,
-`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,
-`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id 
- and e.course_id=c.course_id and  c.department_id=d.department_id and `student_enroll_status`='Following' and user_name='$username'";
-$result = mysqli_query($con,$sql);
+ $sql = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id \n and e.course_id=c.course_id and  c.department_id=d.department_id and `student_enroll_status`='Following' and user_name='$username'";
+ $result = mysqli_query($con,$sql);
 
-  if(mysqli_num_rows($result)==1)
+  if($result && mysqli_num_rows($result)==1)
   {
     //echo "success";
     $row =mysqli_fetch_assoc($result);
@@ -433,6 +517,91 @@ $result = mysqli_query($con,$sql);
     $id=$row['course_id'];
     $pass=$row['user_password_hash'];
     $img=$row['student_profile_img'];
+    if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
+    if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
+    if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+  }
+else
+{
+  // Fallback without status filter (prepared)
+  $sql2 = "SELECT user_name,e.course_id,`student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,`student_profile_img`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,`student_em_name`,`student_em_address`,\n`student_em_phone`,`student_em_relation`,s.`student_nationality`,s.`student_whatsapp`,s.`student_religion`,`student_status`,`course_name`,`department_name`,`course_mode`,course_nvq_level,`academic_year`,`student_enroll_date`,`student_enroll_exit_date`,\n`student_enroll_status`,`user_password_hash` FROM `student` as s, student_enroll as e, user as u, course as c, department as d WHERE user_name=s.student_id and s.student_id=e.student_id and e.course_id=c.course_id and  c.department_id=d.department_id and user_name=?";
+  $result2 = false;
+  if ($st2 = mysqli_prepare($con, $sql2)) {
+    mysqli_stmt_bind_param($st2, 's', $username);
+    mysqli_stmt_execute($st2);
+    $result2 = mysqli_stmt_get_result($st2);
+    mysqli_stmt_close($st2);
+  }
+  if ($result2 && mysqli_num_rows($result2) >= 1) {
+    $row = mysqli_fetch_assoc($result2);
+    $title = $row['student_title'];
+    $fname = $row['student_fullname'];
+    $ininame = $row['student_ininame'];
+    $gender = $row['student_gender'];
+    $civil = $row['student_civil'];
+    $email = $row['student_email'];
+    $nic = $row['student_nic'];
+    $dob = $row['student_dob'];
+    $phone = $row['student_phone'];
+    $address = $row['student_address'];
+    $zip = $row['student_zip'];
+    $district = $row['student_district'];
+    $division = $row['student_divisions'];
+    $province = $row['student_provice'];
+    $blood = $row['student_blood'];
+    $ename = $row['student_em_name'];
+    $eaddress = $row['student_em_address'];
+    $ephone = $row['student_em_phone'];
+    $erelation = $row['student_em_relation'];
+    $coid = $row['course_name'];
+    $depth = $row['department_name'];
+    $level = $row['course_nvq_level'];
+    $mode = $row['course_mode'];
+    $year = $row['academic_year'];
+    $enstatus =$row['student_enroll_status'];
+    $enroll = $row['student_enroll_date'];
+    $exit = $row['student_enroll_exit_date'];
+    $id=$row['course_id'];
+    $pass=$row['user_password_hash'];
+    $img=$row['student_profile_img'];
+    if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
+    if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
+    if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+  }
+  // Final fallback: only student table
+  else {
+    if ($stS = mysqli_prepare($con, "SELECT `student_title`,`student_fullname`,`student_profile_img`,`student_ininame`,`student_gender`,`student_civil`,`student_email`,`student_nic`,\n`student_dob`,`student_phone`,`student_address`,`student_zip`,`student_district`,`student_divisions`,`student_provice`,`student_blood`,\n`student_em_name`,`student_em_address`,`student_em_phone`,`student_em_relation`, `student_status`, `student_nationality`, `student_whatsapp`, `student_religion` FROM student WHERE student_id=? LIMIT 1")) {
+      mysqli_stmt_bind_param($stS, 's', $username);
+      mysqli_stmt_execute($stS);
+      $rS = mysqli_stmt_get_result($stS);
+      if ($rS && ($row = mysqli_fetch_assoc($rS))) {
+        $title = $row['student_title'];
+        $fname = $row['student_fullname'];
+        $ininame = $row['student_ininame'];
+        $gender = $row['student_gender'];
+        $civil = $row['student_civil'];
+        $email = $row['student_email'];
+        $nic = $row['student_nic'];
+        $dob = $row['student_dob'];
+        $phone = $row['student_phone'];
+        $address = $row['student_address'];
+        $zip = $row['student_zip'];
+        $district = $row['student_district'];
+        $division = $row['student_divisions'];
+        $province = $row['student_provice'];
+        $blood = $row['student_blood'];
+        $ename = $row['student_em_name'];
+        $eaddress = $row['student_em_address'];
+        $ephone = $row['student_em_phone'];
+        $erelation = $row['student_em_relation'];
+        $enstatus = $row['student_status'];
+        $img = $row['student_profile_img'];
+        if (isset($row['student_religion'])) { $religion = $row['student_religion']; }
+        if (isset($row['student_nationality'])) { $nationality = $row['student_nationality']; }
+        if (isset($row['student_whatsapp'])) { $whatsapp = $row['student_whatsapp']; }
+      }
+      mysqli_stmt_close($stS);
+    }
   }
 }
 
@@ -458,7 +627,7 @@ if (!empty($username)) {
 // Compute simple profile completion percentage for progress bar
 $__profileFields = [
   $fname, $ininame, $gender, $dob, $civil, $blood,
-  $email, $phone, $address, $province, $district, $zip, $division,
+  $email, $phone, $address, $province, $district, $zip, $division, $religion,
   $ename, $ephone, $eaddress, $erelation
 ];
 $__total = count($__profileFields) + 1; // +1 for profile image
@@ -651,6 +820,10 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Nationality</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($nationality ?: '—'); ?></span>
+                </div>
+                <div class="py-1 border-bottom">
+                  <small class="text-muted d-block">Religion</small>
+                  <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($religion ?: '—'); ?></span>
                 </div>
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Gender</small>
@@ -856,6 +1029,16 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 <label>Nationality</label>
                 <input type="text" class="form-control" name="nationality" value="<?php echo htmlspecialchars($nationality); ?>" />
               </div>
+              <div class="form-group col-md-4">
+                <label>Religion</label>
+                <select class="form-control" name="religion">
+                  <?php $sl_religions = ['Buddhism','Hinduism','Islam','Christianity','Others']; ?>
+                  <option value="">Select Religion</option>
+                  <?php foreach ($sl_religions as $__rel): ?>
+                    <option value="<?php echo $__rel; ?>" <?php echo ($religion === $__rel) ? 'selected' : ''; ?>><?php echo $__rel; ?></option>
+                  <?php endforeach; ?>
+                </select>
+              </div>
             </div>
             <div class="form-row">
               <div class="form-group col-md-4">
@@ -1007,10 +1190,16 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
               <tbody>
               <?php
             
-                  $sql ="SELECT`qualification_type`,`qualification_index_no`,`qualification_year`,`qualification_description`,`qualification_results`
-                  FROM `user`,student_qualification WHERE `user_name`= qualification_student_id and `user_name`='$username'";
-                  $result = mysqli_query ($con, $sql);
-                  if (mysqli_num_rows($result)>0)
+                  $sql = "SELECT `qualification_type`,`qualification_index_no`,`qualification_year`,`qualification_description`,`qualification_results`
+                  FROM `user`, student_qualification WHERE `user_name` = qualification_student_id AND `user_name` = ?";
+                  $result = false;
+                  if ($stq = mysqli_prepare($con, $sql)) {
+                    mysqli_stmt_bind_param($stq, 's', $username);
+                    mysqli_stmt_execute($stq);
+                    $result = mysqli_stmt_get_result($stq);
+                    mysqli_stmt_close($stq);
+                  }
+                  if ($result && mysqli_num_rows($result)>0)
                   {
                     while($row = mysqli_fetch_assoc($result))
                     {
@@ -1055,10 +1244,16 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                   //$stid =$_GET['edit'];WHERE `qualification_student_id`= '$stid'"
                   //include_once("mysqli_connect.php");
                   //$username = $_SESSION['user_name'];
-                  $sql ="SELECT `module_id`, `module_name`, `module_aim`, `module_learning_hours`, `module_resources`, `module_learning_outcomes`, `semester_id`, `module_reference`, `module_relative_unit`, `module_lecture_hours`, `module_practical_hours`, `module_self_study_hours` 
-                  FROM `module` as m, course as c WHERE c.course_id=m.course_id and c.course_id='$id'";
-                  $result = mysqli_query ($con, $sql);
-                  if (mysqli_num_rows($result)>0)
+                  $sql = "SELECT `module_id`, `module_name`, `module_aim`, `module_learning_hours`, `module_resources`, `module_learning_outcomes`, `semester_id`, `module_reference`, `module_relative_unit`, `module_lecture_hours`, `module_practical_hours`, `module_self_study_hours` 
+                  FROM `module` as m, course as c WHERE c.course_id = m.course_id AND c.course_id = ?";
+                  $result = false;
+                  if ($stm = mysqli_prepare($con, $sql)) {
+                    mysqli_stmt_bind_param($stm, 's', $id);
+                    mysqli_stmt_execute($stm);
+                    $result = mysqli_stmt_get_result($stm);
+                    mysqli_stmt_close($stm);
+                  }
+                  if ($result && mysqli_num_rows($result)>0)
                   {
                     while($row = mysqli_fetch_assoc($result))
                     {

@@ -252,6 +252,170 @@ if ($u_t === 'STU') {
             </a>
           </li>
         </ul>
+        <?php } elseif ($u_t === 'HOD') { ?>
+        <ul>
+          <li class="header-menu"><span>Head of Department</span></li>
+          <!-- Dashboard -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
+              <i class="fa fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+
+          <!-- My Department: Department, Courses, Modules -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-university"></i>
+              <span>My Department</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/Department.php">Department Info</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add a Course</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Groups (own department) -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-users"></i>
+              <span>Groups</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Groups.php">Groups</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/AddGroup.php">Add Group</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Reports.php">Reports</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Staff (view all details) -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-user-tie"></i>
+              <span>Staff</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffManage.php">Manage Staff</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- My Department Students -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/DepartmentStudents.php">
+              <i class="fas fa-user-graduate"></i>
+              <span>My Dept Students</span>
+            </a>
+          </li>
+
+          <!-- Timetable -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-calendar-alt"></i>
+              <span>Timetable</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/timetable/Timetable.php">Timetable</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/timetable/AddTimetable.php">Add a Timetable</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Examinations -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-award"></i>
+              <span>Examinations</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/Assessment.php">Assessment Info</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessment.php">Add Assessment</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessmentType.php">Add Assessment Type</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessmentResults.php">Add Assessment Results</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AssessmentReport.php">Assessment Report</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Attendances -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-chalkboard-teacher"></i>
+              <span>Attendances</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendances Info</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MarkAttendance.php">Mark Attendance</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/AttendanceReport.php">Attendance Report</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/WarningsLetters.php">Warnings Letters</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- On-the-job Training -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-briefcase"></i>
+              <span>On-the-job Training</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/OJT.php">OJT Info</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/addojt.php">Add a Training Place</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/OJTReport.php">OJT Report</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Hostels -->
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="far fa-building"></i>
+              <span>Hostels</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">Hostels Info</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Payments.php">Hostel Payments</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a></li>
+              </ul>
+            </div>
+          </li>
+
+          <!-- Payments -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/Payments.php">
+              <i class="fa fa-file-invoice-dollar"></i>
+              <span>Payments</span>
+            </a>
+          </li>
+
+          <!-- OnPeak Calendar -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/onpeak/OnPeak.php">
+              <i class="far fa-calendar-check"></i>
+              <span>OnPeak Calendar</span>
+            </a>
+          </li>
+
+          <!-- Change Password -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/password/change_password.php">
+              <i class="fa fa-key"></i>
+              <span>Change Password</span>
+            </a>
+          </li>
+        </ul>
         <?php } else { ?>
         <ul>
           <li class="header-menu">
@@ -393,9 +557,11 @@ if ($u_t === 'STU') {
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffPositionType.php">Staff Position Types</a>
                   <?php } ?>
                 </li>
+                <?php if($_SESSION['user_type'] !== 'HOD') { ?>
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffModuleEnrollment.php">Module Enrollment</a>
                 </li>
+                <?php } ?>
                 <!-- <li>
                   <a href="../staff/StaffExit">Staff Exit</a>
                 </li> -->
