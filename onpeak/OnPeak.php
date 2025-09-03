@@ -73,22 +73,22 @@ include_once("../menu.php");
         
         
 
-      <div class=row >
+      <div class="table-responsive d-none d-md-block">
         <table class="table table-hover">
             <thead class="thead-dark">
                   <tr>
-                    <th scope="col">REGISTRATION NO </th>
-                    <th scope="col"> CONTACT NO </th>
+                    <th scope="col">REG NO</th>
+                    <th scope="col">CONTACT</th>
                     <th scope="col">EXIT DATE</th>
                     <th scope="col">EXIT TIME</th>
                     <th scope="col">RETURN DATE</th>
                     <th scope="col">RETURN TIME</th>
                     <th scope="col">COMMENT</th>
-                    <th scope="col">ACTION</th>
+                    <th scope="col" class="text-nowrap">ACTION</th>
                     <th scope="col"></th>
-                    
                   </tr>
             </thead>
+            <tbody>
            
              <?php
                 // Replaced stored procedure call with direct SELECT to avoid DEFINER errors
@@ -97,29 +97,72 @@ include_once("../menu.php");
                 if ($result && mysqli_num_rows($result) > 0) {
                  while($row = mysqli_fetch_assoc($result)) {
 
+                // Mobile card view (visible only on mobile)
                 echo '
-                <tbody> 
-                <tr>
-                    <th scope="row">'. $row["student_id"].'</th>
-                    <td>'. $row["contact_no"]. '</td>
-                    <td>'. $row["exit_date"]. '</td>
-                    <td>'. $row["exit_time"]. '</td>
-                    <td>'. $row["return_date"].'</td>
-                    <td>'. $row["return_time"]. '</td>
-                    <td>'. $row["comment"]. '</td>
-                    
-                    <td> 
-                    <form method="POST">
-                        
-                        <button type="submit" class="btn btn-outline-primary" value="'.$row["id"].'" name="approved">Approved</button>
-                        <button type="submit" class="btn btn-outline-danger"  value="'.$row["id"].'" name="NotApproved">Not Approved</button>  
-                         
-                     </td>
-                     </form>
-                     <td> <pre> '. $row["request_date_time"]. ' </pre> </td>
-                 </tr> 
-                 </tbody>
-                 ';
+                <div class="card mb-3 d-md-none">
+                  <div class="card-body">
+                    <div class="row mb-2">
+                      <div class="col-5 font-weight-bold">Reg No:</div>
+                      <div class="col-7">'.$row['student_id'].'</div>
+                    </div>
+                    <div class="row mb-2">
+                      <div class="col-5 font-weight-bold">Contact:</div>
+                      <div class="col-7">'.$row['contact_no'].'</div>
+                    </div>
+                    <div class="row mb-2">
+                      <div class="col-5 font-weight-bold">Exit:</div>
+                      <div class="col-7">'.$row['exit_date'].' '.$row['exit_time'].'</div>
+                    </div>
+                    <div class="row mb-2">
+                      <div class="col-5 font-weight-bold">Return:</div>
+                      <div class="col-7">'.$row['return_date'].' '.$row['return_time'].'</div>
+                    </div>
+                    <div class="row mb-3">
+                      <div class="col-5 font-weight-bold">Comment:</div>
+                      <div class="col-7">'.($row['comment'] ?: '-').'</div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                      <form method="post" class="d-inline">
+                        <button type="submit" class="btn btn-success btn-sm mb-1" name="approved" value="'.$row['id'].'" style="min-width: 80px;">
+                          <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button type="submit" class="btn btn-danger btn-sm mb-1" name="NotApproved" value="'.$row['id'].'" style="min-width: 80px;">
+                          <i class="fas fa-times"></i> Reject
+                        </button>
+                      </form>
+                      <a href="OnPeakinfo.php?stid='.$row['student_id'].'&id='.$row['id'].'" class="btn btn-info btn-sm mb-1">
+                        <i class="fas fa-info-circle"></i> Details
+                      </a>
+                    </div>
+                  </div>
+                </div>';
+
+                // Desktop table row (hidden on mobile)
+                echo '
+                <tr class="d-none d-md-table-row">
+                  <td>'.$row['student_id'].'</td>
+                  <td>'.$row['contact_no'].'</td>
+                  <td>'.$row['exit_date'].'</td>
+                  <td>'.$row['exit_time'].'</td>
+                  <td>'.$row['return_date'].'</td>
+                  <td>'.$row['return_time'].'</td>
+                  <td>'.($row['comment'] ?: '-').'</td>
+                  <td class="text-nowrap">
+                    <form method="post" class="d-inline">
+                      <button type="submit" class="btn btn-success btn-sm" name="approved" value="'.$row['id'].'" title="Approve">
+                        <i class="fas fa-check"></i>
+                      </button>
+                      <button type="submit" class="btn btn-danger btn-sm" name="NotApproved" value="'.$row['id'].'" title="Reject">
+                        <i class="fas fa-times"></i>
+                      </button>
+                    </form>
+                  </td>
+                  <td class="text-nowrap">
+                    <a href="OnPeakinfo.php?stid='.$row['student_id'].'&id='.$row['id'].'" class="btn btn-info btn-sm" title="View Details">
+                      <i class="fas fa-info-circle"></i>
+                    </a>
+                  </td>
+                </tr>';
                   }
                  } else {
                      echo "No more Requests";
@@ -133,138 +176,208 @@ include_once("../menu.php");
 
 
  
-  <div class="border border-light shadow p-3 mb-5 bg-white rounded" > 
-      <div class="col">
-        <div class=row>
-            <div class="col">
-                <br>
-                <br>
-                 <nav class="navbar navbar-light bg-light">
-                        <form class="form-inline">
-                        <div class="pr-5 pl-2 ml-auto text-info"> <h6> <strong>  History  </strong> </h6> </div>
-                       
-                        </form>
-                </nav>
-                <br>
-            </div>
-        </div>
+  <div class="border border-light shadow p-3 mb-4 bg-white rounded">
+    <div class="row">
+      <div class="col-12">
+        <h5 class="text-info mb-4"><strong>Request History</strong></h5>
+      </div>
+    </div>
+
+    <!-- Tabs Navigation -->
+    <ul class="nav nav-tabs nav-fill mb-3" id="historyTabs" role="tablist">
+      <li class="nav-item">
+        <a class="nav-link active" id="approved-tab" data-toggle="tab" href="#approved" role="tab" aria-controls="approved" aria-selected="true">
+          <i class="fas fa-thumbs-up d-none d-md-inline"></i> Approved
+        </a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" id="not-approved-tab" data-toggle="tab" href="#not-approved" role="tab" aria-controls="not-approved" aria-selected="false">
+          <i class="fas fa-thumbs-down d-none d-md-inline"></i> Not Approved
+        </a>
+      </li>
+    </ul>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="historyTabsContent">
+      <!-- Approved Requests Tab -->
+      <div class="tab-pane fade show active" id="approved" role="tabpanel" aria-labelledby="approved-tab">
+        <?php
+        $sql = "SELECT student_id, reason, contact_no, exit_date, exit_time, return_date, return_time, onpeak_request_status 
+                FROM onpeak_request 
+                WHERE onpeak_request_status='Approved' 
+                ORDER BY id DESC";
+        $result = mysqli_query($con, $sql);
         
+        if($result && mysqli_num_rows($result) > 0): 
+          // Mobile Card View
+          echo '<div class="d-md-none">';
+          while($row = mysqli_fetch_assoc($result)) {
+            echo '<div class="card mb-3">
+                    <div class="card-body">
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Reg No:</div>
+                        <div class="col-7">'.$row["student_id"].'</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Reason:</div>
+                        <div class="col-7">'.($row["reason"] ?: '-').'</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Exit:</div>
+                        <div class="col-7">'.$row["exit_date"].' '.$row["exit_time"].'</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Return:</div>
+                        <div class="col-7">'.$row["return_date"].' '.$row["return_time"].'</div>
+                      </div>
+                      <div class="row">
+                        <div class="col-12">
+                          <span class="badge badge-success">'.$row["onpeak_request_status"].'</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>';
+          }
+          echo '</div>';
+          
+          // Reset pointer to start for desktop view
+          mysqli_data_seek($result, 0);
+          
+          // Desktop Table View
+          echo '<div class="table-responsive d-none d-md-block">
+                  <table class="table table-hover">
+                    <thead class="thead-light">
+                      <tr>
+                        <th>Reg No</th>
+                        <th>Reason</th>
+                        <th>Contact</th>
+                        <th>Exit</th>
+                        <th>Return</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>';
+          
+          while($row = mysqli_fetch_assoc($result)) {
+            echo '<tr>
+                    <td>'.$row["student_id"].'</td>
+                    <td>'.($row["reason"] ?: '-').'</td>
+                    <td>'.$row["contact_no"].'</td>
+                    <td>'.$row["exit_date"].'<br><small class="text-muted">'.$row["exit_time"].'</small></td>
+                    <td>'.$row["return_date"].'<br><small class="text-muted">'.$row["return_time"].'</small></td>
+                    <td><span class="badge badge-success">'.$row["onpeak_request_status"].'</span></td>
+                  </tr>';
+          }
+          
+          echo '      </tbody>
+                  </table>
+                </div>';
+                
+        else:
+          echo '<div class="alert alert-info">No approved requests found.</div>';
+        endif;
+        ?>
+      </div>
 
-
-
-
-
+      <!-- Not Approved Requests Tab -->
+      <div class="tab-pane fade" id="not-approved" role="tabpanel" aria-labelledby="not-approved-tab">
+        <?php
+        $sql = "SELECT student_id, reason, contact_no, exit_date, exit_time, return_date, return_time, onpeak_request_status 
+                FROM onpeak_request 
+                WHERE onpeak_request_status='Not Approved' 
+                ORDER BY id DESC";
+        $result = mysqli_query($con, $sql);
+        
+        if($result && mysqli_num_rows($result) > 0):
+          // Mobile Card View
+          echo '<div class="d-md-none">';
+          while($row = mysqli_fetch_assoc($result)) {
+            echo '<div class="card mb-3">
+                    <div class="card-body">
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Reg No:</div>
+                        <div class="col-7">'.$row["student_id"].'</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Reason:</div>
+                        <div class="col-7">'.($row["reason"] ?: '-').'</div>
+                      </div>
+                      <div class="row mb-2">
+                        <div class="col-5 font-weight-bold">Exit:</div>
+                        <div class="col-7">'.$row["exit_date"].' '.$row["exit_time"].'</div>
+                      </div>
+                      <div class="row">
+                        <div class="col-12">
+                          <span class="badge badge-danger">'.$row["onpeak_request_status"].'</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>';
+          }
+          echo '</div>';
+          
+          // Reset pointer to start for desktop view
+          mysqli_data_seek($result, 0);
+          
+          // Desktop Table View
+          echo '<div class="table-responsive d-none d-md-block">
+                  <table class="table table-hover">
+                    <thead class="thead-light">
+                      <tr>
+                        <th>Reg No</th>
+                        <th>Reason</th>
+                        <th>Contact</th>
+                        <th>Exit</th>
+                        <th>Return</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>';
+          
+          while($row = mysqli_fetch_assoc($result)) {
+            echo '<tr>
+                    <td>'.$row["student_id"].'</td>
+                    <td>'.($row["reason"] ?: '-').'</td>
+                    <td>'.$row["contact_no"].'</td>
+                    <td>'.$row["exit_date"].'<br><small class="text-muted">'.$row["exit_time"].'</small></td>
+                    <td>'.$row["return_date"].'<br><small class="text-muted">'.$row["return_time"].'</small></td>
+                    <td><span class="badge badge-danger">'.$row["onpeak_request_status"].'</span></td>
+                  </tr>';
+          }
+          
+          echo '      </tbody>
+                  </table>
+                </div>';
+                
+        else:
+          echo '<div class="alert alert-info">No rejected requests found.</div>';
+        endif;
+        ?>
+      </div>
+    </div>
   </div>
-<ul class="nav nav-tabs" id="myTab" role="tablist">
-  <li class="nav-item">
-    <a class="nav-link active" id="home-tab" data-toggle="tab" href="#home" role="tab" aria-controls="home" aria-selected="true"><i class="fas fa-thumbs-up"></i> Approved Onpeaks</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" id="profile-tab" data-toggle="tab" href="#profile" role="tab" aria-controls="profile" aria-selected="false"><i class="fas fa-thumbs-down"></i> Not Approved onpeaks</a>
-  </li>
-  
-</ul>
-
-<div class="tab-content">
-  <div class="tab-pane active" id="home" role="tabpanel" aria-labelledby="home-tab">
-  <table class="table table-hover">
-  <thead class="thead-dark">
-    <tr>
-    <th scope="col">REGISTRATION NO</th>
-      <th scope="col">REASON FOR EXIT </th>
-      
-      <th scope="col">CONTACT NO</th>
-      <th scope="col">EXIT DATE No</th>
-      <th scope="col">EXIT TIME</th>
-      <th scope="col">RETURN DATE</th>
-      <th scope="col">RETURN TIME</th>
-      <th colspan="3">REFERENCE</th>
-    </tr>
-  </thead>
-  <tbody>
-  <?php
-  // Use direct SELECT; also reuse existing $con from config.php
-  $sql = "SELECT student_id, reason, contact_no, exit_date, exit_time, return_date, return_time, onpeak_request_status FROM onpeak_request WHERE onpeak_request_status='Approved' ORDER BY id DESC";
-  $result = mysqli_query($con, $sql);
-  if($result && mysqli_num_rows($result) > 0){
-    while($row = mysqli_fetch_assoc($result)){
-    echo '<tr>
-      
-      <td>'.$row["student_id"].'</td>
-      <td>'.$row["reason"].'</td>
-      <td>'.$row["contact_no"].'</td>
-      <td>'.$row["exit_date"].'</td>
-      <td>'.$row["exit_time"].'</td>
-      <td>'.$row["return_date"].'</td>
-      <td>'.$row["return_time"].'</td>
-      <td>'.$row["onpeak_request_status"].'</td>
-      
-    </tr>';
-
-  }
-}
-else{
-  echo "0 result";
-}
-
-    ?>
-  </tbody>
-</table>
-
-
-  </div>
-  <div class="tab-pane" id="profile" role="tabpanel" aria-labelledby="profile-tab"><table class="table table-responsive-sm">
-  <thead class="thead-dark">
-    <tr>
-    <th scope="col">REGISTRATION NO</th>
-      <th scope="col">REASON FOR EXIT </th>
-      
-      <th scope="col">CONTACT NO</th>
-      <th scope="col">EXIT DATE No</th>
-      <th scope="col">EXIT TIME</th>
-      <th scope="col">RETURN DATE</th>
-      <th scope="col">RETURN TIME</th>
-      <th colspan="3">REFERENCE</th>
-    </tr>
-  </thead>
-  <tbody>
-  <?php
-  $sql = "SELECT student_id, reason, contact_no, exit_date, exit_time, return_date, return_time, onpeak_request_status FROM onpeak_request WHERE onpeak_request_status='Not Approved' ORDER BY id DESC";
-  $result = mysqli_query($con, $sql);
-  if($result && mysqli_num_rows($result) > 0){
-    while($row = mysqli_fetch_assoc($result)){
-    echo '<tr>
-      
-    <td>'.$row["student_id"].'</td>
-    <td>'.$row["reason"].'</td>
-    <td>'.$row["contact_no"].'</td>
-    <td>'.$row["exit_date"].'</td>
-    <td>'.$row["exit_time"].'</td>
-    <td>'.$row["return_date"].'</td>
-    <td>'.$row["return_time"].'</td>
-    <td>'.$row["onpeak_request_status"].'</td>
-      
-    </tr>';
-
-  }
-}
-else{
-  echo "0 result";
-}
-
-    ?>
- 
-    </tbody>
-    </table>
     
 
 <script>
-  $(function () {
-    $('#myTab li:last-child a').tab('show')
-  })
+  $(document).ready(function() {
+    // Initialize tabs
+    $('#historyTabs a').on('click', function (e) {
+      e.preventDefault();
+      $(this).tab('show');
+    });
+    
+    // Store the selected tab in localStorage
+    $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+      localStorage.setItem('selectedTab', $(e.target).attr('href'));
+    });
+    
+    // Get the last selected tab from localStorage
+    var selectedTab = localStorage.getItem('selectedTab');
+    if (selectedTab) {
+      $('a[href="' + selectedTab + '"]').tab('show');
+    }
+  });
 </script>
-  
-  </div>
 
 
   

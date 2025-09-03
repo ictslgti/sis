@@ -258,8 +258,15 @@ if ($u_t === 'STU') {
           <!-- Dashboard -->
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
-              <i class="fa fa-home"></i>
+              <i class="fa fa-tachometer-alt"></i>
               <span>Dashboard</span>
+            </a>
+          </li>
+          <!-- Attendance -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">
+              <i class="fas fa-calendar-check"></i>
+              <span>Daily Attendance</span>
             </a>
           </li>
 
@@ -364,20 +371,7 @@ if ($u_t === 'STU') {
             </div>
           </li>
 
-          <!-- Hostels -->
-          <li class="sidebar-dropdown">
-            <a href="#">
-              <i class="far fa-building"></i>
-              <span>Hostels</span>
-            </a>
-            <div class="sidebar-submenu">
-              <ul>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">Hostels Info</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Payments.php">Hostel Payments</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a></li>
-              </ul>
-            </div>
-          </li>
+          <!-- Hostels section removed as per requirements -->
 
           <!-- Payments -->
           <li>

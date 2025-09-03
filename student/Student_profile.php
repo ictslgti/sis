@@ -162,7 +162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $tmp  = $_FILES['bank_front']['tmp_name'];
             $size = (int)$_FILES['bank_front']['size'];
             $type = function_exists('mime_content_type') ? mime_content_type($tmp) : '';
-            if ($size > 0 && $size <= 15*1024*1024) {
+            if ($size > 0 && $size <= 50*1024*1024) {
               $ok = false; $ext = 'dat';
               if (stripos((string)$type, 'pdf') !== false) { $ok = true; $ext = 'pdf'; }
               if (stripos((string)$type, 'jpeg') !== false || stripos((string)$type, 'jpg') !== false) { $ok = true; $ext = 'jpg'; }
@@ -273,8 +273,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
 $title ="STUDENT PROFILE | SLGTI"; //YOUR HEAD TITLE CREATE VARIABLE BEFORE FILE NAME
 require_once __DIR__ . '/../head.php';
-// Show the compact student top navbar only for non-admin/non-director users
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','DIR'])) {
+
+// Only show top navigation if the user is a student viewing their own profile or an admin/director
+$showTopNav = true;
+if (isset($_SESSION['user_type'])) {
+    // Hide top nav for HODs viewing student profiles
+    if ($_SESSION['user_type'] === 'HOD' && isset($_GET['Sid'])) {
+        $showTopNav = false;
+    }
+}
+
+// Show the compact student top navbar only when needed
+if ($showTopNav && (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','DIR']))) {
   require_once __DIR__ . '/top_nav.php';
 }
 ?>
@@ -309,8 +319,6 @@ if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','
 
 <!---BLOCK 02--->
 <!---START YOUR CODER HERE----->
-
-
 <!-----END YOUR CODE----->
 <?php
 // Show flash message after redirects (PRG pattern)
@@ -328,7 +336,16 @@ $docPath = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_upload']) && !isset($_GET['Sid'])) {
   if (session_status() === PHP_SESSION_NONE) { session_start(); }
   $loggedUser = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : null;
-  if ($loggedUser && isset($_FILES['image']) && $_FILES['image']['error'] === UPLOAD_ERR_OK) {
+  // Set maximum file size to 50MB (in bytes)
+    $maxFileSize = 50 * 1024 * 1024; // 50MB in bytes
+    
+    if ($_FILES['image']['size'] > $maxFileSize) {
+        echo '<div class="alert alert-danger">Error: File size exceeds 50MB limit.</div>';
+    } elseif ($_FILES['image']['error'] === UPLOAD_ERR_INI_SIZE || $_FILES['image']['error'] === UPLOAD_ERR_FORM_SIZE) {
+        echo '<div class="alert alert-danger">Error: The uploaded file exceeds the maximum file size limit of 50MB.</div>';
+    } elseif ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+        echo '<div class="alert alert-danger">Error uploading file. Error code: ' . $_FILES['image']['error'] . '</div>';
+    } else {
     $tmpName = $_FILES['image']['tmp_name'];
     // No server-side size limit here; relies on PHP upload_max_filesize/post_max_size
       $imgData = file_get_contents($tmpName);
@@ -700,7 +717,8 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
       <div class="mt-2 d-flex justify-content-center">
         <div class="form-group mb-2" style="width:200px;">
           <input type="hidden" name="do_upload" value="1" />
-          <input type="file" name="image" id="image" accept="image/*" class="form-control-file d-none" />
+          <input type="file" name="image" id="image" accept="image/*" class="form-control" required>
+                <small class="form-text text-muted">Maximum file size: 50MB. Allowed formats: JPG, PNG, GIF</small>
           <button type="button" id="triggerImageUpload" class="btn btn-sm btn-outline-primary btn-block">Upload New Photo</button>
           <a class="btn btn-sm btn-primary btn-block mt-2" href="/student/Student_profile.php?edit=1">Edit Profile</a>
         </div>
@@ -1142,6 +1160,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="form-group">
               <label>Front Page (PDF/JPG/PNG) - optional</label>
               <input type="file" class="form-control-file" name="bank_front" accept="application/pdf,image/jpeg,image/png" />
+              <small class="form-text text-muted">Maximum file size: 50MB. Allowed formats: PDF, JPG, PNG</small>
               <?php if (!empty($bankFront)) { ?>
                 <small class="form-text text-muted">Existing file: <a target="_blank" href="/<?php echo htmlspecialchars($bankFront); ?>">View current</a></small>
               <?php } ?>
