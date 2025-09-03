@@ -717,8 +717,8 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
       <div class="mt-2 d-flex justify-content-center">
         <div class="form-group mb-2" style="width:200px;">
           <input type="hidden" name="do_upload" value="1" />
-          <input type="file" name="image" id="image" accept="image/*" class="form-control" required>
-                <small class="form-text text-muted">Maximum file size: 50MB. Allowed formats: JPG, PNG, GIF</small>
+          <input type="file" name="image" id="image" accept="image/*" class="form-control" <?php echo (isset($_GET['edit']) && $_GET['edit'] === '1') ? '' : 'required'; ?>>
+          <small class="form-text text-muted">Maximum file size: 50MB. Allowed formats: JPG, PNG, GIF</small>
           <button type="button" id="triggerImageUpload" class="btn btn-sm btn-outline-primary btn-block">Upload New Photo</button>
           <a class="btn btn-sm btn-primary btn-block mt-2" href="/student/Student_profile.php?edit=1">Edit Profile</a>
         </div>
