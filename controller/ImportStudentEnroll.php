@@ -22,6 +22,70 @@ if (isset($_GET['action']) && $_GET['action'] === 'template') {
     exit;
 }
 
+// Lightweight AJAX endpoints for Manual Add UI
+if (isset($_GET['action']) && $_GET['action'] === 'courses_by_dept') {
+    header('Content-Type: application/json');
+    include_once('../config.php');
+    $dept = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
+    $out = [];
+    $con = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    if (mysqli_connect_errno()) { echo json_encode(['ok'=>false,'error'=>'DB']); exit; }
+    mysqli_set_charset($con, 'utf8');
+    if ($dept !== '') {
+        $stmt = mysqli_prepare($con, 'SELECT course_id, course_name FROM course WHERE department_id = ? ORDER BY course_id');
+        mysqli_stmt_bind_param($stmt, 's', $dept);
+        if (mysqli_stmt_execute($stmt)) {
+            $res = mysqli_stmt_get_result($stmt);
+            while ($row = mysqli_fetch_assoc($res)) { $out[] = $row; }
+        }
+        mysqli_stmt_close($stmt);
+    }
+    mysqli_close($con);
+    echo json_encode(['ok'=>true,'courses'=>$out]);
+    exit;
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'next_student_id') {
+    header('Content-Type: application/json');
+    include_once('../config.php');
+    $course_id = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
+    $academic_year = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
+    if ($course_id === '' || $academic_year === '') { echo json_encode(['ok'=>false,'error'=>'missing']); exit; }
+    $con = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    if (mysqli_connect_errno()) { echo json_encode(['ok'=>false,'error'=>'DB']); exit; }
+    mysqli_set_charset($con, 'utf8');
+    // Find the lexicographically max student_id for given course/year
+    $stmt = mysqli_prepare($con, 'SELECT student_id FROM student_enroll WHERE course_id = ? AND academic_year = ? ORDER BY student_id DESC LIMIT 1');
+    mysqli_stmt_bind_param($stmt, 'ss', $course_id, $academic_year);
+    $next = '';
+    if (mysqli_stmt_execute($stmt)) {
+        $res = mysqli_stmt_get_result($stmt);
+        if ($row = mysqli_fetch_assoc($res)) {
+            $maxId = $row['student_id'];
+            // Increment numeric suffix if present, else append 01
+            if (preg_match('/^(.*?)(\d+)$/', $maxId, $m)) {
+                $prefix = $m[1];
+                $num = $m[2];
+                $len = strlen($num);
+                $next = $prefix . str_pad((string)((int)$num + 1), $len, '0', STR_PAD_LEFT);
+            } else {
+                $next = $maxId . '01';
+            }
+        } else {
+            // No existing id: build a starting id. Use year prefix if recognizable else course prefix
+            $yearDigits = preg_replace('/[^0-9]/', '', $academic_year);
+            if (strlen($yearDigits) >= 4) { $prefix = substr($yearDigits, 0, 4); }
+            else { $prefix = date('Y'); }
+            $coursePart = preg_replace('/[^A-Za-z0-9]/', '', $course_id);
+            $next = $prefix . $coursePart . '01';
+        }
+    }
+    mysqli_stmt_close($stmt);
+    mysqli_close($con);
+    echo json_encode(['ok'=>true,'next_student_id'=>$next]);
+    exit;
+}
+
 // Import flow: only handle POST here. Any direct GET should go back to the UI silently.
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     header('Location: ../student/ImportStudentEnroll.php');

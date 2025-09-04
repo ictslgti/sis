@@ -74,24 +74,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $errors[] = 'DB error (single)';
     }
   }
-  // Bulk delete
+  // Bulk delete (Admin only)
   if (isset($_POST['bulk_action']) && $_POST['bulk_action'] === 'bulk_inactivate') {
-    $sids = isset($_POST['sids']) && is_array($_POST['sids']) ? array_values(array_filter($_POST['sids'])) : [];
-    if (!$sids) {
-      $errors[] = 'No students selected for bulk inactivate.';
+    if (!$is_admin) {
+      $errors[] = 'You are not authorized to perform bulk inactivate.';
     } else {
-      // Build a single UPDATE ... IN (...) with proper escaping
-      $inParts = [];
-      foreach ($sids as $sid) {
-        $inParts[] = "'" . mysqli_real_escape_string($con, $sid) . "'";
-      }
-      $inList = implode(',', $inParts);
-      $q = "UPDATE student SET student_status='Inactive' WHERE student_id IN (".$inList.")";
-      if (mysqli_query($con, $q)) {
-        $affected = mysqli_affected_rows($con);
-        $messages[] = ($affected > 0) ? 'Selected students set to Inactive' : 'No rows updated';
+      $sids = isset($_POST['sids']) && is_array($_POST['sids']) ? array_values(array_filter($_POST['sids'])) : [];
+      if (!$sids) {
+        $errors[] = 'No students selected for bulk inactivate.';
       } else {
-        $errors[] = 'Bulk update failed';
+        // Build a single UPDATE ... IN (...) with proper escaping
+        $inParts = [];
+        foreach ($sids as $sid) {
+          $inParts[] = "'" . mysqli_real_escape_string($con, $sid) . "'";
+        }
+        $in = implode(',', $inParts);
+        $q = "UPDATE student SET student_status='Inactive' WHERE student_id IN ($in)";
+        if (mysqli_query($con, $q)) {
+          $affected = mysqli_affected_rows($con);
+          $messages[] = ($affected > 0) ? 'Selected students set to Inactive' : 'No rows updated';
+        } else {
+          $errors[] = 'Bulk update failed';
+        }
       }
     }
   }
@@ -168,6 +172,7 @@ if ($fconduct === 'accepted') {
 if ($where) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 $sql .= ' ORDER BY s.student_id ASC LIMIT 500';
 $res = mysqli_query($con, $sql);
+$total_count = ($res ? mysqli_num_rows($res) : 0);
 
 // Load dropdown data: departments and courses (for filters)
 $departments = [];
@@ -342,10 +347,10 @@ include_once __DIR__ . '/../menu.php';
         })();
       </script>
 
-      <form method="post" <?php echo $can_mutate ? "onsubmit=\"return confirm('Inactivate selected students?');\"" : 'onsubmit="return false;"'; ?>>
+      <form method="post" <?php echo $is_admin ? "onsubmit=\"return confirm('Inactivate selected students?');\"" : 'onsubmit="return false;"'; ?>>
         <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2">
           <div class="mb-2 mb-md-0">
-            <?php if ($can_mutate): ?>
+            <?php if ($is_admin): ?>
               <button type="submit" name="bulk_action" value="bulk_inactivate" class="btn btn-danger btn-sm"><i class="fa fa-user-times mr-1"></i> Bulk Inactivate</button>
             <?php endif; ?>
           </div>
@@ -357,7 +362,7 @@ include_once __DIR__ . '/../menu.php';
         <!-- Results card -->
         <div class="card shadow-sm border-0">
           <div class="card-header d-flex align-items-center justify-content-between">
-            <div class="font-weight-semibold"><i class="fa fa-users mr-1"></i> Students</div>
+            <div class="font-weight-semibold"><i class="fa fa-users mr-1"></i> Students <span class="badge badge-secondary ml-2"><?php echo (int)$total_count; ?></span></div>
             <div class="d-md-none" style="width: 100%; max-width: 260px;">
               <div class="input-group input-group-sm">
                 <div class="input-group-prepend">
@@ -372,10 +377,11 @@ include_once __DIR__ . '/../menu.php';
               <table id="studentsTable" class="table table-striped table-bordered table-hover table-sm table-sticky mb-0">
                 <thead>
                   <tr>
-                    <?php if ($can_mutate): ?>
+                    <?php if ($is_admin): ?>
                       <th class="d-none d-sm-table-cell"><input type="checkbox" onclick="var c=this.checked; document.querySelectorAll('.sel').forEach(function(cb){cb.checked=c;});"></th>
                     <?php endif; ?>
                     <th class="d-md-none">Info</th>
+                    <th>No</th>
                     <th>Student ID</th>
                     <th>Full Name</th>
                     <th class="d-none d-md-table-cell">Status</th>
@@ -386,7 +392,7 @@ include_once __DIR__ . '/../menu.php';
                 <tbody>
               <?php if ($res && mysqli_num_rows($res) > 0): $i=0; while ($row = mysqli_fetch_assoc($res)): ?>
                 <tr data-sid="<?php echo h($row['student_id']); ?>" data-rowtext="<?php echo h(strtolower(trim(($row['student_id']??'').' '.($row['student_fullname']??'').' '.($row['student_email']??'').' '.($row['student_phone']??'')))); ?>">
-                  <?php if ($can_mutate): ?>
+                  <?php if ($is_admin): ?>
                     <td class="d-none d-sm-table-cell"><input type="checkbox" class="sel" name="sids[]" value="<?php echo h($row['student_id']); ?>"></td>
                   <?php endif; ?>
                   <td class="d-md-none align-middle">
@@ -394,6 +400,7 @@ include_once __DIR__ . '/../menu.php';
                       <i class="fa fa-chevron-down"></i>
                     </button>
                   </td>
+                  <td class="text-muted align-middle"><?php echo ++$i; ?></td>
                   <td><?php echo h($row['student_id']); ?></td>
                   <td><?php echo h($row['student_fullname']); ?></td>
                   <td class="d-none d-md-table-cell">
@@ -440,7 +447,7 @@ include_once __DIR__ . '/../menu.php';
                 </tr>
                 <!-- Mobile details row -->
                 <tr class="details-row d-md-none" id="det-<?php echo h($row['student_id']); ?>">
-                  <td colspan="<?php echo $can_mutate ? 7 : 6; ?>" class="bg-light">
+                  <td colspan="<?php echo $is_admin ? 8 : 7; ?>" class="bg-light">
                     <div class="p-2 small">
                       <div><strong>Status:</strong> <span class="badge badge-<?php echo ($row['student_status']==='Active'?'success':($row['student_status']==='Inactive'?'secondary':'info')); ?>"><?php echo h($row['student_status'] ?: '—'); ?></span></div>
                       <div><strong>Conduct:</strong>
@@ -480,7 +487,7 @@ include_once __DIR__ . '/../menu.php';
                 </tr>
               <?php endwhile; else: ?>
                 <tr>
-                  <td colspan="<?php echo $can_mutate ? 9 : 8; ?>" class="text-center py-5 text-muted">
+                  <td colspan="<?php echo $is_admin ? 8 : 7; ?>" class="text-center py-5 text-muted">
                     <div><i class="fa fa-user-graduate fa-2x mb-2"></i></div>
                     <div><strong>No students found</strong></div>
                     <div class="small">Try adjusting filters or clearing them to see more results.</div>
