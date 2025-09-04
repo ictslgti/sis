@@ -777,8 +777,8 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
 <form method="POST" enctype="multipart/form-data">
 
 <div class="form-row shadow p-2 mb-4 bg-white rounded">
-    <div class="col-md-3 mb-3 text-center"> 
-    <img src="/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail d-block mx-auto" style="width:200px;height:200px;object-fit:cover;border-radius:40px;">
+    <div class="col-12 col-md-3 mb-3 text-center"> 
+    <img src="/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail img-fluid d-block mx-auto" style="max-width:200px;width:100%;height:auto;object-fit:cover;border-radius:40px;">
     <?php
     // $query= "select `student_profile_img` from student where student_id='$username'";
     // $result=mysqli_query($con,$query);
@@ -789,12 +789,14 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     ?>
     <?php if(!isset($_GET['Sid'])): ?>
       <div class="mt-2 d-flex justify-content-center">
-        <div class="form-group mb-2" style="width:200px;">
+        <div class="form-group mb-2 w-100" style="max-width:260px;">
           <input type="hidden" name="do_upload" value="1" />
           <input type="file" name="image" id="image" accept="image/*" class="form-control" <?php echo (isset($_GET['edit']) && $_GET['edit'] === '1') ? '' : 'required'; ?>>
           <small class="form-text text-muted">Maximum file size: 50MB. Allowed formats: JPG, PNG, GIF</small>
-          <button type="button" id="triggerImageUpload" class="btn btn-sm btn-outline-primary btn-block">Upload New Photo</button>
-          <a class="btn btn-sm btn-primary btn-block mt-2" href="/student/Student_profile.php?edit=1">Edit Profile</a>
+          <div class="d-flex flex-column flex-sm-row mt-2">
+            <button type="button" id="triggerImageUpload" class="btn btn-sm btn-outline-primary mr-sm-2 mb-2 mb-sm-0 flex-fill">Upload New Photo</button>
+            <a class="btn btn-sm btn-primary flex-fill" href="/student/Student_profile.php?edit=1">Edit Profile</a>
+          </div>
         </div>
       
         <noscript>
@@ -821,7 +823,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     
     <!-- <button type="button" class="btn btn-outline-success">Success</button> -->
     </div>
-    <div class="col-md-7 col-sm-4">
+    <div class="col-12 col-md-9">
         <div class="mb-2">
           <div class="mb-2">
             <h5 class="text-muted my-1"><b><?php echo htmlspecialchars(($title? $title.'. ' : '').$fname); ?> | Level: <?php echo htmlspecialchars($level); ?></b></h5>
@@ -887,7 +889,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 </div>
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Address</small>
-                  <span class="text-dark font-weight-bold d-block" style="max-width: 80%"><?php echo htmlspecialchars($eaddress ?: '—'); ?></span>
+                  <span class="text-dark font-weight-bold d-block text-break"><?php echo htmlspecialchars($eaddress ?: '—'); ?></span>
                 </div>
                 <div class="py-1">
                   <small class="text-muted d-block">Relationship</small>
@@ -973,7 +975,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 </div>
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Address</small>
-                  <span class="text-dark font-weight-bold d-block" style="max-width: 80%"><?php echo htmlspecialchars($address ?: '—'); ?></span>
+                  <span class="text-dark font-weight-bold d-block text-break"><?php echo htmlspecialchars($address ?: '—'); ?></span>
                 </div>
                 <div class="py-1 border-bottom">
                   <small class="text-muted d-block">Province</small>
@@ -1008,7 +1010,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 <?php 
                   $canUploadDoc = false;
                   if (isset($_SESSION['user_type'])) {
-                    if (in_array($_SESSION['user_type'], ['ADM','MA2'])) { $canUploadDoc = true; }
+                    if (in_array($_SESSION['user_type'], ['ADM','MA2','SAO'])) { $canUploadDoc = true; }
                     if ($_SESSION['user_type'] === 'STU' && isset($_SESSION['user_name']) && $_SESSION['user_name'] === $username) { $canUploadDoc = true; }
                   }
                   if ($canUploadDoc) { ?>
@@ -1053,7 +1055,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 <?php 
                   $canUploadBank = false;
                   if (isset($_SESSION['user_type'])) {
-                    if (in_array($_SESSION['user_type'], ['ADM','MA2'])) { $canUploadBank = true; }
+                    if (in_array($_SESSION['user_type'], ['ADM','MA2','SAO'])) { $canUploadBank = true; }
                     if ($_SESSION['user_type'] === 'STU' && isset($_SESSION['user_name']) && $_SESSION['user_name'] === $username) { $canUploadBank = true; }
                   }
                   if ($canUploadBank) { ?>

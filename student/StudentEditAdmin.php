@@ -2,10 +2,10 @@
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config.php';
 
-// Admin only
-if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'ADM') {
+// Access control: Admin and SAO can edit
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','SAO'], true)) {
   http_response_code(403);
-  echo 'Forbidden: Admins only';
+  echo 'Forbidden: Admin/SAO only';
   exit;
 }
 
@@ -217,14 +217,14 @@ if (!$student) {
   exit;
 }
 
-$title = 'Edit Student (Admin) | SLGTI';
+$title = 'Edit Student | SLGTI';
 include_once __DIR__ . '/../head.php';
 include_once __DIR__ . '/../menu.php';
 ?>
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
-      <h3>Edit Student (Admin)</h3>
+      <h3>Edit Student</h3>
       <?php foreach ($errors as $e): ?>
         <div class="alert alert-danger"><?php echo h($e); ?></div>
       <?php endforeach; ?>

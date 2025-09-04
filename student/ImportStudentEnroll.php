@@ -2,6 +2,9 @@
 <!---BLOCK 01--->
 <?php 
 include_once("../config.php");
+include_once("../auth.php");
+// Access control: only Admin and SAO may access this page
+require_roles(['ADM','SAO']);
 $title ="IMPORT STUDENT ENROLLMENT | SLGTI";
 include_once("../head.php");
 include_once("../menu.php");

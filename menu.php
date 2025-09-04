@@ -441,6 +441,21 @@ if ($u_t === 'STU') {
           </li>
           <?php } ?>
 
+          <?php if(isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO') { ?>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">
+              <i class="fas fa-user-graduate"></i>
+              <span>Students Info</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">
+              <i class="fas fa-file-upload"></i>
+              <span>Import Student Enrollment</span>
+            </a>
+          </li>
+          <?php } ?>
+
           <?php if(isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN1','IN2','LE1','LE2','ADM'])) { ?>
           <li class="sidebar-dropdown">
             <a href="#">

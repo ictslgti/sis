@@ -3,6 +3,9 @@
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 // Controller: handle CSV import for student_enroll and serve CSV template
 // Location: controller/ImportStudentEnroll.php
+// Access control: allow only Admin and SAO to use this controller
+require_once __DIR__ . '/../auth.php';
+require_roles(['ADM','SAO']);
 
 // Serve a CSV template if requested
 if (isset($_GET['action']) && $_GET['action'] === 'template') {

@@ -3,10 +3,13 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-// Access control: Admin or Director (DIR). DIR will be view-only.
-require_roles(['ADM','DIR']);
+// Access control: Admin, Director (DIR), or SAO.
+require_roles(['ADM','DIR','SAO']);
 $is_admin = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
 $is_dir   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
+$is_sao   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';
+// Mutations allowed for Admin and SAO; DIR is strictly view-only
+$can_mutate = ($is_admin || $is_sao);
 
 // Helpers
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
@@ -19,9 +22,9 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 $messages = [];
 $errors = [];
 
-// Block mutations for non-admins
+// Block mutations for users without permission (only ADM and SAO can mutate)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  if (!$is_admin) {
+  if (!$can_mutate) {
     http_response_code(403);
     echo 'Forbidden: View-only access';
     exit;
@@ -106,7 +109,7 @@ if (!empty($_SESSION['flash_messages'])) { $messages = $_SESSION['flash_messages
 if (!empty($_SESSION['flash_errors'])) { $errors = $_SESSION['flash_errors']; unset($_SESSION['flash_errors']); }
 
 // Filters
-$fid = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
+$fyear   = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
 $fstatus = isset($_GET['status']) ? $_GET['status'] : '';
 // Conduct acceptance filter: '', 'accepted', 'pending'
 $fconduct = isset($_GET['conduct']) ? trim($_GET['conduct']) : '';
@@ -115,6 +118,17 @@ $fconduct = isset($_GET['conduct']) ? trim($_GET['conduct']) : '';
 $fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 $fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $fgender = isset($_GET['gender']) ? trim($_GET['gender']) : '';
+
+// If no academic year provided, default to latest Active academic year
+if ($fyear === '') {
+  if ($r = mysqli_query($con, "SELECT academic_year FROM academic WHERE academic_year_status='Active' ORDER BY academic_year DESC LIMIT 1")) {
+    if (mysqli_num_rows($r) > 0) {
+      $row = mysqli_fetch_row($r);
+      $fyear = $row[0] ?? '';
+    }
+    mysqli_free_result($r);
+  }
+}
 
 // For DIR (view-only), restrict to Active students regardless of requested filter
 if ($is_dir) {
@@ -131,8 +145,8 @@ $sql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phon
         LEFT JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')
         LEFT JOIN course c ON c.course_id = e.course_id
         LEFT JOIN department d ON d.department_id = c.department_id";
-if ($fid !== '') {
-  $where[] = "s.student_id = '" . mysqli_real_escape_string($con, $fid) . "'";
+if ($fyear !== '') {
+  $where[] = "e.academic_year = '" . mysqli_real_escape_string($con, $fyear) . "'";
 }
 if ($fstatus !== '') {
   $where[] = "s.student_status = '" . mysqli_real_escape_string($con, $fstatus) . "'";
@@ -167,6 +181,13 @@ if ($r = mysqli_query($con, "SELECT course_id, course_name, department_id FROM c
   mysqli_free_result($r);
 }
 
+// Academic years for filter
+$years = [];
+if ($r = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+  while ($row = mysqli_fetch_assoc($r)) { $years[] = $row['academic_year']; }
+  mysqli_free_result($r);
+}
+
 // Include standard head and menu to load CSS/JS
 $title = 'Manage Students | SLGTI';
 include_once __DIR__ . '/../head.php';
@@ -175,7 +196,7 @@ include_once __DIR__ . '/../menu.php';
 <div class="container-fluid">
   <div class="row">
     <div class="col-12">
-      <h3>Manage Students <?php echo $is_admin ? '(Admin)' : '(View Only)'; ?></h3>
+      <h3>Manage Students <?php echo $can_mutate ? '(Manage)' : '(View Only)'; ?></h3>
 
       <?php foreach ($messages as $m): ?>
         <div class="alert alert-success"><?php echo h($m); ?></div>
@@ -184,62 +205,115 @@ include_once __DIR__ . '/../menu.php';
         <div class="alert alert-danger"><?php echo h($e); ?></div>
       <?php endforeach; ?>
 
-      <form class="form-inline mb-3" method="get" action="">
-        <div class="form-group mr-2">
-          <label for="fid" class="mr-2">Student ID</label>
-          <input type="text" id="fid" name="student_id" class="form-control" value="<?php echo h($fid); ?>" placeholder="2025/AUT/...">
+      <!-- Filters: Modern card layout with responsive grid -->
+      <div class="card shadow-sm border-0 mb-3">
+        <div class="card-header d-flex align-items-center justify-content-between">
+          <div class="font-weight-semibold"><i class="fa fa-sliders-h mr-1"></i> Filters</div>
+          <div class="d-flex align-items-center">
+            <div class="d-none d-md-block mr-2" style="width: 260px;">
+              <div class="input-group input-group-sm">
+                <div class="input-group-prepend">
+                  <span class="input-group-text"><i class="fa fa-search"></i></span>
+                </div>
+                <input type="text" id="quickSearch" class="form-control" placeholder="Quick search... (ID, name, email, phone)">
+              </div>
+            </div>
+            <button class="btn btn-sm btn-outline-secondary d-md-none" type="button" data-toggle="collapse" data-target="#filtersBox" aria-expanded="false" aria-controls="filtersBox">
+              Show/Hide
+            </button>
+          </div>
         </div>
-        <div class="form-group mr-2">
-          <label for="fdept" class="mr-2">Department</label>
-          <select id="fdept" name="department_id" class="form-control">
-            <option value="">-- Any --</option>
-            <?php foreach ($departments as $d): ?>
-              <option value="<?php echo h($d['department_id']); ?>" <?php echo ($fdept===$d['department_id']?'selected':''); ?>><?php echo h($d['department_name']); ?></option>
-            <?php endforeach; ?>
-          </select>
+        <div id="filtersBox" class="collapse show">
+          <div class="card-body">
+            <form class="mb-0" method="get" action="">
+              <div class="form-row">
+                <div class="form-group col-12 col-md-4">
+                  <label for="fyear" class="small text-muted mb-1">Academic Year</label>
+                  <select id="fyear" name="academic_year" class="form-control">
+                    <option value="">-- Any --</option>
+                    <?php foreach ($years as $y): ?>
+                      <option value="<?php echo h($y); ?>" <?php echo ($fyear===$y?'selected':''); ?>><?php echo h($y); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-4">
+                  <label for="fdept" class="small text-muted mb-1">Department</label>
+                  <select id="fdept" name="department_id" class="form-control">
+                    <option value="">-- Any --</option>
+                    <?php foreach ($departments as $d): ?>
+                      <option value="<?php echo h($d['department_id']); ?>" <?php echo ($fdept===$d['department_id']?'selected':''); ?>><?php echo h($d['department_name']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-4">
+                  <label for="fcourse" class="small text-muted mb-1">Course</label>
+                  <select id="fcourse" name="course_id" class="form-control">
+                    <option value="">-- Any --</option>
+                    <?php foreach ($courses as $c): ?>
+                      <option value="<?php echo h($c['course_id']); ?>" data-dept="<?php echo h($c['department_id']); ?>" <?php echo ($fcourse===$c['course_id']?'selected':''); ?>><?php echo h($c['course_name']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-3">
+                  <label for="fgender" class="small text-muted mb-1">Gender</label>
+                  <select id="fgender" name="gender" class="form-control">
+                    <option value="">-- Any --</option>
+                    <?php foreach (["Male","Female","Other"] as $g): ?>
+                      <option value="<?php echo h($g); ?>" <?php echo ($fgender===$g?'selected':''); ?>><?php echo h($g); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-3">
+                  <label for="fstatus" class="small text-muted mb-1">Status</label>
+                  <select id="fstatus" name="status" class="form-control" <?php echo $is_dir ? 'disabled' : ''; ?>>
+                    <option value="">-- Any --</option>
+                    <?php foreach (["Active","Inactive","Following","Completed","Suspended"] as $st): ?>
+                      <?php if (!$is_dir || $st === 'Active'): ?>
+                        <option value="<?php echo h($st); ?>" <?php echo ($fstatus===$st?'selected':''); ?>><?php echo h($st); ?></option>
+                      <?php endif; ?>
+                    <?php endforeach; ?>
+                  </select>
+                  <?php if ($is_dir): ?>
+                    <input type="hidden" name="status" value="Active">
+                  <?php endif; ?>
+                </div>
+                <div class="form-group col-12 col-md-3">
+                  <label for="fconduct" class="small text-muted mb-1">Conduct</label>
+                  <select id="fconduct" name="conduct" class="form-control">
+                    <option value="">-- Any --</option>
+                    <option value="accepted" <?php echo ($fconduct==='accepted'?'selected':''); ?>>Accepted</option>
+                    <option value="pending" <?php echo ($fconduct==='pending'?'selected':''); ?>>Pending</option>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-3 d-flex align-items-end">
+                  <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+                </div>
+              </div>
+            </form>
+          </div>
         </div>
-        <div class="form-group mr-2">
-          <label for="fcourse" class="mr-2">Course</label>
-          <select id="fcourse" name="course_id" class="form-control">
-            <option value="">-- Any --</option>
-            <?php foreach ($courses as $c): ?>
-              <option value="<?php echo h($c['course_id']); ?>" data-dept="<?php echo h($c['department_id']); ?>" <?php echo ($fcourse===$c['course_id']?'selected':''); ?>><?php echo h($c['course_name']); ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="form-group mr-2">
-          <label for="fgender" class="mr-2">Gender</label>
-          <select id="fgender" name="gender" class="form-control">
-            <option value="">-- Any --</option>
-            <?php foreach (["Male","Female","Other"] as $g): ?>
-              <option value="<?php echo h($g); ?>" <?php echo ($fgender===$g?'selected':''); ?>><?php echo h($g); ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
-        <div class="form-group mr-2">
-          <label for="fstatus" class="mr-2">Status</label>
-          <select id="fstatus" name="status" class="form-control" <?php echo $is_dir ? 'disabled' : ''; ?>>
-            <option value="">-- Any --</option>
-            <?php foreach (["Active","Inactive","Following","Completed","Suspended"] as $st): ?>
-              <?php if (!$is_dir || $st === 'Active'): ?>
-                <option value="<?php echo h($st); ?>" <?php echo ($fstatus===$st?'selected':''); ?>><?php echo h($st); ?></option>
-              <?php endif; ?>
-            <?php endforeach; ?>
-          </select>
-          <?php if ($is_dir): ?>
-            <input type="hidden" name="status" value="Active">
-          <?php endif; ?>
-        </div>
-        <div class="form-group mr-2">
-          <label for="fconduct" class="mr-2">Conduct</label>
-          <select id="fconduct" name="conduct" class="form-control">
-            <option value="">-- Any --</option>
-            <option value="accepted" <?php echo ($fconduct==='accepted'?'selected':''); ?>>Accepted</option>
-            <option value="pending" <?php echo ($fconduct==='pending'?'selected':''); ?>>Pending</option>
-          </select>
-        </div>
-        <button type="submit" class="btn btn-primary">Filter</button>
-      </form>
+      </div>
+
+      <style>
+        /* Compact table spacing */
+        .table.table-sm td, .table.table-sm th { padding: .4rem .5rem; }
+        /* On very small screens, avoid horizontal overflow on key columns */
+        @media (max-width: 575.98px){
+          .table td, .table th { white-space: nowrap; }
+        }
+        /* Sticky header within scroll container */
+        .table-sticky thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 2; }
+        /* Scroll container to enable sticky header */
+        .table-scroll { max-height: 70vh; overflow-y: auto; }
+        /* Wrap action buttons nicely */
+        .btn-group.flex-wrap > .btn { margin: 2px; }
+        /* Details rows for mobile */
+        .details-row { display: none; }
+        .details-row.show { display: table-row; }
+        @media (min-width: 768px){
+          .details-row { display: none !important; }
+        }
+      </style>
       <script>
         // Client-side filter: limit course options by selected department
         (function(){
@@ -268,40 +342,72 @@ include_once __DIR__ . '/../menu.php';
         })();
       </script>
 
-      <form method="post" <?php echo $is_admin ? "onsubmit=\"return confirm('Inactivate selected students?');\"" : 'onsubmit="return false;"'; ?>>
-        <?php if ($is_admin): ?>
-        <div class="mb-2">
-          <button type="submit" name="bulk_action" value="bulk_inactivate" class="btn btn-danger btn-sm">Bulk Inactivate</button>
+      <form method="post" <?php echo $can_mutate ? "onsubmit=\"return confirm('Inactivate selected students?');\"" : 'onsubmit="return false;"'; ?>>
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2">
+          <div class="mb-2 mb-md-0">
+            <?php if ($can_mutate): ?>
+              <button type="submit" name="bulk_action" value="bulk_inactivate" class="btn btn-danger btn-sm"><i class="fa fa-user-times mr-1"></i> Bulk Inactivate</button>
+            <?php endif; ?>
+          </div>
+          <div class="mb-2 mb-md-0">
+            <a href="<?php echo $base; ?>/student/ManageStudents.php" class="btn btn-outline-secondary btn-sm"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
+          </div>
         </div>
-        <?php endif; ?>
-        <div class="table-responsive">
-          <table class="table table-striped table-bordered">
-            <thead>
-              <tr>
-                <?php if ($is_admin): ?>
-                  <th><input type="checkbox" onclick="var c=this.checked; document.querySelectorAll('.sel').forEach(function(cb){cb.checked=c;});"></th>
-                <?php endif; ?>
-                <th>Student ID</th>
-                <th>Full Name</th>
-                <th>Email</th>
-                <th>Phone</th>
-                <th>Status</th>
-                <th>Conduct</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
+
+        <!-- Results card -->
+        <div class="card shadow-sm border-0">
+          <div class="card-header d-flex align-items-center justify-content-between">
+            <div class="font-weight-semibold"><i class="fa fa-users mr-1"></i> Students</div>
+            <div class="d-md-none" style="width: 100%; max-width: 260px;">
+              <div class="input-group input-group-sm">
+                <div class="input-group-prepend">
+                  <span class="input-group-text"><i class="fa fa-search"></i></span>
+                </div>
+                <input type="text" id="quickSearchMobile" class="form-control" placeholder="Quick search (ID, name, email, phone)">
+              </div>
+            </div>
+          </div>
+          <div class="card-body p-0">
+            <div class="table-responsive table-scroll" style="border-top-left-radius:.25rem;border-top-right-radius:.25rem;">
+              <table id="studentsTable" class="table table-striped table-bordered table-hover table-sm table-sticky mb-0">
+                <thead>
+                  <tr>
+                    <?php if ($can_mutate): ?>
+                      <th class="d-none d-sm-table-cell"><input type="checkbox" onclick="var c=this.checked; document.querySelectorAll('.sel').forEach(function(cb){cb.checked=c;});"></th>
+                    <?php endif; ?>
+                    <th class="d-md-none">Info</th>
+                    <th>Student ID</th>
+                    <th>Full Name</th>
+                    <th class="d-none d-md-table-cell">Status</th>
+                    <th class="d-none d-lg-table-cell">Conduct</th>
+                    <th class="d-none d-md-table-cell">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
               <?php if ($res && mysqli_num_rows($res) > 0): $i=0; while ($row = mysqli_fetch_assoc($res)): ?>
-                <tr>
-                  <?php if ($is_admin): ?>
-                    <td><input type="checkbox" class="sel" name="sids[]" value="<?php echo h($row['student_id']); ?>"></td>
+                <tr data-sid="<?php echo h($row['student_id']); ?>" data-rowtext="<?php echo h(strtolower(trim(($row['student_id']??'').' '.($row['student_fullname']??'').' '.($row['student_email']??'').' '.($row['student_phone']??'')))); ?>">
+                  <?php if ($can_mutate): ?>
+                    <td class="d-none d-sm-table-cell"><input type="checkbox" class="sel" name="sids[]" value="<?php echo h($row['student_id']); ?>"></td>
                   <?php endif; ?>
+                  <td class="d-md-none align-middle">
+                    <button type="button" class="btn btn-link p-0 toggle-details" data-target="det-<?php echo h($row['student_id']); ?>" aria-label="Toggle details">
+                      <i class="fa fa-chevron-down"></i>
+                    </button>
+                  </td>
                   <td><?php echo h($row['student_id']); ?></td>
                   <td><?php echo h($row['student_fullname']); ?></td>
-                  <td><?php echo h($row['student_email']); ?></td>
-                  <td><?php echo h($row['student_phone']); ?></td>
-                  <td><?php echo h($row['student_status']); ?></td>
-                  <td>
+                  <td class="d-none d-md-table-cell">
+                    <?php 
+                      $st = $row['student_status'] ?: '';
+                      $statusClass = 'secondary';
+                      if ($st === 'Active') $statusClass = 'success';
+                      elseif ($st === 'Following') $statusClass = 'info';
+                      elseif ($st === 'Completed') $statusClass = 'primary';
+                      elseif ($st === 'Suspended') $statusClass = 'danger';
+                    ?>
+                    <span class="badge badge-<?php echo $statusClass; ?>"><?php echo h($st ?: '—'); ?></span>
+                  </td>
+                  <td class="d-none d-lg-table-cell">
                     <?php if (!empty($row['student_conduct_accepted_at'])): ?>
                       <span class="badge badge-success">Accepted</span>
                       <small class="text-muted d-block"><?php echo h($row['student_conduct_accepted_at']); ?></small>
@@ -309,33 +415,148 @@ include_once __DIR__ . '/../menu.php';
                       <span class="badge badge-warning">Pending</span>
                     <?php endif; ?>
                   </td>
-                  <td>
+                  <td class="text-nowrap d-none d-md-table-cell">
                     <?php 
                       $viewUrl = $base.'/student/Student_profile.php?Sid='.urlencode($row['student_id']);
                       $editUrl = $base.'/student/StudentEditAdmin.php?Sid='.urlencode($row['student_id']);
                     ?>
-                    <?php if ($is_admin): ?>
-                      <a class="btn btn-sm btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
-                    <?php endif; ?>
-                    <a class="btn btn-sm btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
-                    <?php if ($is_admin): ?>
-                      <?php if (empty($row['student_conduct_accepted_at'])): ?>
-                        <button type="submit" name="mark_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-sm btn-primary" onclick="return confirm('Mark conduct as accepted for <?php echo h($row['student_id']); ?>?');">Accept</button>
-                      <?php else: ?>
-                        <button type="submit" name="clear_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-sm btn-secondary" onclick="return confirm('Clear conduct acceptance for <?php echo h($row['student_id']); ?>?');">Clear</button>
+                    <div class="btn-group btn-group-sm flex-wrap" role="group">
+                      <?php if ($can_mutate): ?>
+                        <a class="btn btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
                       <?php endif; ?>
-                      <button type="submit" name="delete_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-sm btn-danger" onclick="return confirm('Inactivate <?php echo h($row['student_id']); ?>?');"><i class="far fa-trash-alt"></i></button>
-                    <?php endif; ?>
+                      <a class="btn btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
+                      <?php if ($can_mutate): ?>
+                        <?php if (empty($row['student_conduct_accepted_at'])): ?>
+                          <button type="submit" name="mark_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-primary" onclick="return confirm('Mark conduct as accepted for <?php echo h($row['student_id']); ?>?');">Accept</button>
+                        <?php else: ?>
+                          <?php if ($is_admin): ?>
+                            <button type="submit" name="clear_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-secondary" title="Clear conduct acceptance" onclick="return confirm('Clear conduct acceptance for <?php echo h($row['student_id']); ?>?');"><i class="fas fa-eraser"></i></button>
+                          <?php endif; ?>
+                        <?php endif; ?>
+                        <button type="submit" name="delete_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-danger" onclick="return confirm('Inactivate <?php echo h($row['student_id']); ?>?');"><i class="far fa-trash-alt"></i></button>
+                      <?php endif; ?>
+                    </div>
+                  </td>
+                </tr>
+                <!-- Mobile details row -->
+                <tr class="details-row d-md-none" id="det-<?php echo h($row['student_id']); ?>">
+                  <td colspan="<?php echo $can_mutate ? 7 : 6; ?>" class="bg-light">
+                    <div class="p-2 small">
+                      <div><strong>Status:</strong> <span class="badge badge-<?php echo ($row['student_status']==='Active'?'success':($row['student_status']==='Inactive'?'secondary':'info')); ?>"><?php echo h($row['student_status'] ?: '—'); ?></span></div>
+                      <div><strong>Conduct:</strong>
+                        <?php if (!empty($row['student_conduct_accepted_at'])): ?>
+                          <span class="badge badge-success">Accepted</span>
+                          <small class="text-muted ml-1"><?php echo h($row['student_conduct_accepted_at']); ?></small>
+                        <?php else: ?>
+                          <span class="badge badge-warning">Pending</span>
+                        <?php endif; ?>
+                      </div>
+                      <div class="mt-2">
+                        <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Actions">
+                          <?php if ($can_mutate): ?>
+                            <a class="btn btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
+                          <?php endif; ?>
+                          <a class="btn btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
+                          <?php if ($can_mutate): ?>
+                            <?php if (empty($row['student_conduct_accepted_at'])): ?>
+                              <button type="submit" name="mark_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-primary" onclick="return confirm('Mark conduct as accepted for <?php echo h($row['student_id']); ?>?');">Accept</button>
+                            <?php else: ?>
+                              <?php if ($is_admin): ?>
+                                <button type="submit" name="clear_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-secondary" title="Clear conduct acceptance" onclick="return confirm('Clear conduct acceptance for <?php echo h($row['student_id']); ?>?');"><i class="fas fa-eraser"></i></button>
+                              <?php endif; ?>
+                            <?php endif; ?>
+                            <button type="submit" name="delete_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-danger" onclick="return confirm('Inactivate <?php echo h($row['student_id']); ?>?');"><i class="far fa-trash-alt"></i></button>
+                          <?php endif; ?>
+                        </div>
+                      </div>
+                      <?php if (!empty($row['course_name'])): ?>
+                        <div><strong>Course:</strong> <?php echo h($row['course_name']); ?></div>
+                      <?php endif; ?>
+                      <?php if (!empty($row['department_name'])): ?>
+                        <div><strong>Department:</strong> <?php echo h($row['department_name']); ?></div>
+                      <?php endif; ?>
+                    </div>
                   </td>
                 </tr>
               <?php endwhile; else: ?>
-                <tr><td colspan="<?php echo $is_admin ? 8 : 7; ?>" class="text-center">No students found</td></tr>
+                <tr>
+                  <td colspan="<?php echo $can_mutate ? 9 : 8; ?>" class="text-center py-5 text-muted">
+                    <div><i class="fa fa-user-graduate fa-2x mb-2"></i></div>
+                    <div><strong>No students found</strong></div>
+                    <div class="small">Try adjusting filters or clearing them to see more results.</div>
+                  </td>
+                </tr>
               <?php endif; ?>
-            </tbody>
-          </table>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       </form>
     </div>
   </div>
 </div>
 <?php include_once __DIR__ . '/../footer.php'; ?>
+
+<script>
+// ManageStudents: quick search and persistent row expand
+(function(){
+  var KEY = 'ms_expanded';
+  function loadExpanded(){
+    try { return JSON.parse(sessionStorage.getItem(KEY) || '[]'); } catch(e){ return []; }
+  }
+  function saveExpanded(list){ sessionStorage.setItem(KEY, JSON.stringify(list)); }
+  function addExpanded(sid){ var l=loadExpanded(); if(l.indexOf(sid)===-1){ l.push(sid); saveExpanded(l);} }
+  function removeExpanded(sid){ var l=loadExpanded(); var i=l.indexOf(sid); if(i!==-1){ l.splice(i,1); saveExpanded(l);} }
+
+  // Restore expanded rows on load
+  document.addEventListener('DOMContentLoaded', function(){
+    var expanded = loadExpanded();
+    expanded.forEach(function(sid){
+      var det = document.getElementById('det-' + sid);
+      if(det){ det.classList.add('show'); }
+      // Flip icon if the toggle button exists
+      var toggleBtn = document.querySelector('tr[data-sid="' + CSS.escape(sid) + '"] .toggle-details i');
+      if(toggleBtn){ toggleBtn.classList.remove('fa-chevron-down'); toggleBtn.classList.add('fa-chevron-up'); }
+    });
+  });
+
+  // Toggle mobile details rows and persist state
+  document.addEventListener('click', function(e){
+    var btn = e.target.closest('.toggle-details');
+    if(!btn) return;
+    var id = btn.getAttribute('data-target');
+    if(!id) return;
+    var row = document.getElementById(id);
+    if(!row) return;
+    row.classList.toggle('show');
+    // Toggle icon
+    var icon = btn.querySelector('i');
+    if(icon){ icon.classList.toggle('fa-chevron-down'); icon.classList.toggle('fa-chevron-up'); }
+    // Persist by sid (data-sid on main row)
+    var tr = btn.closest('tr[data-sid]');
+    var sid = tr ? tr.getAttribute('data-sid') : null;
+    if(sid){ if(row.classList.contains('show')) addExpanded(sid); else removeExpanded(sid); }
+  });
+
+  // Quick search filter
+  var qs = document.getElementById('quickSearch');
+  if(qs){
+    qs.addEventListener('input', function(){
+      var q = (qs.value || '').toLowerCase().trim();
+      var rows = document.querySelectorAll('#studentsTable tbody tr[data-rowtext]');
+      rows.forEach(function(tr){
+        var text = tr.getAttribute('data-rowtext') || '';
+        var match = !q || text.indexOf(q) !== -1;
+        tr.style.display = match ? '' : 'none';
+        // Also hide/show its details row if exists
+        var sid = tr.getAttribute('data-sid');
+        if(sid){
+          var det = document.getElementById('det-' + sid);
+          if(det){ det.style.display = match ? (det.classList.contains('show') ? 'table-row' : 'none') : 'none'; }
+        }
+      });
+    });
+  }
+})();
+</script>
