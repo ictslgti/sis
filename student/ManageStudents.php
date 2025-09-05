@@ -32,15 +32,25 @@ function display_name($name)
   // Split by spaces, transform tokens individually
   $parts = preg_split('/\s+/', $name);
   $out = [];
+  $hasMb = function_exists('mb_strtolower') && function_exists('mb_convert_case');
   foreach ($parts as $p) {
     // Keep tokens with periods or that are short ALL-CAPS as-is (initials)
     if (strpos($p, '.') !== false || (preg_match('/^[A-Z]+$/', $p) && strlen($p) <= 4)) {
       $out[] = strtoupper($p);
       continue;
     }
-    // Otherwise, normal title case
-    $lower = mb_strtolower($p, 'UTF-8');
-    $out[] = mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
+    if ($hasMb) {
+      // Unicode-aware title case
+      $lower = mb_strtolower($p, 'UTF-8');
+      $out[] = mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
+    } else {
+      // Fallback: apply ASCII-only title case; leave non-ASCII tokens unchanged
+      if (preg_match('/^[\x20-\x7E]+$/', $p)) {
+        $out[] = ucwords(strtolower($p));
+      } else {
+        $out[] = $p; // preserve original (e.g., Tamil) to avoid corruption
+      }
+    }
   }
   return implode(' ', $out);
 }
