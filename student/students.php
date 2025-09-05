@@ -85,24 +85,6 @@ include_once __DIR__ . '/../menu.php';
         .table-sticky thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 2; }
         .table-scroll { max-height: 70vh; overflow-y: auto; }
       </style>
-      <script>
-        function applyQuickSearch(q) {
-          q = (q || '').toLowerCase().trim();
-          var rows = document.querySelectorAll('#studentsTable tbody tr[data-rowtext]');
-          for (var i = 0; i < rows.length; i++) {
-            var tr = rows[i];
-            var text = tr.getAttribute('data-rowtext') || '';
-            var match = !q || text.indexOf(q) !== -1;
-            tr.style.display = match ? '' : 'none';
-          }
-        }
-        document.addEventListener('DOMContentLoaded', function(){
-          var qs = document.getElementById('quickSearch');
-          if (qs) qs.addEventListener('input', function(){ applyQuickSearch(qs.value); });
-          var qsm = document.getElementById('quickSearchMobile');
-          if (qsm) qsm.addEventListener('input', function(){ applyQuickSearch(qsm.value); });
-        });
-      </script>
 
       <div class="card shadow-sm border-0">
         <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-md-between">
