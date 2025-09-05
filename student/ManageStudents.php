@@ -292,51 +292,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
   exit;
 }
 
-// Export and SAVE to server as CSV with current filters
-if (isset($_GET['export']) && $_GET['export'] === 'excel_save') {
-  $dir = __DIR__ . '/../exports';
-  if (!is_dir($dir)) {
-    @mkdir($dir, 0775, true);
-  }
-  $filename = 'students_' . date('Ymd_His') . '.csv';
-  $path = $dir . '/' . $filename;
-  $ok = false;
-  if ($fp = fopen($path, 'w')) {
-    // Header row
-    fputcsv($fp, ['Student ID', 'Full Name', 'Email', 'Phone', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At']);
-    if ($qr = mysqli_query($con, $sqlExport)) {
-      while ($r = mysqli_fetch_assoc($qr)) {
-        fputcsv($fp, [
-          $r['student_id'],
-          display_name($r['student_fullname'] ?? ''),
-          $r['student_email'] ?? '',
-          $r['student_phone'] ?? '',
-          $r['student_status'] ?? '',
-          $r['student_gender'] ?? '',
-          $r['course_name'] ?? '',
-          $r['department_name'] ?? '',
-          $r['student_conduct_accepted_at'] ?? ''
-        ]);
-      }
-      mysqli_free_result($qr);
-    }
-    fclose($fp);
-    $ok = true;
-  }
-  if (!isset($_SESSION)) { session_start(); }
-  if ($ok) {
-    $_SESSION['flash_messages'][] = 'Export saved to exports/' . $filename;
-  } else {
-    $_SESSION['flash_errors'][] = 'Failed to create export file at exports/' . $filename;
-  }
-  // Redirect back preserving current filters (drop export parameter)
-  $qsBack = $_GET;
-  unset($qsBack['export']);
-  $redir = $base . '/student/ManageStudents.php';
-  if (!empty($qsBack)) { $redir .= '?' . http_build_query($qsBack); }
-  header('Location: ' . $redir);
-  exit;
-}
+// Export-to-file (excel_save) handler removed intentionally
 
 // Load dropdown data: departments and courses (for filters)
 $departments = [];
@@ -602,8 +558,6 @@ include_once __DIR__ . '/../menu.php';
             <a href="<?php echo $base; ?>/student/ManageStudents.php" class="btn btn-outline-secondary btn-sm"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
             <?php $qs = $_GET; $qs['export'] = 'excel'; $exportUrl = $base . '/student/ManageStudents.php?' . http_build_query($qs); ?>
             <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm ml-2"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
-            <?php $qs2 = $_GET; $qs2['export'] = 'excel_save'; $exportSaveUrl = $base . '/student/ManageStudents.php?' . http_build_query($qs2); ?>
-            <a href="<?php echo h($exportSaveUrl); ?>" class="btn btn-outline-success btn-sm ml-2"><i class="fa fa-save mr-1"></i> Export to File</a>
           </div>
         </div>
 
