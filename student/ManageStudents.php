@@ -183,17 +183,20 @@ if ($is_dir) {
 $where = [];
 $params = [];
 // Base SQL for both list and export
+$joinYearCond = '';
+if ($fyear !== '') {
+  $safeYear = mysqli_real_escape_string($con, $fyear);
+  // Apply year condition in the JOIN with TRIM to tolerate trailing/leading spaces in DB
+  $joinYearCond = " AND TRIM(e.academic_year) = TRIM('$safeYear')";
+}
+
 $baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
                s.student_conduct_accepted_at,
                e.course_id, c.course_name, d.department_id, d.department_name
         FROM student s
-        /* Include any enrollment rows; filtering by academic year happens in WHERE below. */
-        LEFT JOIN student_enroll e ON e.student_id = s.student_id
+        LEFT JOIN student_enroll e ON e.student_id = s.student_id$joinYearCond
         LEFT JOIN course c ON c.course_id = e.course_id
         LEFT JOIN department d ON d.department_id = c.department_id";
-if ($fyear !== '') {
-  $where[] = "e.academic_year = '" . mysqli_real_escape_string($con, $fyear) . "'";
-}
 if ($fstatus !== '') {
   $where[] = "s.student_status = '" . mysqli_real_escape_string($con, $fstatus) . "'";
 }
@@ -212,10 +215,42 @@ if ($fconduct === 'accepted') {
   $where[] = "s.student_conduct_accepted_at IS NULL";
 }
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-$sqlList = $baseSql . $whereSql . ' ORDER BY s.student_id ASC LIMIT 500';
-$sqlExport = $baseSql . $whereSql . ' ORDER BY s.student_id ASC';
+$requireEnrollForYear = ($fyear !== '');
+$sqlWhereFinal = $whereSql;
+if ($requireEnrollForYear) {
+  // Ensure we only include students that have an enrollment row for the selected year
+  $sqlWhereFinal .= ($sqlWhereFinal ? ' AND ' : ' WHERE ') . ' e.student_id IS NOT NULL';
+}
+$sqlList = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC LIMIT 500';
+$sqlExport = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
 $res = mysqli_query($con, $sqlList);
 $total_count = ($res ? mysqli_num_rows($res) : 0);
+
+// Optional debug: show filters/SQL on demand for admins/SAO
+if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
+  echo '<div class="container-fluid"><div class="alert alert-warning small">'
+    . '<div><strong>Debug (server):</strong></div>'
+    . '<div><strong>Filters</strong> ' . h(json_encode([
+      'academic_year' => $fyear,
+      'status' => $fstatus,
+      'department_id' => $fdept,
+      'course_id' => $fcourse,
+      'gender' => $fgender,
+      'conduct' => $fconduct,
+    ])) . '</div>'
+    . '<div><strong>SQL (list)</strong> <code style="white-space:pre-wrap;">' . h($sqlList) . '</code></div>'
+    . '<div><strong>Rows</strong> ' . (int)$total_count . '</div>'
+    . '<div><strong>DB Error</strong> ' . h(mysqli_error($con)) . '</div>';
+  // Extra counts to compare
+  $cntAll = 0; $cntYear = 0;
+  if ($r0 = mysqli_query($con, 'SELECT COUNT(*) AS c FROM student')) { $cntAll = (int)mysqli_fetch_assoc($r0)['c']; mysqli_free_result($r0); }
+  if ($fyear !== '' && ($r1 = mysqli_query($con, "SELECT COUNT(*) AS c FROM student_enroll WHERE academic_year='" . mysqli_real_escape_string($con, $fyear) . "'"))) {
+    $cntYear = (int)mysqli_fetch_assoc($r1)['c']; mysqli_free_result($r1);
+  }
+  echo '<div><strong>Total students</strong> ' . $cntAll . '</div>'
+     . '<div><strong>Enroll rows in year</strong> ' . $cntYear . '</div>'
+     . '</div></div>';
+}
 
 // Export (CSV opened by Excel) with current filters
 if (isset($_GET['export']) && $_GET['export'] === 'excel') {
