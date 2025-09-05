@@ -187,7 +187,8 @@ $baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_
                s.student_conduct_accepted_at,
                e.course_id, c.course_name, d.department_id, d.department_name
         FROM student s
-        LEFT JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')
+        /* Include any enrollment rows; filtering by academic year happens in WHERE below. */
+        LEFT JOIN student_enroll e ON e.student_id = s.student_id
         LEFT JOIN course c ON c.course_id = e.course_id
         LEFT JOIN department d ON d.department_id = c.department_id";
 if ($fyear !== '') {
