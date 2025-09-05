@@ -186,14 +186,11 @@ $params = [];
 $joinYearCond = '';
 if ($fyear !== '') {
   $safeYear = mysqli_real_escape_string($con, $fyear);
-  $yearPrefix = mysqli_real_escape_string($con, substr($fyear, 0, 9)); // e.g., 2024/2025
   // Apply year condition tolerant to suffix notes, extra spaces, or unicode spaces.
   // 1) Prefix match ignoring normal spaces
   // 2) OR exact match on the canonical 9-char pattern YYYY/YYYY
-  // 3) OR REGEXP that matches YYYY / YYYY with optional spaces and any suffix
   $joinYearCond = " AND (REPLACE(TRIM(e.academic_year),' ','') LIKE CONCAT(REPLACE(TRIM('$safeYear'),' ',''),'%') 
-                         OR LEFT(TRIM(e.academic_year), 9) = LEFT(TRIM('$safeYear'), 9)
-                         OR TRIM(e.academic_year) REGEXP CONCAT('^', REPLACE(TRIM('$yearPrefix'), '/', '[ ]*/[ ]*')) )";
+                         OR LEFT(TRIM(e.academic_year), 9) = LEFT(TRIM('$safeYear'), 9))";
 }
 
 $baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
@@ -812,12 +809,5 @@ include_once __DIR__ . '/../menu.php';
     if (qsm) {
       qsm.addEventListener('input', function() { applyQuickSearch(qsm.value); });
     }
-    // Apply once on load to honor any prefilled value (e.g., browser autofill/session restore)
-    document.addEventListener('DOMContentLoaded', function(){
-      var initVal = '';
-      if (qs && qs.value) initVal = qs.value;
-      else if (qsm && qsm.value) initVal = qsm.value;
-      applyQuickSearch(initVal);
-    });
   })();
 </script>
