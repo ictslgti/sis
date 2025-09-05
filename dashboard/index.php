@@ -231,6 +231,18 @@ if ($rs = mysqli_query($con, $sqlStu)) {
   }
 </style>
 
+<div class="row mt-2">
+  <div class="col-12">
+    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
+      <div class="mb-2 mb-md-0">
+        <h4 class="mb-0 font-weight-bold text-dark text-center text-md-left">Sri Lanka German Training Institute - MIS</h4>
+        <div class="text-muted small text-center text-md-left">Dashboard Overview</div>
+      </div>
+    </div>
+    <hr class="mt-2 mb-3">
+  </div>
+</div>
+
 <div class="row mt-3 mobile-tight">
   <div class="col-md-4 col-sm-6 col-12 mb-3">
     <div class="card stat-card bg-red shadow-sm">
