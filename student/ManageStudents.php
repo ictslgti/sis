@@ -688,29 +688,7 @@ include_once __DIR__ . '/../menu.php';
                 </tbody>
               </table>
             </div>
-            <?php
-              // Pagination controls
-              $from = $total_count ? ($offset + 1) : 0;
-              $to = min($offset + $per_page, $total_count);
-              $hasPrev = $page > 1;
-              $hasNext = ($offset + $per_page) < $total_count;
-              $qsBase = $_GET;
-              unset($qsBase['page']);
-              $qsBase['per_page'] = $per_page;
-              $prevUrl = $base . '/student/ManageStudents.php?' . http_build_query($qsBase + ['page' => $page - 1]);
-              $nextUrl = $base . '/student/ManageStudents.php?' . http_build_query($qsBase + ['page' => $page + 1]);
-            ?>
-            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-2">
-              <div class="small text-muted mb-2 mb-md-0">
-                Showing <?php echo (int)$from; ?>–<?php echo (int)$to; ?> of <?php echo (int)$total_count; ?>
-              </div>
-              <div>
-                <div class="btn-group btn-group-sm" role="group">
-                  <a class="btn btn-outline-secondary <?php echo $hasPrev ? '' : 'disabled'; ?>" href="<?php echo $hasPrev ? h($prevUrl) : '#'; ?>">&laquo; Prev</a>
-                  <a class="btn btn-outline-secondary <?php echo $hasNext ? '' : 'disabled'; ?>" href="<?php echo $hasNext ? h($nextUrl) : '#'; ?>">Next &raquo;</a>
-                </div>
-              </div>
-            </div>
+            <div class="p-2 small text-muted">Total: <?php echo (int)$total_count; ?></div>
           </div>
         </div>
       </form>
