@@ -220,10 +220,32 @@ if ($fconduct === 'accepted') {
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 $requireEnrollForYear = ($fyear !== '');
 $sqlWhereFinal = $whereSql; // Do NOT require e.student_id for the year; include students without enrollment too
-$sqlList = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
-$sqlExport = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
+
+// Pagination params
+$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$per_page = isset($_GET['per_page']) ? max(10, min(200, (int)$_GET['per_page'])) : 50; // default 50, cap 200
+$offset = ($page - 1) * $per_page;
+
+// Total count for pagination (deduplicate by student)
+$sqlCount = 'SELECT COUNT(DISTINCT s.student_id) AS c FROM student s '
+          . 'LEFT JOIN student_enroll e ON e.student_id = s.student_id' . $joinYearCond . ' '
+          . 'LEFT JOIN course c ON c.course_id = e.course_id '
+          . 'LEFT JOIN department d ON d.department_id = c.department_id '
+          . $sqlWhereFinal;
+$total_count = 0;
+if ($rc = mysqli_query($con, $sqlCount)) {
+  $rowc = mysqli_fetch_assoc($rc);
+  $total_count = (int)($rowc['c'] ?? 0);
+  mysqli_free_result($rc);
+}
+
+// Base ORDER/GROUP for list and export
+$groupOrder = ' GROUP BY s.student_id ORDER BY s.student_id ASC';
+
+// List and export SQL
+$sqlList = $baseSql . $sqlWhereFinal . $groupOrder . ' LIMIT ' . (int)$per_page . ' OFFSET ' . (int)$offset;
+$sqlExport = $baseSql . $sqlWhereFinal . $groupOrder;
 $res = mysqli_query($con, $sqlList);
-$total_count = ($res ? mysqli_num_rows($res) : 0);
 
 // Optional debug: show filters/SQL on demand for admins/SAO
 if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
@@ -703,6 +725,29 @@ include_once __DIR__ . '/../menu.php';
                   <?php endif; ?>
                 </tbody>
               </table>
+            </div>
+            <?php
+              // Pagination controls
+              $from = $total_count ? ($offset + 1) : 0;
+              $to = min($offset + $per_page, $total_count);
+              $hasPrev = $page > 1;
+              $hasNext = ($offset + $per_page) < $total_count;
+              $qsBase = $_GET;
+              unset($qsBase['page']);
+              $qsBase['per_page'] = $per_page;
+              $prevUrl = $base . '/student/ManageStudents.php?' . http_build_query($qsBase + ['page' => $page - 1]);
+              $nextUrl = $base . '/student/ManageStudents.php?' . http_build_query($qsBase + ['page' => $page + 1]);
+            ?>
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center p-2">
+              <div class="small text-muted mb-2 mb-md-0">
+                Showing <?php echo (int)$from; ?>–<?php echo (int)$to; ?> of <?php echo (int)$total_count; ?>
+              </div>
+              <div>
+                <div class="btn-group btn-group-sm" role="group">
+                  <a class="btn btn-outline-secondary <?php echo $hasPrev ? '' : 'disabled'; ?>" href="<?php echo $hasPrev ? h($prevUrl) : '#'; ?>">&laquo; Prev</a>
+                  <a class="btn btn-outline-secondary <?php echo $hasNext ? '' : 'disabled'; ?>" href="<?php echo $hasNext ? h($nextUrl) : '#'; ?>">Next &raquo;</a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
