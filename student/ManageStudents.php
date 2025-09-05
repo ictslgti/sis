@@ -221,31 +221,14 @@ if ($fconduct === 'accepted') {
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 $sqlWhereFinal = $whereSql; // No Academic Year constraint
 
-// Pagination params
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
-$per_page = isset($_GET['per_page']) ? max(10, min(200, (int)$_GET['per_page'])) : 50; // default 50, cap 200
-$offset = ($page - 1) * $per_page;
-
-// Total count for pagination (deduplicate by student)
-$sqlCount = 'SELECT COUNT(DISTINCT `s`.`student_id`) AS `c` FROM `student` AS `s` '
-          . 'LEFT JOIN `student_enroll` AS `e` ON `e`.`student_id` = `s`.`student_id` '
-          . 'LEFT JOIN `course` AS `c` ON `c`.`course_id` = `e`.`course_id` '
-          . 'LEFT JOIN `department` AS `d` ON `d`.`department_id` = `c`.`department_id` '
-          . $sqlWhereFinal;
-$total_count = 0;
-if ($rc = mysqli_query($con, $sqlCount)) {
-  $rowc = mysqli_fetch_assoc($rc);
-  $total_count = (int)($rowc['c'] ?? 0);
-  mysqli_free_result($rc);
-}
-
-// Base ORDER/GROUP for list and export
+// Base ORDER/GROUP for list and export (no pagination)
 $groupOrder = ' GROUP BY s.student_id ORDER BY s.student_id ASC';
 
-// List and export SQL
-$sqlList = $baseSql . $sqlWhereFinal . $groupOrder . ' LIMIT ' . (int)$per_page . ' OFFSET ' . (int)$offset;
-$sqlExport = $baseSql . $sqlWhereFinal . $groupOrder;
+// List and export SQL (full result set)
+$sqlList = $baseSql . $sqlWhereFinal . $groupOrder;
+$sqlExport = $sqlList;
 $res = mysqli_query($con, $sqlList);
+$total_count = ($res ? mysqli_num_rows($res) : 0);
 
 // Optional debug: show filters/SQL on demand for admins/SAO
 if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
