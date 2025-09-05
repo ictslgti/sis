@@ -224,7 +224,7 @@ if ($requireEnrollForYear) {
   // Ensure we only include students that have an enrollment row for the selected year
   $sqlWhereFinal .= ($sqlWhereFinal ? ' AND ' : ' WHERE ') . ' e.student_id IS NOT NULL';
 }
-$sqlList = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC LIMIT 500';
+$sqlList = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
 $sqlExport = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
 $res = mysqli_query($con, $sqlList);
 $total_count = ($res ? mysqli_num_rows($res) : 0);
@@ -580,7 +580,7 @@ include_once __DIR__ . '/../menu.php';
                 <thead>
                   <tr>
                     <?php if ($is_admin): ?>
-                      <th class="d-none d-sm-table-cell"><input type="checkbox" onclick="var c=this.checked; document.querySelectorAll('.sel').forEach(function(cb){cb.checked=c;});"></th>
+                      <th class="d-none d-sm-table-cell"><input type="checkbox" onclick="var c=this.checked; var list=document.querySelectorAll('.sel'); for(var i=0;i<list.length;i++){ list[i].checked=c; }"></th>
                     <?php endif; ?>
                     <th class="d-md-none">Info</th>
                     <th>No</th>
