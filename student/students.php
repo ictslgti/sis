@@ -266,7 +266,7 @@ include_once __DIR__ . '/../menu.php';
     <div class="col-12">
       <div class="card shadow-sm border-0 mb-3 first-section-card">
         <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center">
-          <div class="font-weight-semibold"><i class="fa fa-sliders-h mr-1"></i> Filters</div>
+          <div class="font-weight-semibold"><i class="fa fa-search mr-1"></i> Search</div>
           <div class="d-flex align-items-center w-100 w-md-auto mt-2 mt-md-0 ml-md-auto justify-content-between justify-content-md-end">
             <div class="d-none d-md-block mr-2" style="width: 260px;">
               <div class="input-group input-group-sm">
@@ -320,9 +320,8 @@ include_once __DIR__ . '/../menu.php';
             <?php endif; ?>
           </div>
           <div class="mb-2 mb-md-0">
-          <a href="<?php echo $base; ?>/student/students.php" class="btn btn-outline-secondary btn-sm"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
           <?php $qs = $_GET; $qs['export'] = 'excel'; $exportUrl = $base . '/student/students.php?' . http_build_query($qs); ?>
-          <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm ml-2"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
+          <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
           <?php $qs2 = $_GET; $qs2['export'] = 'excel_save'; $exportSaveUrl = $base . '/student/students.php?' . http_build_query($qs2); ?>
           <a href="<?php echo h($exportSaveUrl); ?>" class="btn btn-outline-success btn-sm ml-2"><i class="fa fa-save mr-1"></i> Export to File</a>
           </div>
