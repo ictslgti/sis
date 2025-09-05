@@ -104,15 +104,15 @@ if (!empty($_SESSION['flash_errors'])) {
   unset($_SESSION['flash_errors']);
 }
 
-// Filters
-$fyear   = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
-$fstatus = isset($_GET['status']) ? $_GET['status'] : '';
-$fconduct = isset($_GET['conduct']) ? trim($_GET['conduct']) : '';
-$fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
-$fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
-$fgender = isset($_GET['gender']) ? trim($_GET['gender']) : '';
+// Filters (IGNORED: page lists all students regardless of filters)
+$fyear   = '';
+$fstatus = '';
+$fconduct = '';
+$fdept   = '';
+$fcourse = '';
+$fgender = '';
 
-// Do not default academic year; show all students initially unless user selects a year
+// Do not default academic year; list all students
 
 // Build base SQL and filter conditions
 $joinYearCond = '';
@@ -143,8 +143,8 @@ $requireEnrollForYear = ($fyear !== '');
 $sqlWhereFinal = $whereSql;
 if ($requireEnrollForYear) { $sqlWhereFinal .= ($sqlWhereFinal ? ' AND ' : ' WHERE ') . ' e.student_id IS NOT NULL'; }
 
-$sqlList   = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC LIMIT 500';
-$sqlExport = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
+$sqlList   = $baseSql . $sqlWhereFinal . ' GROUP BY s.student_id ORDER BY s.student_id ASC LIMIT 500';
+$sqlExport = $baseSql . $sqlWhereFinal . ' GROUP BY s.student_id ORDER BY s.student_id ASC';
 $res = mysqli_query($con, $sqlList);
 $total_count = ($res ? mysqli_num_rows($res) : 0);
 
@@ -276,75 +276,10 @@ include_once __DIR__ . '/../menu.php';
                 <input type="text" id="quickSearch" class="form-control" placeholder="Quick search... (ID, name, email, phone)">
               </div>
             </div>
-            <button class="btn btn-sm btn-outline-secondary d-md-none ml-auto" type="button" data-toggle="collapse" data-target="#filtersBox" aria-expanded="false" aria-controls="filtersBox">
-              Show/Hide
-            </button>
+            <!-- Filters UI disabled -->
           </div>
         </div>
-        <div id="filtersBox" class="collapse show">
-          <div class="card-body">
-            <form class="mb-0" method="get" action="">
-              <div class="form-row">
-                <div class="form-group col-12 col-md-4">
-                  <label for="fyear" class="small text-muted mb-1">Academic Year</label>
-                  <select id="fyear" name="academic_year" class="form-control">
-                    <option value="">-- Any --</option>
-                    <?php foreach ($years as $y): ?>
-                      <option value="<?php echo h($y); ?>" <?php echo ($fyear === $y ? 'selected' : ''); ?>><?php echo h($y); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div class="form-group col-12 col-md-4">
-                  <label for="fdept" class="small text-muted mb-1">Department</label>
-                  <select id="fdept" name="department_id" class="form-control">
-                    <option value="">-- Any --</option>
-                    <?php foreach ($departments as $d): ?>
-                      <option value="<?php echo h($d['department_id']); ?>" <?php echo ($fdept === $d['department_id'] ? 'selected' : ''); ?>><?php echo h($d['department_name']); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div class="form-group col-12 col-md-4">
-                  <label for="fcourse" class="small text-muted mb-1">Course</label>
-                  <select id="fcourse" name="course_id" class="form-control">
-                    <option value="">-- Any --</option>
-                    <?php foreach ($courses as $c): ?>
-                      <option value="<?php echo h($c['course_id']); ?>" data-dept="<?php echo h($c['department_id']); ?>" <?php echo ($fcourse === $c['course_id'] ? 'selected' : ''); ?>><?php echo h($c['course_name']); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div class="form-group col-12 col-md-3">
-                  <label for="fgender" class="small text-muted mb-1">Gender</label>
-                  <select id="fgender" name="gender" class="form-control">
-                    <option value="">-- Any --</option>
-                    <?php foreach (["Male", "Female", "Other"] as $g): ?>
-                      <option value="<?php echo h($g); ?>" <?php echo ($fgender === $g ? 'selected' : ''); ?>><?php echo h($g); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div class="form-group col-12 col-md-3">
-                  <label for="fstatus" class="small text-muted mb-1">Status</label>
-                  <select id="fstatus" name="status" class="form-control">
-                    <option value="">-- Any --</option>
-                    <?php foreach (["Active", "Inactive", "Following", "Completed", "Suspended"] as $st): ?>
-                      <option value="<?php echo h($st); ?>" <?php echo ($fstatus === $st ? 'selected' : ''); ?>><?php echo h($st); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
-                <div class="form-group col-12 col-md-3">
-                  <label for="fconduct" class="small text-muted mb-1">Conduct</label>
-                  <select id="fconduct" name="conduct" class="form-control">
-                    <option value="">-- Any --</option>
-                    <option value="accepted" <?php echo ($fconduct === 'accepted' ? 'selected' : ''); ?>>Accepted</option>
-                    <option value="pending"  <?php echo ($fconduct === 'pending'  ? 'selected' : ''); ?>>Pending</option>
-                  </select>
-                </div>
-                <div class="form-group col-12 col-md-3 d-flex align-items-end">
-                  <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
+        <!-- Filters UI disabled on this page -->
       </div>
 
       <style>
