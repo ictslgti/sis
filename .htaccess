@@ -2,8 +2,7 @@ Options +FollowSymLinks -MultiViews -Indexes
 # Turn mod_rewrite on
 RewriteEngine On
 
-# IMPORTANT: App is served at the VirtualHost root (e.g., http://sis/)
-RewriteBase /
+# NOTE: No RewriteBase — per-directory rewrites work both at vhost root and when deployed under a subdirectory like /sis
 
 # Legacy top-level routes mapped to files in attendance/ directory
 # Example: http://sis/MarkAttendance -> /attendance/MarkAttendance.php
