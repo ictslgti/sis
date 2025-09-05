@@ -26,15 +26,15 @@
 
   <?php /* Footer removed globally as requested. Keeping scripts below intact. */ ?>
   <!-- Optional JavaScript -->
-  <!-- jQuery first, then Popper.js, then Bootstrap JS -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+  <!-- jQuery (prefer local), then Bootstrap JS; if local jQuery fails, dynamic fallback below will load from CDN -->
+  <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/jquery.min.js"></script>
   <!-- <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
       integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous">
   </script> -->
   <!-- Use only Bootstrap bundle (includes Popper) to avoid conflicts -->
   <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/bootstrap.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/js/bootstrap-select.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.8.0/Chart.min.js"></script>
+  <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/bootstrap-select.min.js"></script>
+  <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/Chart.min.js"></script>
   <!-- Menu Toggle Script -->
   <script>
 // $("#menu-toggle").click(function(e) {

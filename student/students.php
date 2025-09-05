@@ -112,13 +112,7 @@ $fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 $fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $fgender = isset($_GET['gender']) ? trim($_GET['gender']) : '';
 
-// Default academic year to Active latest if not provided
-if ($fyear === '') {
-  if ($r = mysqli_query($con, "SELECT academic_year FROM academic WHERE academic_year_status='Active' ORDER BY academic_year DESC LIMIT 1")) {
-    if (mysqli_num_rows($r) > 0) { $row = mysqli_fetch_row($r); $fyear = $row[0] ?? ''; }
-    mysqli_free_result($r);
-  }
-}
+// Do not default academic year; show all students initially unless user selects a year
 
 // Build base SQL and filter conditions
 $joinYearCond = '';
@@ -415,7 +409,7 @@ include_once __DIR__ . '/../menu.php';
               <thead>
                 <tr>
                   <?php if ($is_admin): ?>
-                    <th class="d-none d-sm-table-cell"><input type="checkbox" onclick="var c=this.checked; document.querySelectorAll('.sel').forEach(function(cb){cb.checked=c;});"></th>
+                    <th class="d-none d-sm-table-cell"><input type="checkbox" onclick="var c=this.checked; var list=document.querySelectorAll('.sel'); for(var i=0;i<list.length;i++){ list[i].checked=c; }"></th>
                   <?php endif; ?>
                   <th class="d-md-none">Info</th>
                   <th>No</th>
