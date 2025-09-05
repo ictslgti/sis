@@ -789,52 +789,82 @@ include_once __DIR__ . '/../menu.php';
       }
     }
 
-    // Restore expanded rows on load
+    // Restore expanded rows on load (with safe CSS.escape fallback)
     document.addEventListener('DOMContentLoaded', function() {
-      var expanded = loadExpanded();
-      expanded.forEach(function(sid) {
-        var det = document.getElementById('det-' + sid);
-        if (det) {
-          det.classList.add('show');
-        }
-        // Flip icon if the toggle button exists
-        var toggleBtn = document.querySelector('tr[data-sid="' + CSS.escape(sid) + '"] .toggle-details i');
-        if (toggleBtn) {
-          toggleBtn.classList.remove('fa-chevron-down');
-          toggleBtn.classList.add('fa-chevron-up');
-        }
-      });
+      try {
+        var expanded = loadExpanded();
+        expanded.forEach(function(sid) {
+          try {
+            var det = document.getElementById('det-' + sid);
+            if (det) { det.classList.add('show'); }
+            // Flip icon if the toggle button exists
+            var selectorSid = sid;
+            if (window.CSS && typeof window.CSS.escape === 'function') {
+              selectorSid = CSS.escape(sid);
+            }
+            var toggleBtn = document.querySelector('tr[data-sid="' + selectorSid + '"] .toggle-details i');
+            if (toggleBtn) {
+              toggleBtn.classList.remove('fa-chevron-down');
+              toggleBtn.classList.add('fa-chevron-up');
+            }
+          } catch(_inner){}
+        });
+      } catch(_e){}
     });
 
-    // Toggle mobile details rows and persist state
+    // Toggle mobile details rows and persist state (with closest fallback)
     document.addEventListener('click', function(e) {
-      var btn = e.target.closest('.toggle-details');
-      if (!btn) return;
-      var id = btn.getAttribute('data-target');
-      if (!id) return;
-      var row = document.getElementById(id);
-      if (!row) return;
-      row.classList.toggle('show');
-      // Toggle icon
-      var icon = btn.querySelector('i');
-      if (icon) {
-        icon.classList.toggle('fa-chevron-down');
-        icon.classList.toggle('fa-chevron-up');
-      }
-      // Persist by sid (data-sid on main row)
-      var tr = btn.closest('tr[data-sid]');
-      var sid = tr ? tr.getAttribute('data-sid') : null;
-      if (sid) {
-        if (row.classList.contains('show')) addExpanded(sid);
-        else removeExpanded(sid);
-      }
+      try {
+        var target = e.target;
+        var btn = target.closest ? target.closest('.toggle-details') : null;
+        if (!btn) {
+          // Fallback: manual traversal for older browsers
+          var n = target;
+          while (n && n !== document) {
+            if (n.classList && n.classList.contains('toggle-details')) { btn = n; break; }
+            n = n.parentNode;
+          }
+        }
+        if (!btn) return;
+        var id = btn.getAttribute('data-target');
+        if (!id) return;
+        var row = document.getElementById(id);
+        if (!row) return;
+        if (row.classList) {
+          row.classList.toggle('show');
+        } else {
+          // Very old fallback
+          row.style.display = (row.style.display === 'table-row') ? 'none' : 'table-row';
+        }
+        // Toggle icon
+        var icon = btn.querySelector ? btn.querySelector('i') : null;
+        if (icon && icon.classList) {
+          icon.classList.toggle('fa-chevron-down');
+          icon.classList.toggle('fa-chevron-up');
+        }
+        // Persist by sid (data-sid on main row)
+        var tr = btn.closest ? btn.closest('tr[data-sid]') : null;
+        if (!tr) {
+          var p = btn.parentNode;
+          while (p && p !== document && !tr) {
+            if (p.getAttribute && p.getAttribute('data-sid')) { tr = p; break; }
+            p = p.parentNode;
+          }
+        }
+        var sid = tr ? tr.getAttribute('data-sid') : null;
+        if (sid) {
+          if ((row.classList && row.classList.contains('show')) || row.style.display === 'table-row') addExpanded(sid);
+          else removeExpanded(sid);
+        }
+      } catch(_e){}
     });
 
     // Quick search filter (desktop and mobile)
     function applyQuickSearch(q) {
       q = (q || '').toLowerCase().trim();
       var rows = document.querySelectorAll('#studentsTable tbody tr[data-rowtext]');
-      rows.forEach(function(tr) {
+      for (var i = 0; i < rows.length; i++) {
+        var tr = rows[i];
         var text = tr.getAttribute('data-rowtext') || '';
         var match = !q || text.indexOf(q) !== -1;
         tr.style.display = match ? '' : 'none';
@@ -843,10 +873,10 @@ include_once __DIR__ . '/../menu.php';
         if (sid) {
           var det = document.getElementById('det-' + sid);
           if (det) {
-            det.style.display = match ? (det.classList.contains('show') ? 'table-row' : 'none') : 'none';
+            det.style.display = match ? ((det.classList && det.classList.contains('show')) ? 'table-row' : 'none') : 'none';
           }
         }
-      });
+      }
     }
 
     var qs = document.getElementById('quickSearch');
