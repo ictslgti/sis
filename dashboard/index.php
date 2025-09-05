@@ -176,9 +176,62 @@ if ($rs = mysqli_query($con, $sqlStu)) {
   .bg-yellow .icon { background: rgba(0,0,0,0.15); }
   .stat-label { opacity: .9; font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; }
   .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+
+  /* Mobile-only: remove outer side space on dashboard */
+  @media (max-width: 575.98px) {
+    .page-wrapper .page-content > .container-fluid { padding-left: .25rem !important; padding-right: .25rem !important; }
+    .mobile-tight > [class^="col-"],
+    .mobile-tight > [class*=" col-"] { padding-left: 0 !important; padding-right: 0 !important; }
+    .mobile-tight { margin-left: 0 !important; margin-right: 0 !important; }
+    /* Increase height a bit for the line chart on small screens */
+    .dept-line-body { height: clamp(300px, 50vh, 520px) !important; }
+  }
+  /* Chips list under line chart to show district names currently plotted */
+  .chip-list-wrap { margin-top: .5rem; }
+  .chip-list-label { font-size: 12px; color: #6c757d; margin-bottom: .25rem; }
+  .chip-list { 
+    padding-top: .5rem; 
+    border-top: 1px solid #f1f3f5; 
+    display: flex; 
+    flex-wrap: wrap; 
+    gap: 6px 8px;
+    width: 100%;
+  }
+  .chip { 
+    display: inline-flex; 
+    align-items: center; 
+    background: #f8f9fa; 
+    border: 1px solid #e9ecef; 
+    color: #495057; 
+    border-radius: 999px; 
+    padding: 2px 10px; 
+    font-size: 12px; 
+    line-height: 1.6; 
+    white-space: nowrap; 
+    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
+  }
+  .chip .count { 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    min-width: 18px; height: 18px; 
+    margin-left: 6px; 
+    border-radius: 999px; 
+    background: #e9ecef; 
+    color: #495057; 
+    font-size: 11px; 
+    padding: 0 6px; 
+  }
+  /* Footer-specific tweaks: remove divider inside card-footer */
+  .card-footer .chip-list { border-top: 0; padding-top: 0; }
+  .card-footer .chip-list-label { margin-bottom: .25rem; }
+  @media (max-width: 575.98px) {
+    .chip { font-size: 11px; padding: 2px 8px; }
+    .chip .count { min-width: 16px; height: 16px; font-size: 10px; }
+  }
 </style>
 
-<div class="row mt-3">
+<div class="row mt-3 mobile-tight">
   <div class="col-md-4 col-sm-6 col-12 mb-3">
     <div class="card stat-card bg-red shadow-sm">
       <div class="card-body d-flex align-items-center">
@@ -236,7 +289,7 @@ if ($rs = mysqli_query($con, $sqlStu)) {
 
 
 
-<div class="row mt-4">
+<div class="row mt-4 mobile-tight">
     <div class="col-12">
         <?php
         // Pass selected year into widget
@@ -252,7 +305,7 @@ if ($rs = mysqli_query($con, $sqlStu)) {
     </div>
 </div>
 
-<div class="row mt-4">
+<div class="row mt-4 mobile-tight">
     <div class="col-12">
         <?php
         // Province & District-wise gender widget
@@ -266,6 +319,151 @@ if ($rs = mysqli_query($con, $sqlStu)) {
         ?>
     </div>
     
+</div>
+
+<!-- Department-wise District Count (Line Chart) -->
+<div class="row mt-4 mobile-tight">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
+        <div class="font-weight-semibold"><i class="fas fa-chart-line mr-1 text-primary"></i> Department-wise District Counts</div>
+        <?php if (!empty($selectedYear)) : ?>
+          <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
+        <?php endif; ?>
+      </div>
+      <div class="card-body dept-line-body" style="height: clamp(260px, 42vh, 420px);">
+        <canvas id="deptDistrictLine"></canvas>
+      </div>
+      <div class="card-footer bg-white py-2">
+        <div class="chip-list-wrap mb-1">
+          <div class="chip-list-label">Districts shown</div>
+          <div id="deptDistrictList" class="chip-list" aria-live="polite" aria-label="Districts currently plotted"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    window.addEventListener('load', function(){
+      var ctx = document.getElementById('deptDistrictLine');
+      if (!ctx || !window.Chart) return;
+      var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
+      var limit = isMobile ? 5 : 0; // 0 => all districts (API omits LIMIT)
+      var url = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/dashboard/department_district_api.php?academic_year=<?php echo urlencode($selectedYear); ?>&limit=" + encodeURIComponent(limit);
+      fetch(url)
+        .then(function(r){ return r.json(); })
+        .then(function(json){
+          if (!json || json.status !== 'success') { throw new Error('API error'); }
+          var labels = json.data.labels || [];
+          var series = json.data.datasets || [];
+          // If no data, render a small notice in the card and abort
+          if (!labels.length || !series.length) {
+            var container = ctx.parentNode;
+            if (container) {
+              var div = document.createElement('div');
+              div.className = 'text-center text-muted small';
+              div.textContent = 'No department-wise district data available for the selected academic year.';
+              container.appendChild(div);
+              ctx.style.display = 'none';
+              // Clear district list if exists
+              var listEl0 = document.getElementById('deptDistrictList');
+              if (listEl0) listEl0.innerHTML = '';
+            }
+            return;
+          }
+          // Populate district names shown in the line chart (chips) with per-district totals
+          try {
+            var listEl = document.getElementById('deptDistrictList');
+            if (listEl) {
+              // compute totals per district across all departments (series)
+              var totalsByLabel = labels.map(function(_, idx){
+                var sum = 0; 
+                for (var k=0; k<series.length; k++) { sum += Number(series[k].data[idx] || 0); }
+                return sum;
+              });
+              // Determine top 3 ranks by total (ties keep earlier rank order)
+              var idxs = labels.map(function(_,i){return i;});
+              idxs.sort(function(a,b){ return (totalsByLabel[b]-totalsByLabel[a]) || (a-b); });
+              var rankByIdx = {};
+              for (var r=0; r<idxs.length; r++) { rankByIdx[idxs[r]] = r+1; }
+              listEl.innerHTML = labels.map(function(name, idx){
+                var safe = String(name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                var count = totalsByLabel[idx] || 0;
+                var rank = rankByIdx[idx] || 999;
+                var rankCls = rank===1? ' top1' : (rank===2? ' top2' : (rank===3? ' top3' : ''));
+                var medal = rank<=3 ? '<span class="medal" aria-hidden="true"></span>' : '';
+                var title = 'title="' + safe + ': ' + count + ' students' + (rank<=3? (' (Rank '+rank+')') : '') + '"';
+                return '<span class="chip'+ rankCls +'" '+ title +'>' + medal + safe + '<span class="count">'+ count +'</span></span>';
+              }).join('');
+            }
+          } catch(e) { /* no-op */ }
+          var palette = [
+            '#4e73df','#e74a3b','#1cc88a','#f6c23e','#36b9cc','#6f42c1','#fd7e14','#20c997'
+          ];
+          var datasets = series.map(function(s, i){
+            var color = palette[i % palette.length];
+            return {
+              label: s.label,
+              data: s.data,
+              fill: false,
+              borderColor: color,
+              backgroundColor: color,
+              borderWidth: isMobile ? 1.5 : 2,
+              pointRadius: isMobile ? 0 : 3,
+              pointHoverRadius: isMobile ? 6 : 5,
+              pointHitRadius: 10,
+              lineTension: 0.25,
+              cubicInterpolationMode: 'monotone',
+              spanGaps: true
+            };
+          });
+          var chart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              legend: { display: !isMobile, position: isMobile ? 'bottom' : 'top', labels: { boxWidth: 10, fontSize: isMobile ? 10 : 12 } },
+              tooltips: { mode: 'index', intersect: false, bodyFontSize: isMobile ? 11 : 12 },
+              layout: { padding: { left: 6, right: 6, top: 6, bottom: isMobile ? 12 : 8 } },
+              hover: { mode: 'nearest', intersect: true },
+              scales: {
+                xAxes: [{
+                  ticks: {
+                    autoSkip: isMobile ? true : false,
+                    maxRotation: isMobile ? 35 : 60,
+                    minRotation: 0,
+                    fontSize: isMobile ? 10 : 12,
+                    callback: function(value, index){
+                      if (!isMobile) return value;
+                      // On mobile, show every 2nd label only
+                      if (index % 2 !== 0) return '';
+                      var v = String(value || '');
+                      return v.length > 10 ? (v.substr(0, 10) + '…') : v;
+                    }
+                  },
+                  gridLines: { display: false }
+                }],
+                yAxes: [{
+                  ticks: { beginAtZero: true, precision: 0, fontSize: isMobile ? 10 : 12 },
+                  gridLines: { color: 'rgba(0,0,0,0.05)' }
+                }]
+              }
+            }
+          });
+        })
+        .catch(function(e){
+          console && console.warn && console.warn('deptDistrictLine error', e);
+          var container = ctx && ctx.parentNode;
+          if (container) {
+            var div = document.createElement('div');
+            div.className = 'text-center text-muted small';
+            div.textContent = 'Unable to load chart at this time.';
+            container.appendChild(div);
+            if (ctx) ctx.style.display = 'none';
+          }
+        });
+    });
+  </script>
 </div>
 
 <!-- Removed progress bar cards row (Completion & Dropout) as requested -->

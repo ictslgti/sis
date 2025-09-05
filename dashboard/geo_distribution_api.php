@@ -30,14 +30,15 @@ $accCase = ($conduct === 'accepted') ? " AND s.student_conduct_accepted_at IS NO
 // Province-wise counts
 $sqlProv = "
   SELECT 
-    COALESCE(NULLIF(TRIM(s.student_provice), ''), 'Unknown') AS province,
+    TRIM(s.student_provice) AS province,
     SUM(CASE WHEN s.student_gender='Male'   " . $accCase . " THEN 1 ELSE 0 END) AS male,
     SUM(CASE WHEN s.student_gender='Female' " . $accCase . " THEN 1 ELSE 0 END) AS female,
     SUM(CASE WHEN 1=1 " . $accCase . " THEN 1 ELSE 0 END) AS total
   FROM student s
   JOIN student_enroll e ON e.student_id = s.student_id " . $statusCond . $yearCond . "
-  GROUP BY province
-  ORDER BY province ASC";
+  WHERE s.student_provice IS NOT NULL AND TRIM(s.student_provice) <> ''
+  GROUP BY TRIM(s.student_provice)
+  ORDER BY total DESC, province ASC";
 
 $resProv = mysqli_query($con, $sqlProv);
 if (!$resProv) {
@@ -57,13 +58,14 @@ while ($row = mysqli_fetch_assoc($resProv)) {
 // District-wise counts
 $sqlDist = "
   SELECT 
-    COALESCE(NULLIF(TRIM(s.student_district), ''), 'Unknown') AS district,
+    TRIM(s.student_district) AS district,
     SUM(CASE WHEN s.student_gender='Male'   " . $accCase . " THEN 1 ELSE 0 END) AS male,
     SUM(CASE WHEN s.student_gender='Female' " . $accCase . " THEN 1 ELSE 0 END) AS female,
     SUM(CASE WHEN 1=1 " . $accCase . " THEN 1 ELSE 0 END) AS total
   FROM student s
   JOIN student_enroll e ON e.student_id = s.student_id " . $statusCond . $yearCond . "
-  GROUP BY district
+  WHERE s.student_district IS NOT NULL AND TRIM(s.student_district) <> ''
+  GROUP BY TRIM(s.student_district)
   ORDER BY total DESC, district ASC
   LIMIT 20"; // Top 20 for readability
 

@@ -3,9 +3,20 @@
 // - No head/menu/footer includes
 // - Uses Chart.js already loaded globally (footer.php)
 ?>
-<div class="row mt-3">
-  <div class="col-md-6 col-sm-12 mb-3">
-    <div class="card">
+<style>
+  /* Gender widget responsive layout */
+  .gw .chart-container{ height: clamp(260px, 42vw, 380px); }
+  @media (max-width: 576px){ .gw .chart-container{ height: 300px; }}
+  .gw .card{ height: 100%; }
+  /* Department grid: allow wrap and keep tidy spacing */
+  #deptCharts_embed{ margin-left: -8px; margin-right: -8px; }
+  #deptCharts_embed > div{ padding-left: 8px; padding-right: 8px; }
+  .dept-mini-card{ border: 1px solid #e9ecef; border-radius: .5rem; }
+  .dept-mini-card canvas{ width: 100% !important; }
+</style>
+<div class="row mt-3 gw">
+  <div class="col-lg-6 col-md-12 mb-3 d-flex">
+    <div class="card w-100 shadow-sm">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0">Overall Gender (All Departments)</h6>
         <div class="small text-muted">Male vs Female totals</div>
@@ -24,8 +35,8 @@
       </div>
     </div>
   </div>
-  <div class="col-md-6 col-sm-12 mb-3">
-    <div class="card">
+  <div class="col-lg-6 col-md-12 mb-3 d-flex">
+    <div class="card w-100 shadow-sm">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0">Department-wise</h6>
         
@@ -113,9 +124,9 @@
     genderDeptData.forEach(function(it){
       if (isAdminDepartment(it.department)) return;
       var col = document.createElement('div');
-      col.className = 'col-sm-6 col-md-4 col-lg-3 mb-3';
+      col.className = 'col-6 col-md-4 col-lg-3 mb-3';
       var card = document.createElement('div');
-      card.className = 'border rounded p-2 h-100';
+      card.className = 'dept-mini-card p-2 h-100';
       var title = document.createElement('div');
       title.className = 'small text-truncate font-weight-bold mb-2';
       title.title = it.department||'';
