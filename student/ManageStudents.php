@@ -153,27 +153,15 @@ if (!empty($_SESSION['flash_errors'])) {
   unset($_SESSION['flash_errors']);
 }
 
-// Filters
-$fyear   = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
+// Filters (no Academic Year)
 $fstatus = isset($_GET['status']) ? $_GET['status'] : '';
 // Conduct acceptance filter: '', 'accepted', 'pending'
 $fconduct = isset($_GET['conduct']) ? trim($_GET['conduct']) : '';
 
-// New filters: department, course, gender
+// Other filters: department, course, gender
 $fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 $fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $fgender = isset($_GET['gender']) ? trim($_GET['gender']) : '';
-
-// If no academic year provided, default to latest Active academic year
-if ($fyear === '') {
-  if ($r = mysqli_query($con, "SELECT academic_year FROM academic WHERE academic_year_status='Active' ORDER BY academic_year DESC LIMIT 1")) {
-    if (mysqli_num_rows($r) > 0) {
-      $row = mysqli_fetch_row($r);
-      $fyear = $row[0] ?? '';
-    }
-    mysqli_free_result($r);
-  }
-}
 
 // For DIR (view-only), restrict to Active students regardless of requested filter
 if ($is_dir) {
@@ -183,21 +171,11 @@ if ($is_dir) {
 $where = [];
 $params = [];
 // Base SQL for both list and export
-$joinYearCond = '';
-if ($fyear !== '') {
-  $safeYear = mysqli_real_escape_string($con, $fyear);
-  // Apply year condition tolerant to suffix notes, extra spaces, or unicode spaces.
-  // 1) Prefix match ignoring normal spaces
-  // 2) OR exact match on the canonical 9-char pattern YYYY/YYYY
-  $joinYearCond = " AND (REPLACE(TRIM(e.academic_year),' ','') LIKE CONCAT(REPLACE(TRIM('$safeYear'),' ',''),'%') 
-                         OR LEFT(TRIM(e.academic_year), 9) = LEFT(TRIM('$safeYear'), 9))";
-}
-
 $baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
                s.student_conduct_accepted_at,
                e.course_id, c.course_name, d.department_id, d.department_name
         FROM student s
-        LEFT JOIN student_enroll e ON e.student_id = s.student_id$joinYearCond
+        LEFT JOIN student_enroll e ON e.student_id = s.student_id
         LEFT JOIN course c ON c.course_id = e.course_id
         LEFT JOIN department d ON d.department_id = c.department_id";
 if ($fstatus !== '') {
@@ -218,8 +196,7 @@ if ($fconduct === 'accepted') {
   $where[] = "s.student_conduct_accepted_at IS NULL";
 }
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
-$requireEnrollForYear = ($fyear !== '');
-$sqlWhereFinal = $whereSql; // Do NOT require e.student_id for the year; include students without enrollment too
+$sqlWhereFinal = $whereSql; // No Academic Year constraint
 
 // Pagination params
 $page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
@@ -228,7 +205,7 @@ $offset = ($page - 1) * $per_page;
 
 // Total count for pagination (deduplicate by student)
 $sqlCount = 'SELECT COUNT(DISTINCT s.student_id) AS c FROM student s '
-          . 'LEFT JOIN student_enroll e ON e.student_id = s.student_id' . $joinYearCond . ' '
+          . 'LEFT JOIN student_enroll e ON e.student_id = s.student_id '
           . 'LEFT JOIN course c ON c.course_id = e.course_id '
           . 'LEFT JOIN department d ON d.department_id = c.department_id '
           . $sqlWhereFinal;
@@ -252,7 +229,6 @@ if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
   echo '<div class="container-fluid"><div class="alert alert-warning small">'
     . '<div><strong>Debug (server):</strong></div>'
     . '<div><strong>Filters</strong> ' . h(json_encode([
-      'academic_year' => $fyear,
       'status' => $fstatus,
       'department_id' => $fdept,
       'course_id' => $fcourse,
@@ -265,11 +241,7 @@ if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
   // Extra counts to compare
   $cntAll = 0; $cntYear = 0;
   if ($r0 = mysqli_query($con, 'SELECT COUNT(*) AS c FROM student')) { $cntAll = (int)mysqli_fetch_assoc($r0)['c']; mysqli_free_result($r0); }
-  if ($fyear !== '' && ($r1 = mysqli_query($con, "SELECT COUNT(*) AS c FROM student_enroll WHERE academic_year='" . mysqli_real_escape_string($con, $fyear) . "'"))) {
-    $cntYear = (int)mysqli_fetch_assoc($r1)['c']; mysqli_free_result($r1);
-  }
   echo '<div><strong>Total students</strong> ' . $cntAll . '</div>'
-     . '<div><strong>Enroll rows in year</strong> ' . $cntYear . '</div>'
      . '</div></div>';
 }
 
@@ -328,14 +300,7 @@ if ($r = mysqli_query($con, "SELECT course_id, course_name, department_id FROM c
   mysqli_free_result($r);
 }
 
-// Academic years for filter
-$years = [];
-if ($r = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
-  while ($row = mysqli_fetch_assoc($r)) {
-    $years[] = $row['academic_year'];
-  }
-  mysqli_free_result($r);
-}
+// No Academic Year dropdown
 
 // Include standard head and menu to load CSS/JS
 $title = 'Manage Students | SLGTI';
@@ -396,15 +361,6 @@ include_once __DIR__ . '/../menu.php';
           <div class="card-body">
             <form class="mb-0" method="get" action="">
               <div class="form-row">
-                <div class="form-group col-12 col-md-4">
-                  <label for="fyear" class="small text-muted mb-1">Academic Year</label>
-                  <select id="fyear" name="academic_year" class="form-control">
-                    <option value="">-- Any --</option>
-                    <?php foreach ($years as $y): ?>
-                      <option value="<?php echo h($y); ?>" <?php echo ($fyear === $y ? 'selected' : ''); ?>><?php echo h($y); ?></option>
-                    <?php endforeach; ?>
-                  </select>
-                </div>
                 <div class="form-group col-12 col-md-4">
                   <label for="fdept" class="small text-muted mb-1">Department</label>
                   <select id="fdept" name="department_id" class="form-control">
@@ -625,8 +581,8 @@ include_once __DIR__ . '/../menu.php';
                         <td><?php echo h($row['student_id']); ?></td>
                         <td>
                           <?php echo h(display_name($row['student_fullname'])); ?>
-                          <?php if ($fyear !== '' && empty($row['course_name'])): ?>
-                            <span class="badge badge-warning ml-1">No enrollment in selected year</span>
+                          <?php if (empty($row['course_name'])): ?>
+                            <span class="badge badge-warning ml-1">No enrollment</span>
                           <?php endif; ?>
                         </td>
                         <td class="d-none d-md-table-cell">
@@ -704,8 +660,8 @@ include_once __DIR__ . '/../menu.php';
                             </div>
                             <?php if (!empty($row['course_name'])): ?>
                               <div><strong>Course:</strong> <?php echo h($row['course_name']); ?></div>
-                            <?php elseif ($fyear !== ''): ?>
-                              <div><strong>Enrollment:</strong> <span class="badge badge-warning">No enrollment in selected year</span></div>
+                            <?php elseif (empty($row['course_name'])): ?>
+                              <div><strong>Enrollment:</strong> <span class="badge badge-warning">No enrollment</span></div>
                             <?php endif; ?>
                             <?php if (!empty($row['department_name'])): ?>
                               <div><strong>Department:</strong> <?php echo h($row['department_name']); ?></div>
