@@ -175,13 +175,22 @@ if ($is_dir) {
 $where = [];
 $params = [];
 // Base SQL for both list and export
-$baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
-               s.student_conduct_accepted_at,
-               e.course_id, c.course_name, d.department_id, d.department_name
-        FROM student s
-        LEFT JOIN student_enroll e ON e.student_id = s.student_id
-        LEFT JOIN course c ON c.course_id = e.course_id
-        LEFT JOIN department d ON d.department_id = c.department_id";
+$baseSql = "SELECT 
+              `s`.`student_id`,
+              `s`.`student_fullname`,
+              `s`.`student_email`,
+              `s`.`student_phone`,
+              `s`.`student_status`,
+              `s`.`student_gender`,
+              `s`.`student_conduct_accepted_at`,
+              `e`.`course_id`,
+              `c`.`course_name`,
+              `d`.`department_id`,
+              `d`.`department_name`
+            FROM `student` AS `s`
+            LEFT JOIN `student_enroll` AS `e` ON `e`.`student_id` = `s`.`student_id`
+            LEFT JOIN `course` AS `c` ON `c`.`course_id` = `e`.`course_id`
+            LEFT JOIN `department` AS `d` ON `d`.`department_id` = `c`.`department_id`";
 if ($fstatus !== '') {
   $where[] = "s.student_status = '" . mysqli_real_escape_string($con, $fstatus) . "'";
 }
@@ -208,10 +217,10 @@ $per_page = isset($_GET['per_page']) ? max(10, min(200, (int)$_GET['per_page']))
 $offset = ($page - 1) * $per_page;
 
 // Total count for pagination (deduplicate by student)
-$sqlCount = 'SELECT COUNT(DISTINCT s.student_id) AS c FROM student s '
-          . 'LEFT JOIN student_enroll e ON e.student_id = s.student_id '
-          . 'LEFT JOIN course c ON c.course_id = e.course_id '
-          . 'LEFT JOIN department d ON d.department_id = c.department_id '
+$sqlCount = 'SELECT COUNT(DISTINCT `s`.`student_id`) AS `c` FROM `student` AS `s` '
+          . 'LEFT JOIN `student_enroll` AS `e` ON `e`.`student_id` = `s`.`student_id` '
+          . 'LEFT JOIN `course` AS `c` ON `c`.`course_id` = `e`.`course_id` '
+          . 'LEFT JOIN `department` AS `d` ON `d`.`department_id` = `c`.`department_id` '
           . $sqlWhereFinal;
 $total_count = 0;
 if ($rc = mysqli_query($con, $sqlCount)) {
@@ -244,7 +253,7 @@ if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
     . '<div><strong>DB Error</strong> ' . h(mysqli_error($con)) . '</div>';
   // Extra counts to compare
   $cntAll = 0; $cntYear = 0;
-  if ($r0 = mysqli_query($con, 'SELECT COUNT(*) AS c FROM student')) { $cntAll = (int)mysqli_fetch_assoc($r0)['c']; mysqli_free_result($r0); }
+  if ($r0 = mysqli_query($con, 'SELECT COUNT(*) AS `c` FROM `student`')) { $cntAll = (int)mysqli_fetch_assoc($r0)['c']; mysqli_free_result($r0); }
   echo '<div><strong>Total students</strong> ' . $cntAll . '</div>'
      . '</div></div>';
 }
