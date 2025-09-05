@@ -120,15 +120,16 @@ function saveSidebarOpenState(isOpen){
   try { localStorage.setItem('slgti_sidebar_open', isOpen ? '1' : '0'); } catch(e){}
 }
 
-  $("#close-sidebar").on('click', function(e) {
-  e.preventDefault();
-  $(".page-wrapper").removeClass("toggled");
-  saveSidebarOpenState(false);
+  // Use delegated handlers to be resilient to markup timing and support touch
+  $(document).on('click touchstart', "#close-sidebar", function(e) {
+    e.preventDefault();
+    $(".page-wrapper").removeClass("toggled");
+    saveSidebarOpenState(false);
   });
-  $("#show-sidebar").on('click', function(e) {
-  e.preventDefault();
-  $(".page-wrapper").addClass("toggled");
-  saveSidebarOpenState(true);
+  $(document).on('click touchstart', "#show-sidebar", function(e) {
+    e.preventDefault();
+    $(".page-wrapper").addClass("toggled");
+    saveSidebarOpenState(true);
   });
 
   // Responsive behavior: on mobile, start collapsed and auto-close after navigation
@@ -160,12 +161,20 @@ function saveSidebarOpenState(isOpen){
     if (isMobile()) { $(".page-wrapper").removeClass("toggled"); } else { $(".page-wrapper").addClass("toggled"); }
   });
 
-  // After clicking any sidebar link on mobile, hide the sidebar to show content
-  $('#sidebar a').on('click', function(e) {
-    if (isMobile()) {
-      $(".page-wrapper").removeClass("toggled");
-      saveSidebarOpenState(false);
-    }
+  // After clicking any real navigation link on mobile, hide the sidebar
+  // Do NOT close when clicking dropdown togglers or placeholder links (#)
+  $(document).on('click touchstart', '#sidebar a', function(e) {
+    try {
+      var $a = $(this);
+      var href = ($a.attr('href') || '').trim();
+      var isDropdownToggler = $a.parent().is('.sidebar-dropdown') && $a.is('.sidebar-dropdown > a');
+      var isPlaceholder = href === '' || href === '#' || href === 'javascript:void(0)';
+      if (isDropdownToggler || isPlaceholder) return; // don't auto-close
+      if (isMobile()) {
+        $(".page-wrapper").removeClass("toggled");
+        saveSidebarOpenState(false);
+      }
+    } catch(_){}
   });
 }
 
