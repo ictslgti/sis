@@ -59,6 +59,43 @@ if(!isset($_SESSION['user_name'])){
         }
       }
     </style>
+    <?php $__is_debug = (isset($_GET['debug']) && $_GET['debug'] === '1'); $__is_admin_like = (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['ADM','SAO'], true)); ?>
+    <?php if ($__is_debug && $__is_admin_like) { ?>
+    <style>
+      #slgti-debug-overlay { position: fixed; z-index: 2147483647; bottom: 0; left: 0; right: 0; max-height: 40vh; overflow:auto; background: rgba(0,0,0,.85); color: #ffe08a; font: 12px/1.4 monospace; padding: 8px; border-top: 2px solid #ffc107; }
+      #slgti-debug-overlay .dbg { margin: 4px 0; white-space: pre-wrap; word-break: break-word; }
+      #slgti-debug-overlay .dbg b { color: #fff; }
+    </style>
+    <script>
+      (function(){
+        var box;
+        function ensure(){
+          if (!box){
+            box = document.createElement('div'); box.id = 'slgti-debug-overlay';
+            box.innerHTML = '<div class="dbg"><b>Debug enabled</b> — JS errors will appear here.</div>';
+            document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(box); });
+          }
+          return box;
+        }
+        function log(msg){ try { ensure().appendChild(document.createElement('div')).className='dbg'; ensure().lastChild.innerHTML = msg; } catch(e){}
+        }
+        window.addEventListener('error', function(e){
+          try{
+            var m = '<b>ERROR:</b> ' + (e.message||'') + ' at ' + (e.filename||'') + ':' + (e.lineno||'') + ':' + (e.colno||'');
+            log(m);
+          }catch(_){ }
+        });
+        window.addEventListener('unhandledrejection', function(e){
+          try{
+            var r = e.reason; var msg = (r && (r.stack||r.message)) ? (r.stack||r.message) : String(r);
+            log('<b>UNHANDLED PROMISE:</b> ' + msg);
+          }catch(_){ }
+        });
+        // Warn if jQuery missing (Bootstrap JS may need it)
+        setTimeout(function(){ if(!window.jQuery){ log('<b>WARNING:</b> jQuery not loaded before Bootstrap. Some UI may not work.'); } }, 1500);
+      })();
+    </script>
+    <?php } ?>
     <script>
       // Apply saved theme ASAP to avoid flash
       (function(){

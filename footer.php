@@ -169,7 +169,16 @@ function saveSidebarOpenState(isOpen){
   });
 }
 
-$('.debug-url').html('Delete URL: <strong>' + $(this).find('.btn-ok').attr('href') + '</strong>');
+// Hook delete confirmation modal to display and set the target URL safely
+$('#confirm-delete').on('show.bs.modal', function (e) {
+  try {
+    var trigger = e.relatedTarget ? $(e.relatedTarget) : null;
+    var href = trigger ? (trigger.data('href') || trigger.attr('href') || '#') : '#';
+    $(this).find('.btn-ok').attr('href', href);
+    $(this).find('.debug-url').html('Delete URL: <strong>' + href + '</strong>');
+  } catch(err) { /* noop */ }
+});
+
 }); // end initWhenjQueryReady
 
 var timeDisplay = document.getElementById("timestamp");
