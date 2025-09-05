@@ -205,7 +205,8 @@ if ($fstatus !== '') {
   $where[] = "s.student_status = '" . mysqli_real_escape_string($con, $fstatus) . "'";
 }
 if ($fdept !== '') {
-  $where[] = "d.department_id = '" . mysqli_real_escape_string($con, $fdept) . "'";
+  // Filter by the foreign key on course to avoid missing rows when department lookup is absent
+  $where[] = "c.department_id = '" . mysqli_real_escape_string($con, $fdept) . "'";
 }
 if ($fcourse !== '') {
   $where[] = "c.course_id = '" . mysqli_real_escape_string($con, $fcourse) . "'";
