@@ -186,8 +186,11 @@ $params = [];
 $joinYearCond = '';
 if ($fyear !== '') {
   $safeYear = mysqli_real_escape_string($con, $fyear);
-  // Apply year condition in the JOIN with TRIM to tolerate trailing/leading spaces in DB
-  $joinYearCond = " AND TRIM(e.academic_year) = TRIM('$safeYear')";
+  // Apply year condition tolerant to suffix notes, extra spaces, or unicode spaces.
+  // 1) Prefix match ignoring normal spaces
+  // 2) OR exact match on the canonical 9-char pattern YYYY/YYYY
+  $joinYearCond = " AND (REPLACE(TRIM(e.academic_year),' ','') LIKE CONCAT(REPLACE(TRIM('$safeYear'),' ',''),'%') 
+                         OR LEFT(TRIM(e.academic_year), 9) = LEFT(TRIM('$safeYear'), 9))";
 }
 
 $baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
