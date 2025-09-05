@@ -54,7 +54,9 @@
     return cnt;
   }
   function fetchGenderData(){
-    return fetch("<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/dashboard/gender_distribution_api.php?get_gender_data=1&status=Following&conduct=accepted")
+    var base = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/dashboard/gender_distribution_api.php?get_gender_data=1&status=Following&conduct=accepted";
+    var yr = "<?php echo isset($gw_academic_year) && $gw_academic_year !== '' ? ('&academic_year=' . rawurlencode($gw_academic_year)) : ''; ?>";
+    return fetch(base + yr)
       .then(r=>r.json()).then(j=> j.status==='success'? j.data: []).catch(()=>[]);
   }
   function computeCountsAll(){

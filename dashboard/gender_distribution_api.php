@@ -1,6 +1,6 @@
 <?php
 // Returns department-wise gender counts as JSON
-// Query: ?get_gender_data=1 [&status=Following|Completed|Dropout|All]
+// Query: ?get_gender_data=1 [&status=Following|Completed|Dropout|All] [&academic_year=YYYY/YYYY] [&conduct=accepted|all]
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -20,9 +20,24 @@ if (!in_array($status, $allowed, true)) { $status = 'Following'; }
 $conduct = isset($_GET['conduct']) ? strtolower(trim($_GET['conduct'])) : 'accepted';
 if (!in_array($conduct, ['accepted','all'], true)) { $conduct = 'accepted'; }
 
+// Academic year filter: default to latest Active if not provided
+$year = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
+if ($year === '') {
+    if ($rs = mysqli_query($con, "SELECT academic_year FROM academic WHERE academic_year_status='Active' ORDER BY academic_year DESC LIMIT 1")) {
+        if ($r = mysqli_fetch_row($rs)) { $year = $r[0] ?? ''; }
+        mysqli_free_result($rs);
+    }
+}
+
 // Build SQL with LEFT JOIN to include all departments
-// Tables inferred: department(department_id, department_name), course(department_id), student_enroll(student_id, course_id, student_enroll_status), student(student_id, student_gender)
-$whereEnroll = ($status === 'All') ? '' : " AND e.student_enroll_status = '" . mysqli_real_escape_string($con, $status) . "'";
+// Tables inferred: department(department_id, department_name), course(department_id), student_enroll(student_id, course_id, student_enroll_status, academic_year), student(student_id, student_gender)
+$whereEnroll = '';
+if ($status !== 'All') {
+    $whereEnroll .= " AND e.student_enroll_status = '" . mysqli_real_escape_string($con, $status) . "'";
+}
+if ($year !== '') {
+    $whereEnroll .= " AND e.academic_year = '" . mysqli_real_escape_string($con, $year) . "'";
+}
 
 // Apply acceptance condition inside aggregates to preserve LEFT JOIN behavior
 $accCase = ($conduct === 'accepted') ? " AND s.student_conduct_accepted_at IS NOT NULL" : "";

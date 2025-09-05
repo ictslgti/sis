@@ -20,6 +20,27 @@ function h($s)
 }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
+// Display helper: Title-case names while preserving initials like H.A.R.C.
+function display_name($name)
+{
+  $name = trim((string)$name);
+  if ($name === '') return '';
+  // Split by spaces, transform tokens individually
+  $parts = preg_split('/\s+/', $name);
+  $out = [];
+  foreach ($parts as $p) {
+    // Keep tokens with periods or that are short ALL-CAPS as-is (initials)
+    if (strpos($p, '.') !== false || (preg_match('/^[A-Z]+$/', $p) && strlen($p) <= 4)) {
+      $out[] = strtoupper($p);
+      continue;
+    }
+    // Otherwise, normal title case
+    $lower = mb_strtolower($p, 'UTF-8');
+    $out[] = mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
+  }
+  return implode(' ', $out);
+}
+
 // Ensure conduct column exists (no-op if already there)
 @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_conduct_accepted_at` DATETIME NULL");
 
@@ -161,8 +182,8 @@ if ($is_dir) {
 
 $where = [];
 $params = [];
-// Join with enrollment/course/department to support department/course filtering
-$sql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
+// Base SQL for both list and export
+$baseSql = "SELECT s.student_id, s.student_fullname, s.student_email, s.student_phone, s.student_status, s.student_gender,
                s.student_conduct_accepted_at,
                e.course_id, c.course_name, d.department_id, d.department_name
         FROM student s
@@ -189,12 +210,48 @@ if ($fconduct === 'accepted') {
 } elseif ($fconduct === 'pending') {
   $where[] = "s.student_conduct_accepted_at IS NULL";
 }
-if ($where) {
-  $sql .= ' WHERE ' . implode(' AND ', $where);
-}
-$sql .= ' ORDER BY s.student_id ASC LIMIT 500';
-$res = mysqli_query($con, $sql);
+$whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
+$sqlList = $baseSql . $whereSql . ' ORDER BY s.student_id ASC LIMIT 500';
+$sqlExport = $baseSql . $whereSql . ' ORDER BY s.student_id ASC';
+$res = mysqli_query($con, $sqlList);
 $total_count = ($res ? mysqli_num_rows($res) : 0);
+
+// Export (CSV opened by Excel) with current filters
+if (isset($_GET['export']) && $_GET['export'] === 'excel') {
+  $filename = 'students_' . date('Ymd_His') . '.csv';
+  // Send Excel-friendly CSV headers
+  header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
+  header('Content-Disposition: attachment; filename=' . $filename);
+  header('Pragma: no-cache');
+  header('Expires: 0');
+  // Clear any existing output buffers to avoid stray bytes
+  if (function_exists('ob_get_level')) {
+    while (ob_get_level() > 0) { ob_end_clean(); }
+  }
+  // Output BOM for Excel UTF-8
+  echo "\xEF\xBB\xBF";
+  $out = fopen('php://output', 'w');
+  // Header row
+  fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Phone', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At']);
+  if ($qr = mysqli_query($con, $sqlExport)) {
+    while ($r = mysqli_fetch_assoc($qr)) {
+      fputcsv($out, [
+        $r['student_id'],
+        display_name($r['student_fullname'] ?? ''),
+        $r['student_email'] ?? '',
+        $r['student_phone'] ?? '',
+        $r['student_status'] ?? '',
+        $r['student_gender'] ?? '',
+        $r['course_name'] ?? '',
+        $r['department_name'] ?? '',
+        $r['student_conduct_accepted_at'] ?? ''
+      ]);
+    }
+    mysqli_free_result($qr);
+  }
+  fclose($out);
+  exit;
+}
 
 // Load dropdown data: departments and courses (for filters)
 $departments = [];
@@ -458,6 +515,8 @@ include_once __DIR__ . '/../menu.php';
           </div>
           <div class="mb-2 mb-md-0">
             <a href="<?php echo $base; ?>/student/ManageStudents.php" class="btn btn-outline-secondary btn-sm"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
+            <?php $qs = $_GET; $qs['export'] = 'excel'; $exportUrl = $base . '/student/ManageStudents.php?' . http_build_query($qs); ?>
+            <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm ml-2"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
           </div>
         </div>
 
@@ -505,7 +564,7 @@ include_once __DIR__ . '/../menu.php';
                         </td>
                         <td class="text-muted align-middle"><?php echo ++$i; ?></td>
                         <td><?php echo h($row['student_id']); ?></td>
-                        <td><?php echo h($row['student_fullname']); ?></td>
+                        <td><?php echo h(display_name($row['student_fullname'])); ?></td>
                         <td class="d-none d-md-table-cell">
                           <?php
                           $st = $row['student_status'] ?: '';

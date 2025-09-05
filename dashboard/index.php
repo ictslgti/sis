@@ -17,6 +17,14 @@ include_once("../menu.php");
 <?php
 // Determine if current user is a student
 $isStudent = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU');
+// Academic year filter (default: latest Active) - used by both student and admin dashboards
+$selectedYear = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
+if ($selectedYear === '') {
+  if ($rs = mysqli_query($con, "SELECT academic_year FROM academic WHERE academic_year_status='Active' ORDER BY academic_year DESC LIMIT 1")) {
+    if ($r = mysqli_fetch_row($rs)) { $selectedYear = $r[0] ?? ''; }
+    mysqli_free_result($rs);
+  }
+}
 ?>
 
 <?php if ($isStudent): ?>
@@ -49,7 +57,34 @@ $isStudent = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU')
     }
 ?>
 
+<!-- Academic Year filter -->
 <div class="row mt-3">
+  <div class="col-12">
+    <form method="get" action="" class="form-inline mb-2">
+      <label class="mr-2 small text-muted">Academic Year</label>
+      <select name="academic_year" class="form-control form-control-sm mr-2" style="min-width:200px;">
+        <option value="">-- Latest Active --</option>
+        <?php
+        $years = [];
+        if ($rs = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+          while ($r = mysqli_fetch_assoc($rs)) { $years[] = $r['academic_year']; }
+          mysqli_free_result($rs);
+        }
+        foreach ($years as $y) {
+          $sel = ($selectedYear === $y) ? 'selected' : '';
+          echo '<option value="'.htmlspecialchars($y).'" '.$sel.'>'.htmlspecialchars($y).'</option>';
+        }
+        ?>
+      </select>
+      <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+      <?php if (!empty($_GET['academic_year'])): ?>
+        <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-link btn-sm ml-2">Clear</a>
+      <?php endif; ?>
+    </form>
+  </div>
+</div>
+
+<div class="row mt-1">
   <div class="col-md-4 col-sm-12">
     <div class="card mb-3 text-center">
       <div class="card-body">
@@ -116,8 +151,14 @@ if ($rs = mysqli_query($con, "SELECT COUNT(academic_year) AS cnt FROM academic")
   if ($r = mysqli_fetch_assoc($rs)) { $acadCount = (int)$r['cnt']; }
   mysqli_free_result($rs);
 }
-// Students who accepted Code of Conduct
-if ($rs = mysqli_query($con, "SELECT COUNT(student_id) AS cnt FROM student WHERE student_conduct_accepted_at IS NOT NULL")) {
+// Students (current active) in the selected academic year
+// Definition: enrollment in selected year with status in ('Following','Active'), and student status not 'Inactive'
+$yearCond = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
+$sqlStu = "SELECT COUNT(DISTINCT s.student_id) AS cnt
+           FROM student s
+           JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+           WHERE COALESCE(s.student_status,'') <> 'Inactive'";
+if ($rs = mysqli_query($con, $sqlStu)) {
   if ($r = mysqli_fetch_assoc($rs)) { $studentCount = (int)$r['cnt']; }
   mysqli_free_result($rs);
 }
@@ -198,6 +239,8 @@ if ($rs = mysqli_query($con, "SELECT COUNT(student_id) AS cnt FROM student WHERE
 <div class="row mt-4">
     <div class="col-12">
         <?php
+        // Pass selected year into widget
+        $gw_academic_year = $selectedYear;
         // Embed gender charts widget directly on dashboard
         $genderWidget = __DIR__ . '/partials/gender_widget.php';
         if (file_exists($genderWidget)) {
@@ -207,6 +250,22 @@ if ($rs = mysqli_query($con, "SELECT COUNT(student_id) AS cnt FROM student WHERE
         }
         ?>
     </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <?php
+        // Province & District-wise gender widget
+        $ggw_academic_year = $selectedYear;
+        $geoWidget = __DIR__ . '/partials/geo_gender_widget.php';
+        if (file_exists($geoWidget)) {
+            include $geoWidget;
+        } else {
+            echo '<div class="alert alert-warning">Geo gender widget not found.</div>';
+        }
+        ?>
+    </div>
+    
 </div>
 
 <!-- Removed progress bar cards row (Completion & Dropout) as requested -->
