@@ -336,7 +336,7 @@ require_once __DIR__ . '/../head.php';
 $showTopNav = true;
 if (isset($_SESSION['user_type'])) {
     // Hide top nav for HODs viewing student profiles
-    if ($_SESSION['user_type'] === 'HOD' && isset($_GET['Sid'])) {
+    if (($_SESSION['user_type'] === 'HOD' && isset($_GET['Sid'])) || $_SESSION['user_type'] === 'SAO') {
         $showTopNav = false;
     }
 }
