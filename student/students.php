@@ -58,18 +58,8 @@ include_once __DIR__ . '/../menu.php';
   <div class="row">
     <div class="col-12">
       <div class="card shadow-sm border-0 mb-3 first-section-card">
-        <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center">
-          <div class="font-weight-semibold"><i class="fa fa-search mr-1"></i> Search</div>
-          <div class="d-flex align-items-center w-100 w-md-auto mt-2 mt-md-0 ml-md-auto justify-content-between justify-content-md-end">
-            <div class="d-none d-md-block mr-2" style="width: 260px;">
-              <div class="input-group input-group-sm">
-                <div class="input-group-prepend">
-                  <span class="input-group-text"><i class="fa fa-search"></i></span>
-                </div>
-                <input type="text" id="quickSearch" class="form-control" placeholder="Quick search... (ID, name, email, phone)">
-              </div>
-            </div>
-          </div>
+        <div class="card-header d-flex align-items-center">
+          <div class="font-weight-semibold"><i class="fa fa-users mr-1"></i> Students</div>
         </div>
       </div>
 
@@ -89,12 +79,6 @@ include_once __DIR__ . '/../menu.php';
       <div class="card shadow-sm border-0">
         <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-md-between">
           <div class="font-weight-semibold mb-2 mb-md-0"><i class="fa fa-users mr-1"></i> Students <span class="badge badge-secondary ml-2"><?php echo (int)$total_count; ?></span></div>
-          <div class="d-md-none w-100">
-            <div class="input-group input-group-sm">
-              <div class="input-group-prepend"><span class="input-group-text"><i class="fa fa-search"></i></span></div>
-              <input type="text" id="quickSearchMobile" class="form-control" placeholder="Quick search (ID, name, email, phone)">
-            </div>
-          </div>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive table-scroll" style="border-top-left-radius:.25rem;border-top-right-radius:.25rem;">
@@ -115,7 +99,7 @@ include_once __DIR__ . '/../menu.php';
               </thead>
               <tbody>
                 <?php if ($res && mysqli_num_rows($res) > 0): $i = 0; while ($row = mysqli_fetch_assoc($res)): ?>
-                  <tr data-rowtext="<?php echo h(strtolower(trim(($row['student_id'] ?? '') . ' ' . ($row['student_fullname'] ?? '') . ' ' . ($row['student_email'] ?? '') . ' ' . ($row['student_phone'] ?? '')))); ?>">
+                  <tr>
                     <td class="text-muted align-middle"><?php echo ++$i; ?></td>
                     <td><?php echo h($row['student_id']); ?></td>
                     <td><?php echo h(display_name($row['student_fullname'])); ?></td>
