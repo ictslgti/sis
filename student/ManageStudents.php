@@ -219,11 +219,7 @@ if ($fconduct === 'accepted') {
 }
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 $requireEnrollForYear = ($fyear !== '');
-$sqlWhereFinal = $whereSql;
-if ($requireEnrollForYear) {
-  // Ensure we only include students that have an enrollment row for the selected year
-  $sqlWhereFinal .= ($sqlWhereFinal ? ' AND ' : ' WHERE ') . ' e.student_id IS NOT NULL';
-}
+$sqlWhereFinal = $whereSql; // Do NOT require e.student_id for the year; include students without enrollment too
 $sqlList = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
 $sqlExport = $baseSql . $sqlWhereFinal . ' ORDER BY s.student_id ASC';
 $res = mysqli_query($con, $sqlList);
@@ -605,7 +601,12 @@ include_once __DIR__ . '/../menu.php';
                         </td>
                         <td class="text-muted align-middle"><?php echo ++$i; ?></td>
                         <td><?php echo h($row['student_id']); ?></td>
-                        <td><?php echo h(display_name($row['student_fullname'])); ?></td>
+                        <td>
+                          <?php echo h(display_name($row['student_fullname'])); ?>
+                          <?php if ($fyear !== '' && empty($row['course_name'])): ?>
+                            <span class="badge badge-warning ml-1">No enrollment in selected year</span>
+                          <?php endif; ?>
+                        </td>
                         <td class="d-none d-md-table-cell">
                           <?php
                           $st = $row['student_status'] ?: '';
@@ -681,6 +682,8 @@ include_once __DIR__ . '/../menu.php';
                             </div>
                             <?php if (!empty($row['course_name'])): ?>
                               <div><strong>Course:</strong> <?php echo h($row['course_name']); ?></div>
+                            <?php elseif ($fyear !== ''): ?>
+                              <div><strong>Enrollment:</strong> <span class="badge badge-warning">No enrollment in selected year</span></div>
                             <?php endif; ?>
                             <?php if (!empty($row['department_name'])): ?>
                               <div><strong>Department:</strong> <?php echo h($row['department_name']); ?></div>

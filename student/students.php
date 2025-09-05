@@ -1,5 +1,7 @@
 <?php
-if (session_status() === PHP_SESSION_NONE) { session_start(); }
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
@@ -7,14 +9,21 @@ require_once __DIR__ . '/../auth.php';
 require_roles(['ADM', 'DIR', 'SAO']);
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-function h($s) { return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
-function display_name($name) {
+function h($s)
+{
+  return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8');
+}
+function display_name($name)
+{
   $name = trim((string)$name);
   if ($name === '') return '';
   $parts = preg_split('/\s+/', $name);
   $out = [];
   foreach ($parts as $p) {
-    if (strpos($p, '.') !== false || (preg_match('/^[A-Z]+$/', $p) && strlen($p) <= 4)) { $out[] = strtoupper($p); continue; }
+    if (strpos($p, '.') !== false || (preg_match('/^[A-Z]+$/', $p) && strlen($p) <= 4)) {
+      $out[] = strtoupper($p);
+      continue;
+    }
     $lower = mb_strtolower($p, 'UTF-8');
     $out[] = mb_convert_case($lower, MB_CASE_TITLE, 'UTF-8');
   }
@@ -64,16 +73,48 @@ include_once __DIR__ . '/../menu.php';
       </div>
 
       <style>
-        .table.table-sm td, .table.table-sm th { padding: .4rem .5rem; }
-        @media (max-width: 575.98px) {
-          .breadcrumb { margin-bottom: .35rem; padding: .25rem .5rem; }
-          .page-title { font-size: 1.15rem; line-height: 1.25; }
-          .page-title i { margin-right: .35rem !important; font-size: 1rem; }
-          .first-section-card { margin-top: .5rem !important; }
-          .table td, .table th { white-space: nowrap; }
+        .table.table-sm td,
+        .table.table-sm th {
+          padding: .4rem .5rem;
         }
-        .table-sticky thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 2; }
-        .table-scroll { max-height: 70vh; overflow-y: auto; }
+
+        @media (max-width: 575.98px) {
+          .breadcrumb {
+            margin-bottom: .35rem;
+            padding: .25rem .5rem;
+          }
+
+          .page-title {
+            font-size: 1.15rem;
+            line-height: 1.25;
+          }
+
+          .page-title i {
+            margin-right: .35rem !important;
+            font-size: 1rem;
+          }
+
+          .first-section-card {
+            margin-top: .5rem !important;
+          }
+
+          .table td,
+          .table th {
+            white-space: nowrap;
+          }
+        }
+
+        .table-sticky thead th {
+          position: sticky;
+          top: 0;
+          background: #f8f9fa;
+          z-index: 2;
+        }
+
+        .table-scroll {
+          max-height: 70vh;
+          overflow-y: auto;
+        }
       </style>
 
       <div class="card shadow-sm border-0">
@@ -98,35 +139,38 @@ include_once __DIR__ . '/../menu.php';
                 </tr>
               </thead>
               <tbody>
-                <?php if ($res && mysqli_num_rows($res) > 0): $i = 0; while ($row = mysqli_fetch_assoc($res)): ?>
-                  <tr>
-                    <td class="text-muted align-middle"><?php echo ++$i; ?></td>
-                    <td><?php echo h($row['student_id']); ?></td>
-                    <td><?php echo h(display_name($row['student_fullname'])); ?></td>
-                    <td class="d-none d-lg-table-cell"><?php echo h($row['student_email'] ?? ''); ?></td>
-                    <td class="d-none d-lg-table-cell"><?php echo h($row['student_phone'] ?? ''); ?></td>
-                    <td>
-                      <?php $st = $row['student_status'] ?: ''; $statusClass = 'secondary';
+                <?php if ($res && mysqli_num_rows($res) > 0): $i = 0;
+                  while ($row = mysqli_fetch_assoc($res)): ?>
+                    <tr>
+                      <td class="text-muted align-middle"><?php echo ++$i; ?></td>
+                      <td><?php echo h($row['student_id']); ?></td>
+                      <td><?php echo h(display_name($row['student_fullname'])); ?></td>
+                      <td class="d-none d-lg-table-cell"><?php echo h($row['student_email'] ?? ''); ?></td>
+                      <td class="d-none d-lg-table-cell"><?php echo h($row['student_phone'] ?? ''); ?></td>
+                      <td>
+                        <?php $st = $row['student_status'] ?: '';
+                        $statusClass = 'secondary';
                         if ($st === 'Active') $statusClass = 'success';
                         elseif ($st === 'Following') $statusClass = 'info';
                         elseif ($st === 'Completed') $statusClass = 'primary';
                         elseif ($st === 'Suspended') $statusClass = 'danger';
-                      ?>
-                      <span class="badge badge-<?php echo $statusClass; ?>"><?php echo h($st ?: '—'); ?></span>
-                    </td>
-                    <td class="d-none d-lg-table-cell"><?php echo h($row['student_gender'] ?? ''); ?></td>
-                    <td class="d-none d-xl-table-cell"><?php echo h($row['course_name'] ?? ''); ?></td>
-                    <td class="d-none d-xl-table-cell"><?php echo h($row['department_name'] ?? ''); ?></td>
-                    <td class="d-none d-xl-table-cell">
-                      <?php if (!empty($row['student_conduct_accepted_at'])): ?>
-                        <span class="badge badge-success">Accepted</span>
-                        <small class="text-muted d-block"><?php echo h($row['student_conduct_accepted_at']); ?></small>
-                      <?php else: ?>
-                        <span class="badge badge-warning">Pending</span>
-                      <?php endif; ?>
-                    </td>
-                  </tr>
-                <?php endwhile; else: ?>
+                        ?>
+                        <span class="badge badge-<?php echo $statusClass; ?>"><?php echo h($st ?: '—'); ?></span>
+                      </td>
+                      <td class="d-none d-lg-table-cell"><?php echo h($row['student_gender'] ?? ''); ?></td>
+                      <td class="d-none d-xl-table-cell"><?php echo h($row['course_name'] ?? ''); ?></td>
+                      <td class="d-none d-xl-table-cell"><?php echo h($row['department_name'] ?? ''); ?></td>
+                      <td class="d-none d-xl-table-cell">
+                        <?php if (!empty($row['student_conduct_accepted_at'])): ?>
+                          <span class="badge badge-success">Accepted</span>
+                          <small class="text-muted d-block"><?php echo h($row['student_conduct_accepted_at']); ?></small>
+                        <?php else: ?>
+                          <span class="badge badge-warning">Pending</span>
+                        <?php endif; ?>
+                      </td>
+                    </tr>
+                  <?php endwhile;
+                else: ?>
                   <tr>
                     <td colspan="10" class="text-center py-5 text-muted">
                       <div><i class="fa fa-user-graduate fa-2x mb-2"></i></div>
