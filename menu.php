@@ -451,7 +451,7 @@ if ($u_t === 'STU') {
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">
               <i class="fas fa-file-upload"></i>
-              <span>Import Student Enrollment</span>
+              <span>Add Students</span>
             </a>
           </li>
           <?php } ?>

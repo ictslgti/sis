@@ -1,11 +1,110 @@
 <?php
 // Ensure session for flash messages
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
+
+// Compute the next student_id from existing records for course + year
+function compute_next_student_id(mysqli $con, string $course_id, string $academic_year): string {
+    $stmt = mysqli_prepare($con, 'SELECT student_id FROM student_enroll WHERE course_id = ? AND academic_year = ? ORDER BY student_id DESC LIMIT 1');
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, 'ss', $course_id, $academic_year);
+        if (mysqli_stmt_execute($stmt)) {
+            $res = mysqli_stmt_get_result($stmt);
+            if ($res && ($row = mysqli_fetch_assoc($res))) {
+                $maxId = $row['student_id'];
+                if (preg_match('/^(.*?)(\d+)$/', $maxId, $m)) {
+                    $prefix = $m[1];
+                    $num = $m[2];
+                    $len = strlen($num);
+                    mysqli_stmt_close($stmt);
+                    return $prefix . str_pad((string)((int)$num + 1), $len, '0', STR_PAD_LEFT);
+                } else {
+                    mysqli_stmt_close($stmt);
+                    return $maxId . '01';
+                }
+            }
+        }
+        mysqli_stmt_close($stmt);
+    }
+    // First ID: build from year digits + course id + 01
+    $yearDigits = preg_replace('/[^0-9]/', '', $academic_year);
+    $prefix = strlen($yearDigits) >= 4 ? substr($yearDigits, 0, 4) : date('Y');
+    $coursePart = preg_replace('/[^A-Za-z0-9]/', '', $course_id);
+    return $prefix . $coursePart . '01';
+}
 // Controller: handle CSV import for student_enroll and serve CSV template
 // Location: controller/ImportStudentEnroll.php
 // Access control: allow only Admin and SAO to use this controller
 require_once __DIR__ . '/../auth.php';
 require_roles(['ADM','SAO']);
+
+// --- Helper functions for optional capacity enforcement ---
+// Detect if a table has any of the known capacity columns and return the column name
+function detect_capacity_column(mysqli $con, string $table): ?string {
+    $candidates = ['max_students', 'capacity', 'intake', 'max_intake', 'max_enroll'];
+    foreach ($candidates as $col) {
+        $q = sprintf("SHOW COLUMNS FROM `%s` LIKE '%s'", mysqli_real_escape_string($con, $table), mysqli_real_escape_string($con, $col));
+        $res = mysqli_query($con, $q);
+        if ($res && mysqli_num_rows($res) > 0) { mysqli_free_result($res); return $col; }
+    }
+    return null;
+}
+
+// Get max allowed for a given course and academic year, preferring batch capacity if present, else course capacity
+function get_max_allowed(mysqli $con, string $course_id, string $academic_year): int {
+    // Prefer batch-level capacity if available
+    $batchCol = detect_capacity_column($con, 'batch');
+    if ($batchCol) {
+        $stmt = mysqli_prepare($con, "SELECT `$batchCol` FROM batch WHERE course_id = ? AND academic_year = ? ORDER BY `$batchCol` DESC LIMIT 1");
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 'ss', $course_id, $academic_year);
+            if (mysqli_stmt_execute($stmt)) {
+                $res = mysqli_stmt_get_result($stmt);
+                if ($res && ($row = mysqli_fetch_row($res))) {
+                    $val = (int)($row[0] ?? 0);
+                    mysqli_stmt_close($stmt);
+                    return max(0, $val);
+                }
+            }
+            mysqli_stmt_close($stmt);
+        }
+    }
+    // Fallback to course-level capacity
+    $courseCol = detect_capacity_column($con, 'course');
+    if ($courseCol) {
+        $stmt = mysqli_prepare($con, "SELECT `$courseCol` FROM course WHERE course_id = ? LIMIT 1");
+        if ($stmt) {
+            mysqli_stmt_bind_param($stmt, 's', $course_id);
+            if (mysqli_stmt_execute($stmt)) {
+                $res = mysqli_stmt_get_result($stmt);
+                if ($res && ($row = mysqli_fetch_row($res))) {
+                    $val = (int)($row[0] ?? 0);
+                    mysqli_stmt_close($stmt);
+                    return max(0, $val);
+                }
+            }
+            mysqli_stmt_close($stmt);
+        }
+    }
+    return 0; // 0 means no limit configured
+}
+
+// Count current enrollments for course + year (all records)
+function get_current_enrollment(mysqli $con, string $course_id, string $academic_year): int {
+    $stmt = mysqli_prepare($con, 'SELECT COUNT(*) AS c FROM student_enroll WHERE course_id = ? AND academic_year = ?');
+    if ($stmt) {
+        mysqli_stmt_bind_param($stmt, 'ss', $course_id, $academic_year);
+        if (mysqli_stmt_execute($stmt)) {
+            $res = mysqli_stmt_get_result($stmt);
+            if ($res && ($row = mysqli_fetch_assoc($res))) {
+                $c = (int)$row['c'];
+                mysqli_stmt_close($stmt);
+                return $c;
+            }
+        }
+        mysqli_stmt_close($stmt);
+    }
+    return 0;
+}
 
 // Serve a CSV template if requested
 if (isset($_GET['action']) && $_GET['action'] === 'template') {
@@ -54,33 +153,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'next_student_id') {
     $con = mysqli_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
     if (mysqli_connect_errno()) { echo json_encode(['ok'=>false,'error'=>'DB']); exit; }
     mysqli_set_charset($con, 'utf8');
-    // Find the lexicographically max student_id for given course/year
-    $stmt = mysqli_prepare($con, 'SELECT student_id FROM student_enroll WHERE course_id = ? AND academic_year = ? ORDER BY student_id DESC LIMIT 1');
-    mysqli_stmt_bind_param($stmt, 'ss', $course_id, $academic_year);
-    $next = '';
-    if (mysqli_stmt_execute($stmt)) {
-        $res = mysqli_stmt_get_result($stmt);
-        if ($row = mysqli_fetch_assoc($res)) {
-            $maxId = $row['student_id'];
-            // Increment numeric suffix if present, else append 01
-            if (preg_match('/^(.*?)(\d+)$/', $maxId, $m)) {
-                $prefix = $m[1];
-                $num = $m[2];
-                $len = strlen($num);
-                $next = $prefix . str_pad((string)((int)$num + 1), $len, '0', STR_PAD_LEFT);
-            } else {
-                $next = $maxId . '01';
-            }
-        } else {
-            // No existing id: build a starting id. Use year prefix if recognizable else course prefix
-            $yearDigits = preg_replace('/[^0-9]/', '', $academic_year);
-            if (strlen($yearDigits) >= 4) { $prefix = substr($yearDigits, 0, 4); }
-            else { $prefix = date('Y'); }
-            $coursePart = preg_replace('/[^A-Za-z0-9]/', '', $course_id);
-            $next = $prefix . $coursePart . '01';
-        }
-    }
-    mysqli_stmt_close($stmt);
+    $next = compute_next_student_id($con, $course_id, $academic_year);
     mysqli_close($con);
     echo json_encode(['ok'=>true,'next_student_id'=>$next]);
     exit;
@@ -102,7 +175,8 @@ if (isset($_POST['manual']) && $_POST['manual'] === '1') {
     }
     mysqli_set_charset($con, 'utf8');
 
-    $student_id = trim($_POST['student_id'] ?? '');
+    // Ignore any client-provided student_id; always compute on server to prevent tampering
+    $student_id = trim($_POST['student_id'] ?? ''); // kept for debug visibility
     $stu_full   = trim($_POST['student_fullname'] ?? '');
     $stu_nic    = trim($_POST['student_nic'] ?? '');
     $course_id  = trim($_POST['course_id'] ?? '');
@@ -138,7 +212,7 @@ if (isset($_POST['manual']) && $_POST['manual'] === '1') {
         'actions' => [],
     ];
 
-    if ($student_id === '') { $errors++; $errMsgs[] = 'Student ID is required'; }
+    // Student ID is auto-generated on the server; no need to validate presence from client
     if ($course_id === '')  { $errors++; $errMsgs[] = 'Course is required'; }
     if ($academic_year === '') { $errors++; $errMsgs[] = 'Academic Year is required'; }
     if ($enroll_date === '' || !$isDate($enroll_date)) { $errors++; $errMsgs[] = 'Valid Enroll Date is required (YYYY-MM-DD)'; }
@@ -206,9 +280,12 @@ if (isset($_POST['manual']) && $_POST['manual'] === '1') {
             }
         }
 
-        // Upsert enrollment
+        // Upsert enrollment with capacity enforcement on inserts
         if ($errors === 0) {
             $exit_date = $enroll_date; // default same day
+            // Determine the authoritative student_id for this course/year
+            $computed_id = compute_next_student_id($con, $course_id, $academic_year);
+            $student_id = $computed_id;
             mysqli_stmt_bind_param($selEnroll, 'sss', $student_id, $course_id, $academic_year);
             mysqli_stmt_execute($selEnroll);
             mysqli_stmt_store_result($selEnroll);
@@ -225,6 +302,13 @@ if (isset($_POST['manual']) && $_POST['manual'] === '1') {
                     $dbg['actions'][] = ['enroll_update' => ['ok' => true, 'affected' => $aff]];
                 }
             } else {
+                // Capacity check only for new inserts
+                $maxAllowed = get_max_allowed($con, $course_id, $academic_year);
+                $current = get_current_enrollment($con, $course_id, $academic_year);
+                $dbg['checks']['capacity'] = ['max' => $maxAllowed, 'current' => $current];
+                if ($maxAllowed > 0 && ($current + 1) > $maxAllowed) {
+                    $errors++; $errMsgs[] = 'Max enrollment reached for course ' . $course_id . ' in ' . $academic_year . ' (limit ' . $maxAllowed . ').';
+                } else {
                 mysqli_stmt_bind_param($insEnroll, 'sssssss', $student_id, $course_id, $course_mode, $academic_year, $enroll_date, $exit_date, $status);
                 if (!mysqli_stmt_execute($insEnroll)) {
                     $errors++; $errMsgs[] = 'Insert failed: ' . mysqli_error($con);
@@ -233,6 +317,7 @@ if (isset($_POST['manual']) && $_POST['manual'] === '1') {
                     $aff = mysqli_stmt_affected_rows($insEnroll);
                     if ($aff > 0) { $inserted++; }
                     $dbg['actions'][] = ['enroll_insert' => ['ok' => true, 'affected' => $aff]];
+                }
                 }
             }
         }
@@ -489,6 +574,9 @@ if (!$dryRun) {
 
 $line = 1; // header already read
 $processed = 0;
+// Capacity tracking caches for CSV run
+$currentCache = []; // key: course_id|year => current count from DB
+$pendingAdds  = []; // key: course_id|year => number of inserts we have done or plan to do in this run
 while (($row = fgetcsv($handle, 0, $delim)) !== false) {
     $line++;
     // Extract with safe index
@@ -647,11 +735,23 @@ while (($row = fgetcsv($handle, 0, $delim)) !== false) {
             $updated++;
         }
     } else {
-        mysqli_stmt_bind_param($insEnroll, 'sssssss', $student_id, $course_id, $course_mode, $academic_year, $enroll_date, $exit_date, $status);
-        if (!mysqli_stmt_execute($insEnroll)) {
-            $errors++; $errMsgs[] = "Line $line: Insert failed - " . mysqli_error($con);
+        // Capacity check using DB current + within-file pending
+        $key = $course_id . '|' . $academic_year;
+        if (!array_key_exists($key, $currentCache)) {
+            $currentCache[$key] = get_current_enrollment($con, $course_id, $academic_year);
+        }
+        if (!array_key_exists($key, $pendingAdds)) { $pendingAdds[$key] = 0; }
+        $maxAllowed = get_max_allowed($con, $course_id, $academic_year);
+        if ($maxAllowed > 0 && ($currentCache[$key] + $pendingAdds[$key] + 1) > $maxAllowed) {
+            $errors++; $errMsgs[] = "Line $line: Max enrollment reached for course $course_id in $academic_year (limit $maxAllowed).";
         } else {
-            $inserted++;
+            mysqli_stmt_bind_param($insEnroll, 'sssssss', $student_id, $course_id, $course_mode, $academic_year, $enroll_date, $exit_date, $status);
+            if (!mysqli_stmt_execute($insEnroll)) {
+                $errors++; $errMsgs[] = "Line $line: Insert failed - " . mysqli_error($con);
+            } else {
+                $inserted++;
+                $pendingAdds[$key]++;
+            }
         }
     }
 }

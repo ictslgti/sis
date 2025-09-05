@@ -415,6 +415,25 @@ body {
   overflow-x: hidden;
 }
 
+/* Mobile spacing optimizations */
+@media (max-width: 575.98px) {
+  /* Remove large side gutters on small screens */
+  .page-wrapper .page-content > div {
+    padding: 0 !important;
+  }
+  /* Tighter breadcrumb spacing */
+  .breadcrumb {
+    margin-bottom: .35rem;
+    padding: .25rem .5rem;
+    border-radius: .5rem;
+  }
+  /* Tighter top headings spacing */
+  h1, h2, h3 {
+    margin-top: .35rem;
+    margin-bottom: .6rem;
+  }
+}
+
 /*------scroll bar---------------------*/
 
 ::-webkit-scrollbar {
