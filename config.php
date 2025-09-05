@@ -40,6 +40,9 @@ if (mysqli_connect_errno()) {
     if (mysqli_num_rows($result) > 0) {
         //echo "Database 'mis' exists<br>";
         mysqli_select_db($con, 'sis');
+        // Force UTF-8 everywhere (needed for Tamil and other scripts)
+        @mysqli_set_charset($con, 'utf8mb4');
+        @mysqli_query($con, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     } else {
         die("Error: Database 'mis' does not exist. Please create it first.");
     }
