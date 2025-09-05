@@ -42,7 +42,23 @@
 //     $("#wrapper").toggleClass("toggled");
 // });
 
-jQuery(function ($) {
+// Ensure jQuery is available even if the primary CDN is blocked (e.g., on some NGINX setups)
+(function initWhenjQueryReady(init){
+  // If jQuery already present, run immediately
+  if (window.jQuery) return init(window.jQuery);
+  // Try a secondary CDN
+  var s = document.createElement('script');
+  s.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
+  s.async = true;
+  s.onload = function(){ init(window.jQuery); };
+  s.onerror = function(){
+    // As a last resort, wait until it appears (e.g., if injected elsewhere)
+    var tries = 0; var t = setInterval(function(){
+      if (window.jQuery || ++tries > 20) { clearInterval(t); if (window.jQuery) init(window.jQuery); }
+    }, 200);
+  };
+  document.head.appendChild(s);
+})(function ($) {
 
 // Restore active submenus from saved state before binding handlers
 function restoreActiveSubmenus() {
@@ -72,9 +88,11 @@ function saveActiveSubmenus() {
   } catch(e){}
 }
 
-restoreActiveSubmenus();
+// If the sidebar markup is not present, skip initializing
+if (document.getElementById('sidebar')) {
+  restoreActiveSubmenus();
 
-$(".sidebar-dropdown > a").on('click', function(e) {
+  $(".sidebar-dropdown > a").on('click', function(e) {
 e.preventDefault();
 $(".sidebar-submenu").slideUp(200);
 if (
@@ -96,22 +114,22 @@ $(this)
   .addClass("active");
 }
  saveActiveSubmenus();
-});
+  });
 
 function saveSidebarOpenState(isOpen){
   try { localStorage.setItem('slgti_sidebar_open', isOpen ? '1' : '0'); } catch(e){}
 }
 
-$("#close-sidebar").on('click', function(e) {
+  $("#close-sidebar").on('click', function(e) {
   e.preventDefault();
   $(".page-wrapper").removeClass("toggled");
   saveSidebarOpenState(false);
-});
-$("#show-sidebar").on('click', function(e) {
+  });
+  $("#show-sidebar").on('click', function(e) {
   e.preventDefault();
   $(".page-wrapper").addClass("toggled");
   saveSidebarOpenState(true);
-});
+  });
 
   // Responsive behavior: on mobile, start collapsed and auto-close after navigation
   function isMobile() {
@@ -149,9 +167,10 @@ $("#show-sidebar").on('click', function(e) {
       saveSidebarOpenState(false);
     }
   });
+}
 
 $('.debug-url').html('Delete URL: <strong>' + $(this).find('.btn-ok').attr('href') + '</strong>');
-});
+}); // end initWhenjQueryReady
 
 var timeDisplay = document.getElementById("timestamp");
 
