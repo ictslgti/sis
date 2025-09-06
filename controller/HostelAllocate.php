@@ -11,7 +11,7 @@ function redirect_back_alloc($params = []){
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); echo 'Method Not Allowed'; exit; }
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','WAR'])) { http_response_code(403); echo 'Forbidden'; exit; }
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','SAO','WAR'])) { http_response_code(403); echo 'Forbidden'; exit; }
 
 $student_id   = isset($_POST['student_id']) ? trim($_POST['student_id']) : '';
 $room_id      = isset($_POST['room_id']) ? (int)$_POST['room_id'] : 0;

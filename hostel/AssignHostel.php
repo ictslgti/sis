@@ -5,7 +5,7 @@ include_once("../config.php");
 include_once("../head.php");
 include_once("../menu.php");
 
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','WAR'])) {
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','SAO','WAR'])) {
   echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>';
   include_once("../footer.php");
   exit;

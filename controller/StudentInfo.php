@@ -1,6 +1,6 @@
 <?php
 // Read-only JSON endpoint: returns student personal and emergency info
-// Access: ADM (all students), WAR (restricted to same-gender students)
+// Access: ADM & SAO (all students), WAR (restricted to same-gender students)
 
 header('Content-Type: application/json');
 
@@ -24,7 +24,7 @@ if (!$userType || !$userName) {
   respond(false, 'Unauthorized', 401);
 }
 
-if (!in_array($userType, ['ADM','WAR'], true)) {
+if (!in_array($userType, ['ADM','SAO','WAR'], true)) {
   respond(false, 'Forbidden', 403);
 }
 

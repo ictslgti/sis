@@ -15,6 +15,7 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 // Detect WAR user and fetch warden gender
 $isWarden = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'WAR';
 $isAdmin  = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
+$isSAO    = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';
 $wardenGender = null;
 if ($isWarden && !empty($_SESSION['user_name'])) {
   if ($st = mysqli_prepare($con, "SELECT staff_gender FROM staff WHERE staff_id=? LIMIT 1")) {
@@ -82,117 +83,192 @@ if (isset($_GET['delete'])) {
     </div>
 
     <div class="card-body">
-    <div class="table-responsive">
-        <!-- Filter Row -->
-        <form method="GET" class="form-inline mb-3">
-          <div class="form-group mr-2">
-            <label for="student_id" class="mr-2">Student ID</label>
-            <input type="text" class="form-control" id="student_id" name="student_id" value="<?php echo isset($_GET['student_id'])? htmlspecialchars($_GET['student_id']) : '';?>" placeholder="e.g. 2019/ICT/001" />
+    <style>
+      /* Scoped styles for Hostel page */
+      .font-weight-600 { font-weight: 600; }
+      .btn-xs { padding: .15rem .4rem; font-size: .75rem; line-height: 1.2; border-radius: .2rem; }
+      .room-card { border-color: var(--border-color); }
+      .room-card .card-header { background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); }
+      .stud-item { transition: background-color .15s ease, box-shadow .15s ease; }
+      .stud-item:hover { background-color: rgba(0,0,0,.03); box-shadow: 0 1px 0 rgba(0,0,0,.03) inset; }
+      @media (max-width: 575.98px){
+        #roomWiseForm .form-control-sm { min-width: 180px; }
+      }
+    </style>
+    <?php if ($isAdmin || $isSAO || $isWarden): ?>
+      <div class="mb-3 d-flex justify-content-end align-items-center" style="gap:.5rem">
+        <a href="<?php echo (defined('APP_BASE')?APP_BASE:''); ?>/hostel/BulkRoomAssign.php" class="btn btn-sm btn-primary">
+          <i class="fa fa-users"></i> Bulk Assign
+        </a>
+        <a href="<?php echo (defined('APP_BASE')?APP_BASE:''); ?>/hostel/ManualAllocate.php" class="btn btn-sm btn-outline-secondary">
+          <i class="fa fa-user-plus"></i> Manual Allocate
+        </a>
+      </div>
+    <?php endif; ?>
+
+    <?php
+      // Filters for room-wise cards
+      $filterHostel = isset($_GET['hostel_id']) ? (int)$_GET['hostel_id'] : 0;
+      $filterBlock  = isset($_GET['block_id']) ? (int)$_GET['block_id'] : 0;
+      // Load hostels list
+      $hostels = [];
+      $hres = mysqli_query($con, "SELECT id, name FROM hostels WHERE active=1 ORDER BY name");
+      while ($hres && ($row = mysqli_fetch_assoc($hres))) { $hostels[] = $row; }
+    ?>
+    <div class="card shadow-sm mb-3">
+      <div class="card-body py-3">
+        <form method="get" id="roomWiseForm" class="form-inline align-items-center" style="gap:.5rem .75rem">
+          <div class="form-group mb-2">
+            <label for="hostel_id" class="mr-2 small text-muted">Hostel</label>
+            <select name="hostel_id" id="hostel_id" class="form-control form-control-sm">
+              <option value="0">-- Select Hostel --</option>
+              <?php foreach ($hostels as $h): ?>
+                <option value="<?php echo (int)$h['id']; ?>" <?php echo $filterHostel===(int)$h['id']?'selected':''; ?>><?php echo htmlspecialchars($h['name']); ?></option>
+              <?php endforeach; ?>
+            </select>
           </div>
-          <button type="submit" class="btn btn-outline-primary" name="search" value="1"><i class="fas fa-search"></i> Search</button>
-          <?php if (!empty($_GET['student_id'])): ?>
-            <a href="/hostel/Hostel.php" class="btn btn-link ml-2">Clear</a>
-          <?php endif; ?>
+          <div class="form-group mb-2">
+            <label for="block_id" class="mr-2 small text-muted">Block</label>
+            <select name="block_id" id="block_id" class="form-control form-control-sm" <?php echo $filterHostel>0?'':'disabled'; ?>>
+              <option value="0">-- Select Block --</option>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-sm btn-outline-primary mb-2" <?php echo ($filterHostel>0 && $filterBlock>0)?'':'disabled'; ?>>View Room-wise</button>
         </form>
+      </div>
+    </div>
 
-
-<table class="table table-hover mt-2" id="HostelAccomadation">
-<thead>
-<tr>
-      <th scope="col"><i class="far fa-id-card"></i>&nbsp;Allocation ID</th>
-      <th scope="col"><i class="far fa-id-card"></i>&nbsp;Student ID</th>
-      <th scope="col"><i class="far fa-user"></i>&nbsp;Student Name</th>
-      <th scope="col"><i class="fas fa-list-ol"></i>&nbsp;Room ID</th>
-      <th scope="col"><i class="fas fa-info-circle"></i>&nbsp;Status</th>
-      <th scope="col"><i class="far fa-caret-square-right"></i>&nbsp;Action</th>
-    </tr>
-
-   
-
-
-    
-
-</thead>
-
-<tbody>
-<?php 
-// Build allocation list query with optional filters and warden gender restriction
-$q = "SELECT a.id AS alloc_id, a.student_id, s.student_fullname AS student_name, a.room_id, a.status FROM hostel_allocations a";
-$where = [];
-$params = [];
-$types = '';
-
-// Join student for name (always), and if warden, also filter by gender
-if ($isWarden && $wardenGender) {
-  $q .= " INNER JOIN student s ON s.student_id = a.student_id";
-  $where[] = "s.student_gender = ?";
-  $types .= 's';
-  $params[] = $wardenGender;
-} else {
-  $q .= " LEFT JOIN student s ON s.student_id = a.student_id";
-}
-
-// Student ID filter
-if (isset($_GET['search']) && isset($_GET['student_id']) && $_GET['student_id'] !== '') {
-  $where[] = "a.student_id = ?";
-  $types .= 's';
-  $params[] = $_GET['student_id'];
-}
-
-if (!empty($where)) {
-  $q .= ' WHERE ' . implode(' AND ', $where);
-}
-
-$q .= ' ORDER BY a.id DESC';
-
-$result = false;
-if ($stmt = mysqli_prepare($con, $q)) {
-  if (!empty($params)) {
-    mysqli_stmt_bind_param($stmt, $types, ...$params);
-  }
-  mysqli_stmt_execute($stmt);
-  $result = mysqli_stmt_get_result($stmt);
-}
-
-if ($result && mysqli_num_rows($result) > 0) {
-  while ($row = mysqli_fetch_assoc($result)) {
-    echo '<tr>';
-    echo '<td>'.htmlspecialchars($row["alloc_id"]).'</td>';
-    echo '<td>'.htmlspecialchars($row["student_id"]).'</td>';
-    echo '<td>'.htmlspecialchars($row["student_name"] ?? '').'</td>';
-    echo '<td>'.htmlspecialchars($row["room_id"]).'</td>';
-    echo '<td>'.htmlspecialchars($row["status"]).'</td>';
-    echo '<td class="d-flex">';
-    // Info button
-    echo '<button type="button" class="btn btn-sm btn-info mr-2 js-see-info" data-student="'.htmlspecialchars($row["student_id"]).'">See info</button>';
-    // Delete (Admins only)
-    if ($isAdmin) {
-      echo '<a data-href="?delete='.htmlspecialchars($row["alloc_id"]).'" data-toggle="modal" data-target="#confirm-delete">';
-      echo '<button type="button" name="delete" class="btn btn-danger btn-circle"><i class="fas fa-trash"></i></button></a>';
-    }
-    // Edit
-    echo '<a href="hostel/EditAllocation.php?id='.htmlspecialchars($row["alloc_id"]).'" class="ml-2">';
-    echo '<button type="button" class="btn btn-outline-info rounded-pill"><i class="far fa-edit"></i></button></a>';
-    echo '</td>';
-    echo '</tr>';
-  }
-} else {
-  if ($result === false) {
-    echo '<div class="alert alert-danger">Database error: ' . htmlspecialchars(mysqli_error($con)) . '</div>';
-  } else {
-    echo '<tr><td colspan="6" class="text-center text-muted">No allocations found</td></tr>';
-  }
-}
-
-?>
-
-</tbody>
-</table>
-</div>
+    <?php if ($filterBlock > 0): ?>
+      <?php
+        // Query room-wise students for selected block (similar to AllocatedRoomWise)
+        $sql = "
+          SELECT 
+            r.id AS room_id,
+            r.room_no,
+            r.capacity,
+            s.student_id,
+            s.student_ininame,
+            s.student_fullname,
+            d.department_name,
+            (SELECT COUNT(*) FROM hostel_allocations a2 WHERE a2.room_id=r.id AND a2.status='active') AS occupied
+          FROM hostel_rooms r
+          LEFT JOIN hostel_allocations a 
+            ON a.room_id = r.id AND a.status = 'active'
+          LEFT JOIN student s 
+            ON s.student_id = a.student_id
+          LEFT JOIN (
+            SELECT se.student_id, MAX(se.student_enroll_date) AS max_enroll_date
+            FROM student_enroll se
+            GROUP BY se.student_id
+          ) le ON le.student_id = s.student_id
+          LEFT JOIN student_enroll e
+            ON e.student_id = le.student_id AND e.student_enroll_date = le.max_enroll_date
+          LEFT JOIN course c ON c.course_id = e.course_id
+          LEFT JOIN department d ON d.department_id = c.department_id
+          WHERE r.block_id = ?
+          ORDER BY CAST(r.room_no AS UNSIGNED), r.room_no, s.student_ininame";
+        $roomsData = [];
+        if ($st = mysqli_prepare($con, $sql)) {
+          mysqli_stmt_bind_param($st, 'i', $filterBlock);
+          mysqli_stmt_execute($st);
+          $rs = mysqli_stmt_get_result($st);
+          while ($rs && $row = mysqli_fetch_assoc($rs)) { $roomsData[] = $row; }
+          mysqli_stmt_close($st);
+        }
+        // Group by room
+        $byRoom = [];
+        foreach ($roomsData as $r) { $byRoom[$r['room_id']][] = $r; }
+      ?>
+      <div class="card shadow-sm mb-4">
+        <div class="card-body">
+          <h5 class="mb-3">Room-wise Students</h5>
+          <?php if (empty($byRoom)): ?>
+            <div class="alert alert-info mb-0">No rooms or allocations found for the selected block.</div>
+          <?php else: ?>
+            <div class="row">
+              <?php foreach ($byRoom as $roomId => $rows): $meta = $rows[0]; $occ = (int)($meta['occupied'] ?? 0); ?>
+                <div class="col-12 col-lg-6 col-xl-4 mb-3">
+                  <div class="room-card card h-100 shadow-sm">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                      <div class="font-weight-600">Room <?php echo htmlspecialchars($meta['room_no']); ?></div>
+                      <span class="badge badge-light border"><span class="text-muted">Occupied</span> <?php echo (int)$occ; ?>/<?php echo (int)$meta['capacity']; ?></span>
+                    </div>
+                    <div class="card-body p-2 flex-grow-1">
+                      <?php
+                        $hadStudent = false;
+                        foreach ($rows as $rr) {
+                          if (empty($rr['student_id'])) continue;
+                          $hadStudent = true;
+                      ?>
+                        <div class="stud-item border rounded p-2 mb-2">
+                          <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                              <div class="font-weight-600 mb-0"><?php echo htmlspecialchars($rr['student_ininame'] ?: $rr['student_fullname']); ?></div>
+                              <div class="text-muted small"><?php echo htmlspecialchars($rr['student_id']); ?> · <?php echo htmlspecialchars($rr['department_name'] ?: ''); ?></div>
+                            </div>
+                            <button type="button" class="btn btn-xs btn-outline-info js-see-info" title="See details" data-student="<?php echo htmlspecialchars($rr['student_id']); ?>">
+                              <i class="fa fa-eye"></i>
+                            </button>
+                          </div>
+                        </div>
+                      <?php } if (!$hadStudent): ?>
+                        <div class="text-muted small">No students allocated</div>
+                      <?php endif; ?>
+                    </div>
+                  </div>
+                </div>
+              <?php endforeach; ?>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+    <?php endif; ?>
+    <!-- Removed legacy allocations table as per requirements -->
    </div>
   </div>
 </div>
 </div>
+
+<script>
+(function(){
+  // JS for room-wise filters: load blocks by selected hostel and toggle submit
+  function qs(id){ return document.getElementById(id); }
+  var hostel = qs('hostel_id');
+  var block  = qs('block_id');
+  var form   = qs('roomWiseForm');
+  var base   = '<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>';
+  var preBlock = <?php echo json_encode(isset($_GET['block_id']) ? (int)$_GET['block_id'] : 0); ?>;
+
+  function toggleBtn(){
+    var btns = form ? form.querySelectorAll('button[type="submit"]') : [];
+    var ok = hostel && block && hostel.value !== '0' && block.value !== '0';
+    btns.forEach(function(b){ b.disabled = !ok; });
+  }
+
+  function loadBlocks(){
+    if (!hostel || !block) return;
+    var hid = hostel.value || '0';
+    if (hid === '0') { block.innerHTML = '<option value="0">-- Select Block --</option>'; block.disabled = true; toggleBtn(); return; }
+    fetch(base + '/hostel/blocks_api.php?hostel_id='+encodeURIComponent(hid))
+      .then(function(r){ return r.json(); })
+      .then(function(list){
+        var opts = '<option value="0">-- Select Block --</option>';
+        (list||[]).forEach(function(b){ opts += '<option value="'+b.id+'"'+ (preBlock==b.id?' selected':'') +'>'+ b.name +'</option>'; });
+        block.innerHTML = opts;
+        block.disabled = false;
+        toggleBtn();
+      })
+      .catch(function(){ block.innerHTML = '<option value="0">-- Select Block --</option>'; block.disabled = true; toggleBtn(); });
+  }
+
+  if (hostel) {
+    hostel.addEventListener('change', function(){ preBlock = 0; block.value='0'; loadBlocks(); });
+    block && block.addEventListener('change', function(){ toggleBtn(); if (form && hostel.value !== '0' && block.value !== '0'){ form.submit(); } });
+    loadBlocks();
+    toggleBtn();
+  }
+})();
+</script>
 
 <!-- Student Info Modal -->
 <div class="modal fade" id="studentInfoModal" tabindex="-1" role="dialog" aria-hidden="true">

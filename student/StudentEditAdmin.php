@@ -27,7 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   // Collect fields
   $fields = [
     'student_title','student_fullname','student_ininame','student_gender','student_email','student_nic','student_dob','student_phone','student_address',
-    'student_zip','student_district','student_divisions','student_provice','student_blood','student_civil',
+    'student_zip','student_district','student_divisions','student_provice','student_blood','student_religion','student_civil',
     'student_em_name','student_em_address','student_em_phone','student_em_relation','student_status'
   ];
   $data = [];
@@ -41,16 +41,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   // New Academic Year (optional)
   $new_ayear = isset($_POST['new_ayear']) ? trim($_POST['new_ayear']) : '';
 
-  $sql = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_email=?, student_nic=?, student_dob=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_blood=?, student_civil=?, student_em_name=?, student_em_address=?, student_em_phone=?, student_em_relation=?, student_status=? WHERE student_id=?";
+  $sql = "UPDATE student SET student_title=?, student_fullname=?, student_ininame=?, student_gender=?, student_email=?, student_nic=?, student_dob=?, student_phone=?, student_address=?, student_zip=?, student_district=?, student_divisions=?, student_provice=?, student_blood=?, student_religion=?, student_civil=?, student_em_name=?, student_em_address=?, student_em_phone=?, student_em_relation=?, student_status=? WHERE student_id=?";
   // Begin transaction to ensure atomicity when changing student_id
   mysqli_begin_transaction($con);
   $ok = true;
 
   $stmt = mysqli_prepare($con, $sql);
   if ($stmt) {
-    // 20 fields to update + 1 for WHERE student_id => 21 's'
-    mysqli_stmt_bind_param($stmt, 'sssssssssssssssssssss',
-      $data['student_title'],$data['student_fullname'],$data['student_ininame'],$data['student_gender'],$data['student_email'],$data['student_nic'],$data['student_dob'],$data['student_phone'],$data['student_address'],$data['student_zip'],$data['student_district'],$data['student_divisions'],$data['student_provice'],$data['student_blood'],$data['student_civil'],$data['student_em_name'],$data['student_em_address'],$data['student_em_phone'],$data['student_em_relation'],$data['student_status'],$sid
+    // 21 fields to update + 1 for WHERE student_id => 22 's'
+    mysqli_stmt_bind_param($stmt, 'ssssssssssssssssssssss',
+      $data['student_title'],$data['student_fullname'],$data['student_ininame'],$data['student_gender'],$data['student_email'],$data['student_nic'],$data['student_dob'],$data['student_phone'],$data['student_address'],$data['student_zip'],$data['student_district'],$data['student_divisions'],$data['student_provice'],$data['student_blood'],$data['student_religion'],$data['student_civil'],$data['student_em_name'],$data['student_em_address'],$data['student_em_phone'],$data['student_em_relation'],$data['student_status'],$sid
     );
     if (!mysqli_stmt_execute($stmt)) { $ok = false; $errors[] = 'Failed to update student core fields: '.mysqli_error($con); }
     mysqli_stmt_close($stmt);
@@ -312,6 +312,23 @@ include_once __DIR__ . '/../menu.php';
                 <input type="text" name="student_civil" class="form-control" value="<?php echo h($student['student_civil'] ?? ''); ?>">
               </div>
               <div class="form-group col-md-3">
+                <label>Religion</label>
+                <?php
+                  $religionOptions = ['Buddhism','Hinduism','Islam','Christianity','Roman Catholic','Other'];
+                  $currentReligion = $student['student_religion'] ?? '';
+                  $relInList = in_array($currentReligion, $religionOptions, true);
+                ?>
+                <select name="student_religion" class="form-control">
+                  <option value="">Select religion</option>
+                  <?php foreach ($religionOptions as $rel): ?>
+                    <option value="<?php echo h($rel); ?>" <?php echo (($currentReligion === $rel) ? 'selected' : ''); ?>><?php echo h($rel); ?></option>
+                  <?php endforeach; ?>
+                  <?php if ($currentReligion !== '' && !$relInList): ?>
+                    <option value="<?php echo h($currentReligion); ?>" selected><?php echo h($currentReligion); ?> (custom)</option>
+                  <?php endif; ?>
+                </select>
+              </div>
+              <div class="form-group col-md-3">
                 <label>Status</label>
                 <select name="student_status" class="form-control">
                   <?php $statuses=['Active','Following','Completed','Suspended','Inactive']; foreach($statuses as $st): ?>
@@ -398,7 +415,20 @@ include_once __DIR__ . '/../menu.php';
               </div>
               <div class="form-group col-md-4">
                 <label>Relation</label>
-                <input type="text" name="student_em_relation" class="form-control" value="<?php echo h($student['student_em_relation'] ?? ''); ?>">
+                <?php
+                  $relationOptions = ['Father','Mother','Guardian','Brother','Sister','Spouse','Relative','Friend','Neighbor','Other'];
+                  $currentRelation = $student['student_em_relation'] ?? '';
+                  $inList = in_array($currentRelation, $relationOptions, true);
+                ?>
+                <select name="student_em_relation" class="form-control">
+                  <option value="">Select relation</option>
+                  <?php foreach ($relationOptions as $rel): ?>
+                    <option value="<?php echo h($rel); ?>" <?php echo (($currentRelation === $rel) ? 'selected' : ''); ?>><?php echo h($rel); ?></option>
+                  <?php endforeach; ?>
+                  <?php if ($currentRelation !== '' && !$inList): ?>
+                    <option value="<?php echo h($currentRelation); ?>" selected><?php echo h($currentRelation); ?> (custom)</option>
+                  <?php endif; ?>
+                </select>
               </div>
             </div>
             <div class="form-row">

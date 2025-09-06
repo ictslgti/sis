@@ -35,23 +35,32 @@ $expand = function($g) {
 $params = [$bid];
 $types  = 'i';
 
-$genderConds = ["h.gender='Mixed'"]; // always allow Mixed
 $want = [];
 foreach ([$wardenGender, $studentGender] as $g) { foreach ($expand($g) as $v) { $want[$v] = true; } }
 $wantList = array_keys($want);
+
 if (!empty($wantList)) {
+  $genderConds = ["h.gender='Mixed'"];
   $place = implode(',', array_fill(0, count($wantList), '?'));
   $genderConds[] = "h.gender IN ($place)";
   foreach ($wantList as $v) { $params[] = $v; $types .= 's'; }
+  $sql = "SELECT r.id, r.room_no, r.capacity,
+                 (SELECT COUNT(*) FROM hostel_allocations a WHERE a.room_id=r.id AND a.status='active') AS occupied
+          FROM hostel_rooms r
+          INNER JOIN hostel_blocks b ON b.id = r.block_id
+          INNER JOIN hostels h ON h.id = b.hostel_id
+          WHERE r.block_id = ? AND (".implode(' OR ', $genderConds).")
+          ORDER BY r.room_no";
+} else {
+  // No gender context -> return all rooms for the block
+  $sql = "SELECT r.id, r.room_no, r.capacity,
+                 (SELECT COUNT(*) FROM hostel_allocations a WHERE a.room_id=r.id AND a.status='active') AS occupied
+          FROM hostel_rooms r
+          INNER JOIN hostel_blocks b ON b.id = r.block_id
+          INNER JOIN hostels h ON h.id = b.hostel_id
+          WHERE r.block_id = ?
+          ORDER BY r.room_no";
 }
-
-$sql = "SELECT r.id, r.room_no, r.capacity,
-               (SELECT COUNT(*) FROM hostel_allocations a WHERE a.room_id=r.id AND a.status='active') AS occupied
-        FROM hostel_rooms r
-        INNER JOIN hostel_blocks b ON b.id = r.block_id
-        INNER JOIN hostels h ON h.id = b.hostel_id
-        WHERE r.block_id = ? AND (".implode(' OR ', $genderConds).")
-        ORDER BY r.room_no";
 
 $stmt = mysqli_prepare($con, $sql);
 if ($stmt) { mysqli_stmt_bind_param($stmt, $types, ...$params); }

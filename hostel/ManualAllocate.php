@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../head.php';
 require_once __DIR__ . '/../menu.php';
 
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','WAR'])) {
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','SAO','WAR'])) {
   echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>';
   require_once __DIR__ . '/../footer.php';
   exit;
