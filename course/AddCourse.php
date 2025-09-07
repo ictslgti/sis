@@ -208,7 +208,8 @@ if(isset($_POST['Adding']))
               </div>
             
                 
-                </form >      
+                
+      
 <br><br>
 <?php
       if(isset($_GET['edits']))
@@ -221,6 +222,7 @@ if(isset($_POST['Adding']))
       }
       ?>
             </div>
+            </form>
             <script>
             function Number(evt) {
             var num = String.fromCharCode(evt.which);

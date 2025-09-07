@@ -245,7 +245,7 @@ if ($rs = mysqli_query($con, $sqlStu)) {
 
 <div class="row mt-3 mobile-tight">
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-red shadow-sm">
+    <div class="card stat-card bg-black shadow-sm">
       <div class="card-body d-flex align-items-center">
         <div class="icon mr-3"><i class="fas fa-building fa-lg"></i></div>
         <div>
@@ -256,7 +256,7 @@ if ($rs = mysqli_query($con, $sqlStu)) {
     </div>
   </div>
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-black shadow-sm">
+    <div class="card stat-card bg-red shadow-sm">
       <div class="card-body d-flex align-items-center">
         <div class="icon mr-3"><i class="fas fa-book-open fa-lg"></i></div>
         <div>
@@ -291,14 +291,104 @@ if ($rs = mysqli_query($con, $sqlStu)) {
 </div>
 <hr>
 
+<style>
+  .rel-card { border: 0; border-radius: .75rem; color: #fff; overflow: hidden; position: relative; }
+  .rel-card .rel-body { display: flex; align-items: center; justify-content: space-between; }
+  .rel-card .rel-icon { width: 42px; height: 42px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.2); }
+  .rel-card .rel-name { font-weight: 600; letter-spacing: .2px; }
+  .rel-card .rel-count { font-size: 1.6rem; font-weight: 800; line-height: 1; }
+  .rel-card .rel-percent { font-size: .85rem; opacity: .95; }
+  .rel-grad-0 { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
+  .rel-grad-1 { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); }
+  .rel-grad-2 { background: linear-gradient(135deg, #f6c23e 0%, #e0a800 100%); color: #212529; }
+  .rel-grad-3 { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%); }
+  .rel-grad-4 { background: linear-gradient(135deg, #36b9cc 0%, #258391 100%); }
+  .rel-grad-5 { background: linear-gradient(135deg, #6f42c1 0%, #4b2f88 100%); }
+  .rel-grad-6 { background: linear-gradient(135deg, #fd7e14 0%, #c75c0b 100%); }
+  .rel-grad-7 { background: linear-gradient(135deg, #20c997 0%, #0f8f6d 100%); }
+  @media (max-width: 575.98px) {
+    .rel-card .rel-count { font-size: 1.4rem; }
+    .rel-card .rel-name { font-size: .95rem; }
+    .rel-card .rel-percent { font-size: .8rem; }
+  }
+  .rel-empty { border: 1px dashed #e9ecef; background: #f8f9fa; color: #6c757d; border-radius: .75rem; }
+  .rel-empty .card-body { padding: 1.25rem; }
+  .rel-filter .form-control { min-width: 180px; }
+  @media (max-width: 575.98px) { .rel-filter .form-inline { display: block; } .rel-filter .form-control { width: 100%; margin-bottom: .5rem; } }
+</style>
 
+<div class="row mt-3 mobile-tight align-items-center rel-filter">
+  <div class="col-md-6 col-sm-12">
+    <h5 class="mb-0"><i class="fas fa-praying-hands mr-2 text-primary"></i>Religion-wise Students</h5>
+    <small class="text-muted">Live count by student religion</small>
+  </div>
+  <div class="col-md-6 col-sm-12 text-md-right mt-2 mt-md-0">
+    <form class="form-inline justify-content-md-end" id="relFilterForm">
+      <label class="mr-2 small text-muted">Department</label>
+      <select class="form-control form-control-sm" id="relDept">
+        <option value="">All</option>
+        <?php
+          $dres = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
+          if ($dres) { while($dr = mysqli_fetch_assoc($dres)) { echo '<option value="'.htmlspecialchars($dr['department_id']).'">'.htmlspecialchars($dr['department_name'])."</option>"; } }
+        ?>
+      </select>
+    </form>
+  </div>
+  <div class="col-12"><hr class="mt-2 mb-3"></div>
+</div>
 
+<div class="row" id="religionCards"></div>
 
-<!-- Removed academic year dropdown and bar chart as requested -->
-
-
-
-
+<script>
+  (function(){
+    function fetchReligion(dept){
+      var base = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>";
+      var url = base + '/dashboard/religion_distribution_api.php' + (dept ? ('?department_id=' + encodeURIComponent(dept)) : '');
+      return fetch(url).then(function(r){ return r.json(); });
+    }
+    function renderReligion(json){
+      var wrap = document.getElementById('religionCards');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      if (!json || json.ok!==true || !json.data || !json.data.length){
+        wrap.innerHTML = '<div class="col-12"><div class="card rel-empty"><div class="card-body text-center">No religion data available.</div></div></div>';
+        return;
+      }
+      var total = Number(json.total||0) || 0;
+      json.data.forEach(function(r, idx){
+        var name = String(r.religion||'Unknown');
+        var cnt = Number(r.cnt||0) || 0;
+        var pct = total>0 ? Math.round((cnt/total)*1000)/10 : 0; // 0.1 precision
+        var grad = 'rel-grad-' + (idx % 8);
+        var icon = '<i class="fas fa-praying-hands"></i>';
+        var col = document.createElement('div');
+        col.className = 'col-lg-3 col-md-4 col-sm-6 col-12 mb-3';
+        col.innerHTML = '<div class="card rel-card '+grad+' shadow-sm">\
+            <div class="card-body rel-body">\
+              <div>\
+                <div class="rel-name">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\
+                <div class="rel-percent">'+pct+'% of students</div>\
+              </div>\
+              <div class="text-right">\
+                <div class="rel-icon mb-2">'+icon+'</div>\
+                <div class="rel-count">'+cnt+'</div>\
+              </div>\
+            </div>\
+          </div>';
+        wrap.appendChild(col);
+      });
+    }
+    function load(){
+      var dept = document.getElementById('relDept').value;
+      fetchReligion(dept).then(renderReligion).catch(function(){ renderReligion(null); });
+    }
+    document.addEventListener('DOMContentLoaded', function(){
+      var sel = document.getElementById('relDept');
+      if (sel) sel.addEventListener('change', load);
+      load();
+    });
+  })();
+  </script>
 
 
 <div class="row mt-4 mobile-tight">

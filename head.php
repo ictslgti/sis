@@ -56,6 +56,10 @@ if(!isset($_SESSION['user_name'])){
           padding-top: .75rem;
           padding-bottom: .75rem;
         }
+        /* Ensure sidebar links are clickable above content */
+        #sidebar { position: fixed; top: 0; bottom: 0; z-index: 1040; }
+        #sidebar .sidebar-content, #sidebar .sidebar-menu a { position: relative; z-index: 1041; }
+        .page-wrapper .page-content { position: relative; z-index: 1; }
       }
     </style>
     <?php $__is_debug = (isset($_GET['debug']) && $_GET['debug'] === '1'); $__is_admin_like = (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['ADM','SAO'], true)); ?>
@@ -95,6 +99,25 @@ if(!isset($_SESSION['user_name'])){
       })();
     </script>
     <?php } ?>
+    <script>
+      // Improve mobile: close sidebar after clicking a menu link
+      document.addEventListener('DOMContentLoaded', function(){
+        try {
+          var wrapper = document.querySelector('.page-wrapper');
+          document.querySelectorAll('#sidebar a[href]').forEach(function(a){
+            function maybeClose(){
+              var href = a.getAttribute('href');
+              // Do not close for dropdown toggles or non-navigating links
+              var isDropdownToggle = a.parentElement && a.parentElement.classList && a.parentElement.classList.contains('sidebar-dropdown');
+              if (!href || href === '#' || isDropdownToggle) { return; }
+              setTimeout(function(){ if (wrapper) { wrapper.classList.remove('toggled'); } }, 50);
+            }
+            a.addEventListener('click', maybeClose, {passive: true});
+            a.addEventListener('touchstart', maybeClose, {passive: true});
+          });
+        } catch(e) { /* no-op */ }
+      });
+    </script>
     <script>
       // Apply saved theme ASAP to avoid flash
       (function(){

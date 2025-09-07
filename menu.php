@@ -475,6 +475,13 @@ if ($u_t === 'STU') {
               </ul>
             </div>
           </li>
+          <!-- SAO: Attendance Report -->
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
+              <i class="fas fa-calendar-check"></i>
+              <span>Attendance Report</span>
+            </a>
+          </li>
           <?php } ?>
 
           <?php if(isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN1','IN2','LE1','LE2','ADM'])) { ?>
@@ -614,6 +621,9 @@ if ($u_t === 'STU') {
                 </li>
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Manage Students</a>
+                </li>
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/BulkUpdateReligion.php">Bulk Update Student Religion</a>
                 </li>
                 <hr>
                 <li>

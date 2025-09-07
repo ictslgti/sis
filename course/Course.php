@@ -97,9 +97,9 @@ include_once("../menu.php");
                             echo '  <td>'. htmlspecialchars($row['course_nvq_level']) .  "<br>" .'</td>';
                             if (($_SESSION['user_type'] == 'ADM')) {
                                 echo '  <td>';
-                                echo '    <a href="Module.php?course_id='.urlencode($row['course_id']).'" class="btn btn-primary btn-sm btn-icon-split"><span class="text">Modules</span></a> ';
-                                echo '    <a href="BatchDetails.php?course_id='.urlencode($row['course_id']).'" class="btn btn-sm btn-primary btn-icon-split"><span class="text">Batch</span></a> ';
-                                echo '    <a href="AddCourse.php?edits='.urlencode($row['course_id']).'" class="btn btn-sm btn-warning"><i class="far fa-edit"></i></a> ';
+                                echo '    <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/course/Module.php?course_id='.urlencode($row['course_id']).'" class="btn btn-primary btn-sm btn-icon-split"><span class="text">Modules</span></a> ';
+                                echo '    <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/batch/BatchDetails.php?course_id='.urlencode($row['course_id']).'" class="btn btn-sm btn-primary btn-icon-split"><span class="text">Batch</span></a> ';
+                                echo '    <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/course/AddCourse.php?edits='.urlencode($row['course_id']).'" class="btn btn-sm btn-warning"><i class="far fa-edit"></i></a> ';
                                 echo '    <button class="btn btn-sm btn-danger" data-href="?delete_id='.htmlspecialchars($row['course_id']).'" data-toggle="modal" data-target="#confirm-delete"><i class="fas fa-trash"></i></button>';
                                 echo '  </td>';
                             }
@@ -112,7 +112,7 @@ include_once("../menu.php");
                     ?>
                 </tbody>
             </table>
-            <?php if(($_SESSION['user_type'] =='ADM') || ($_SESSION['user_type'] =='HOD')) { ?><a href="AddCourse.php" style="text-align:center;font-weight: 900;font-size:15px;" class="text-primary page-link"><i class="fas fa-plus">&nbsp;&nbsp;ADD COURSE</a></i><?php }?>
+            <?php if(($_SESSION['user_type'] =='ADM') || ($_SESSION['user_type'] =='HOD')) { ?><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php" style="text-align:center;font-weight: 900;font-size:15px;" class="text-primary page-link"><i class="fas fa-plus">&nbsp;&nbsp;ADD COURSE</a></i><?php }?>
        
         </div>
     </div>

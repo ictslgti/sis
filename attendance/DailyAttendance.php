@@ -9,6 +9,30 @@ include_once ("Attendancenav.php");
 require_roles(['HOD']);
 ?>
 <!-- end dont change the order-->
+<style>
+  /* Mobile layout improvements specific to Daily Attendance */
+  @media (max-width: 576px) {
+    .card-header .d-flex { flex-direction: column !important; align-items: stretch !important; }
+    .card-header .d-flex > div:first-child { margin-bottom: .5rem; }
+    .card-header .form-inline { display: block !important; }
+    .card-header .form-inline label { display: block; width: 100%; margin: .25rem 0; font-weight: 600; }
+    .card-header .form-inline input.form-control,
+    .card-header .form-inline select.form-control,
+    .card-header .form-inline button { width: 100% !important; margin: 0 0 .5rem 0 !important; }
+    .badge { display: inline-block; margin-bottom: .5rem; }
+    .table-responsive { overflow-x: auto; }
+    table.table thead th, table.table tbody td { white-space: nowrap; }
+    /* Reasonable minimum widths */
+    table.table thead th:nth-child(1),
+    table.table tbody td:nth-child(1) { min-width: 84px; text-align: center; }
+    table.table thead th:nth-child(2),
+    table.table tbody td:nth-child(2) { min-width: 160px; }
+    table.table thead th:nth-child(3),
+    table.table tbody td:nth-child(3) { min-width: 200px; }
+    table.table thead th:nth-child(4),
+    table.table tbody td:nth-child(4) { min-width: 120px; }
+  }
+</style>
 
 <?php
 // Resolve department for HOD
@@ -27,6 +51,30 @@ $date = isset($_GET['date']) && $_GET['date']!=='' ? $_GET['date'] : date('Y-m-d
 // Force single slot
 $slot = 1;
 $course = isset($_GET['course']) ? trim($_GET['course']) : '';
+
+// Build holiday set for current month (to disable in picker)
+$firstDay = date('Y-m-01', strtotime($date));
+$lastDay  = date('Y-m-t', strtotime($date));
+function load_holidays_set_month($con, $firstDay, $lastDay){
+  $set = [];
+  $cands = [
+    ['table'=>'holidays_lk','col'=>'date'],
+    ['table'=>'public_holidays','col'=>'holiday_date'],
+    ['table'=>'holidays','col'=>'holiday_date'],
+  ];
+  foreach ($cands as $c) {
+    $t = mysqli_real_escape_string($con, $c['table']);
+    $rs = mysqli_query($con, "SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='{$t}' LIMIT 1");
+    if ($rs && mysqli_fetch_row($rs)) {
+      $col = $c['col'];
+      $q = mysqli_query($con, "SELECT `${col}` AS d FROM `${t}` WHERE `${col}` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'");
+      if ($q) { while($r=mysqli_fetch_assoc($q)){ if (!empty($r['d'])) { $set[$r['d']] = true; } } }
+      break;
+    }
+  }
+  return $set;
+}
+$holidaySet = load_holidays_set_month($con, $firstDay, $lastDay);
 
 // Load department courses
 $courses = [];
@@ -101,7 +149,7 @@ if (!empty($students)) {
         <div>
           <form class="form-inline" method="get" action="">
             <label class="mr-2">Date</label>
-            <input type="date" name="date" class="form-control mr-2" value="<?php echo htmlspecialchars($date); ?>" required>
+            <input type="date" name="date" id="att-date" class="form-control mr-2" value="<?php echo htmlspecialchars($date); ?>" required>
             <!-- Single slot only; slot selector removed -->
             <label class="mr-2">Course</label>
             <select name="course" class="form-control mr-2">
@@ -176,6 +224,38 @@ if (!empty($students)) {
             <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Attendance</button>
           </div>
         </form>
+        <script>
+          (function(){
+            var dInput = document.getElementById('att-date');
+            if (!dInput) return;
+            var holidays = <?php echo json_encode(array_keys($holidaySet)); ?>;
+            var hset = {};
+            holidays.forEach(function(d){ hset[d] = true; });
+            function isWorkingDay(iso){
+              var dt = new Date(iso);
+              if (isNaN(dt)) return true;
+              var w = dt.getDay(); // 0=Sun,6=Sat
+              if (w===0 || w===6) return false;
+              return !hset[iso];
+            }
+            var lastValid = dInput.value;
+            // On load, if chosen date invalid, revert to today (if working) or keep as-is
+            try{
+              var cur = dInput.value;
+              if (cur && !isWorkingDay(cur)) { /* keep as-is but record a safe fallback */ lastValid = new Date().toISOString().slice(0,10); }
+              else { lastValid = cur; }
+            }catch(_){ }
+            dInput.addEventListener('change', function(){
+              var v = dInput.value;
+              if (v && !isWorkingDay(v)) {
+                alert('Selected date is a weekend/holiday. Please pick a working day.');
+                dInput.value = lastValid || '';
+              } else {
+                lastValid = v;
+              }
+            });
+          })();
+        </script>
         <script>
           function toggleAll(state){
             document.querySelectorAll('input[type="checkbox"][name="present[]"]').forEach(cb=>cb.checked=state);
