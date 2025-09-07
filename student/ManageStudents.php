@@ -185,7 +185,7 @@ if ($is_dir) {
 $where = [];
 $params = [];
 // Base SQL for both list and export
-$baseSql = "SELECT 
+$baseSql = "SELECT DISTINCT
               `s`.`student_id`,
               `s`.`student_fullname`,
               `s`.`student_email`,
@@ -223,7 +223,7 @@ $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 $sqlWhereFinal = $whereSql; // No Academic Year constraint
 
 // Base ORDER/GROUP for list and export (no pagination)
-$groupOrder = ' GROUP BY s.student_id ORDER BY s.student_id ASC';
+$groupOrder = ' ORDER BY s.`student_id` ASC';
 
 // List and export SQL (full result set)
 $sqlList = $baseSql . $sqlWhereFinal . $groupOrder;
