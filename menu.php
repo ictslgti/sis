@@ -471,7 +471,9 @@ if ($u_t === 'STU') {
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">Add a Student</a>
                 </li>
-                
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/AllowanceEligibility.php">Allowance Eligibility</a>
+                </li>
               </ul>
             </div>
           </li>
