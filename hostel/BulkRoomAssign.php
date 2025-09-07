@@ -195,7 +195,8 @@ $msg = isset($_GET['msg']) ? trim($_GET['msg']) : '';
       const rooms = await r.json();
       const room = (rooms||[]).find(x => String(x.id) === String(rid));
       // Capacity info already set; we now fetch students from server-side simple list
-      const resp = await fetch(base + '/controller/StudentListApi.php');
+      // Pass hostel_id so server can filter by hostel gender (Male/Female)
+      const resp = await fetch(base + '/controller/StudentListApi.php?hostel_id=' + encodeURIComponent(hid));
       // Fallback if API doesn't exist: we will render a message
       if (resp.status !== 200){
         studentsBox.innerHTML = '<div class="alert alert-warning">Student list API not found. Please contact admin.</div>';
