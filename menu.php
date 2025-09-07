@@ -442,14 +442,22 @@ if ($u_t === 'STU') {
           <?php } ?>
 
           <?php if(isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO') { ?>
-          <!-- SAO: One top-level option for Hostel -->
-          <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">
+          <!-- SAO: Hostel with submenu -->
+          <li class="sidebar-dropdown">
+            <a href="#">
               <i class="far fa-building"></i>
               <span>Hostel</span>
             </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">Hostels Info</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/BulkRoomAssign.php">Bulk Assign</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManualAllocate.php">Manual Allocate</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Payments.php">Hostel Payments</a></li>
+              </ul>
+            </div>
           </li>
-          <!-- SAO: Another option with submenu list for Students -->
+          <!-- SAO: Students submenu -->
           <li class="sidebar-dropdown">
             <a href="#">
               <i class="fas fa-user-graduate"></i>
@@ -461,27 +469,9 @@ if ($u_t === 'STU') {
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Manage Students</a>
                 </li>
                 <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/AddStudent.php">Add a Student</a>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">Add a Student</a>
                 </li>
-                <hr>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentReEnroll.php">Student Re Enroll</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ChangeEnrollment.php">Change Course/Reg No</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentEnrollmentReport.php">Student Enrollment Report</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentIDPhoto.php">Student ID Photo</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/UploadDocumentation.php">Upload Documentation (PDF)</a>
-                </li>
-                <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">Import Student Enrollment</a>
-                </li>
+                
               </ul>
             </div>
           </li>

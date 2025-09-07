@@ -19,7 +19,7 @@ if(!isset($_SESSION['user_name'])){
     <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/signin.css">
     <link href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/bootstrap-select.min.css">
-    <title><?php echo $title; ?></title>
+    <title><?php echo htmlspecialchars(isset($title) && $title !== '' ? $title : 'MIS@SLGTI', ENT_QUOTES, 'UTF-8'); ?></title>
     <style>
       :root {
         --bg-body: #f8f9fa;
