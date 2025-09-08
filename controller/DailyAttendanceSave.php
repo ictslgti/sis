@@ -3,8 +3,8 @@ require_once __DIR__ . '/../config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-// Only HODs can save daily attendance
-if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'HOD') {
+// HOD and IN3 can save daily attendance
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['HOD','IN3'], true)) {
   http_response_code(403);
   echo 'Forbidden';
   exit;

@@ -6,12 +6,12 @@
  
  <ul class="nav nav-tabs">
   
-   <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD') { ?>
-   <li class="nav-item">
-     <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/DailyAttendance.php">Daily Attendance (HOD)</a>
-   </li>
-   <li class="nav-item">
-     <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report (HOD)</a>
-   </li>
-   <?php } ?>
- </ul>
+   <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN3'], true)) { ?>
+  <li class="nav-item">
+    <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/DailyAttendance.php">Daily Attendance</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
+  </li>
+  <?php } ?>
+</ul>

@@ -9,8 +9,8 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-// Access control: Admin, Director (DIR), or SAO.
-require_roles(['ADM', 'DIR', 'SAO']);
+// Access control: Admin, Director (DIR), SAO, or Instructor Level 3 (IN3)
+require_roles(['ADM', 'DIR', 'SAO', 'IN3']);
 $is_admin = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
 $is_dir   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
 $is_sao   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';

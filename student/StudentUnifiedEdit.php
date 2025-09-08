@@ -6,11 +6,16 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-require_roles(['ADM','SAO','DIR']);
+require_roles(['ADM','SAO','DIR','IN3']);
 $is_admin = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
 $is_sao   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';
 $is_dir   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
-$can_mutate = ($is_admin || $is_sao); // DIR is view-only
+$is_in3   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'IN3';
+// Fine-grained permissions
+$can_edit_profile = ($is_admin || $is_sao || $is_in3);
+$can_change_enroll = ($is_admin || $is_sao || $is_in3);
+// Legacy flag (used in Hostel tab actions)
+$can_mutate = ($is_admin || $is_sao); // IN3 cannot mutate hostel
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 $base = defined('APP_BASE') ? APP_BASE : '';
@@ -57,14 +62,14 @@ $messages = [];
 $errors = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  if (!$can_mutate) {
-    http_response_code(403);
-    echo 'Forbidden: View-only access';
-    exit;
-  }
 
   $form = isset($_POST['form']) ? $_POST['form'] : '';
   if ($form === 'profile') {
+    if (!$can_edit_profile) {
+      http_response_code(403);
+      echo 'Forbidden: cannot edit profile';
+      exit;
+    }
     // Update student table core fields
     $fields = [
       'student_title','student_fullname','student_ininame','student_gender','student_civil','student_email',
@@ -86,6 +91,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
 
   if ($form === 'enroll') {
+    if (!$can_change_enroll) {
+      http_response_code(403);
+      echo 'Forbidden: cannot change enrollment';
+      exit;
+    }
     // Update or insert latest enrollment
     $course_id = isset($_POST['course_id']) ? trim($_POST['course_id']) : '';
     $course_mode = isset($_POST['course_mode']) ? trim($_POST['course_mode']) : '';
@@ -93,6 +103,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $student_enroll_date = isset($_POST['student_enroll_date']) ? trim($_POST['student_enroll_date']) : '';
     $student_enroll_exit_date = isset($_POST['student_enroll_exit_date']) ? trim($_POST['student_enroll_exit_date']) : '';
     $student_enroll_status = isset($_POST['student_enroll_status']) ? trim($_POST['student_enroll_status']) : '';
+
+    // Server-side restriction for IN3: can only change course within SAME department and cannot change other fields
+    if ($is_in3) {
+      // Determine current department of student's latest enrollment
+      $curDeptId = null;
+      if ($r = mysqli_query($con, "SELECT c.department_id FROM student_enroll e LEFT JOIN course c ON c.course_id=e.course_id WHERE e.student_id='".mysqli_real_escape_string($con,$sid)."' ORDER BY e.student_enroll_date DESC, e.id DESC LIMIT 1")) {
+        if ($tmp = mysqli_fetch_assoc($r)) { $curDeptId = $tmp['department_id'] ?? null; }
+        mysqli_free_result($r);
+      }
+      // Department of target course
+      $targetDeptId = null;
+      if ($course_id !== '') {
+        if ($r = mysqli_query($con, "SELECT department_id FROM course WHERE course_id='".mysqli_real_escape_string($con,$course_id)."' LIMIT 1")) {
+          if ($tmp = mysqli_fetch_assoc($r)) { $targetDeptId = $tmp['department_id'] ?? null; }
+          mysqli_free_result($r);
+        }
+      }
+      if (!$curDeptId || !$targetDeptId || (string)$curDeptId !== (string)$targetDeptId) {
+        $errors[] = 'You can only change the course within the same department.';
+        $_SESSION['flash_errors'] = $errors; header('Location: ' . $base . '/student/StudentUnifiedEdit.php?Sid='.urlencode($sid)); exit;
+      }
+      // Force other fields to remain as previous values for IN3
+      $rs = mysqli_query($con, "SELECT * FROM student_enroll WHERE student_id='".mysqli_real_escape_string($con,$sid)."' ORDER BY student_enroll_date DESC, id DESC LIMIT 1");
+      $prev = $rs ? mysqli_fetch_assoc($rs) : null; if ($rs) mysqli_free_result($rs);
+      if ($prev) {
+        $course_mode = $prev['course_mode'] ?? $course_mode;
+        $academic_year = $prev['academic_year'] ?? $academic_year;
+        $student_enroll_date = $prev['student_enroll_date'] ?? $student_enroll_date;
+        $student_enroll_exit_date = $prev['student_enroll_exit_date'] ?? $student_enroll_exit_date;
+        $student_enroll_status = $prev['student_enroll_status'] ?? $student_enroll_status;
+      }
+    }
 
     // Check if latest exists
     $has = false;
@@ -189,21 +231,21 @@ include_once __DIR__ . '/../menu.php';
         <div class="form-row">
           <div class="form-group col-md-2">
             <label>Title</label>
-            <input type="text" class="form-control" name="student_title" value="<?php echo h($student['student_title'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_title" value="<?php echo h($student['student_title'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-10">
             <label>Full Name</label>
-            <input type="text" class="form-control" name="student_fullname" value="<?php echo h($student['student_fullname'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_fullname" value="<?php echo h($student['student_fullname'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-6">
             <label>Name with Initials</label>
-            <input type="text" class="form-control" name="student_ininame" value="<?php echo h($student['student_ininame'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_ininame" value="<?php echo h($student['student_ininame'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-2">
             <label>Gender</label>
-            <select class="form-control" name="student_gender" <?php echo $can_mutate?'':'disabled'; ?>>
+            <select class="form-control" name="student_gender" <?php echo $can_edit_profile?'':'disabled'; ?>>
               <?php foreach (["Male","Female","Other"] as $g): ?>
                 <option value="<?php echo h($g); ?>" <?php echo (($student['student_gender'] ?? '')===$g?'selected':''); ?>><?php echo h($g); ?></option>
               <?php endforeach; ?>
@@ -211,7 +253,7 @@ include_once __DIR__ . '/../menu.php';
           </div>
           <div class="form-group col-md-2">
             <label>Civil Status</label>
-            <select class="form-control" name="student_civil" <?php echo $can_mutate?'':'disabled'; ?>>
+            <select class="form-control" name="student_civil" <?php echo $can_edit_profile?'':'disabled'; ?>>
               <?php foreach (["Single","Married"] as $c): ?>
                 <option value="<?php echo h($c); ?>" <?php echo (($student['student_civil'] ?? '')===$c?'selected':''); ?>><?php echo h($c); ?></option>
               <?php endforeach; ?>
@@ -219,80 +261,80 @@ include_once __DIR__ . '/../menu.php';
           </div>
           <div class="form-group col-md-2">
             <label>NIC</label>
-            <input type="text" class="form-control" name="student_nic" value="<?php echo h($student['student_nic'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_nic" value="<?php echo h($student['student_nic'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-4">
             <label>Email</label>
-            <input type="email" class="form-control" name="student_email" value="<?php echo h($student['student_email'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="email" class="form-control" name="student_email" value="<?php echo h($student['student_email'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-4">
             <label>Phone</label>
-            <input type="text" class="form-control" name="student_phone" value="<?php echo h($student['student_phone'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_phone" value="<?php echo h($student['student_phone'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-4">
             <label>WhatsApp</label>
-            <input type="text" class="form-control" name="student_whatsapp" value="<?php echo h($student['student_whatsapp'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_whatsapp" value="<?php echo h($student['student_whatsapp'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Date of Birth</label>
-            <input type="date" class="form-control" name="student_dob" value="<?php echo h($student['student_dob'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="date" class="form-control" name="student_dob" value="<?php echo h($student['student_dob'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Nationality</label>
-            <input type="text" class="form-control" name="student_nationality" value="<?php echo h($student['student_nationality'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_nationality" value="<?php echo h($student['student_nationality'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>ZIP</label>
-            <input type="text" class="form-control" name="student_zip" value="<?php echo h($student['student_zip'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_zip" value="<?php echo h($student['student_zip'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Blood</label>
-            <input type="text" class="form-control" name="student_blood" value="<?php echo h($student['student_blood'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_blood" value="<?php echo h($student['student_blood'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-6">
             <label>Address</label>
-            <input type="text" class="form-control" name="student_address" value="<?php echo h($student['student_address'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_address" value="<?php echo h($student['student_address'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>District</label>
-            <input type="text" class="form-control" name="student_district" value="<?php echo h($student['student_district'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_district" value="<?php echo h($student['student_district'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Divisional Secretariat</label>
-            <input type="text" class="form-control" name="student_divisions" value="<?php echo h($student['student_divisions'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_divisions" value="<?php echo h($student['student_divisions'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Province</label>
-            <input type="text" class="form-control" name="student_provice" value="<?php echo h($student['student_provice'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_provice" value="<?php echo h($student['student_provice'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Emergency Name</label>
-            <input type="text" class="form-control" name="student_em_name" value="<?php echo h($student['student_em_name'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_em_name" value="<?php echo h($student['student_em_name'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Emergency Address</label>
-            <input type="text" class="form-control" name="student_em_address" value="<?php echo h($student['student_em_address'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_em_address" value="<?php echo h($student['student_em_address'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Emergency Phone</label>
-            <input type="text" class="form-control" name="student_em_phone" value="<?php echo h($student['student_em_phone'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_em_phone" value="<?php echo h($student['student_em_phone'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Emergency Relation</label>
-            <input type="text" class="form-control" name="student_em_relation" value="<?php echo h($student['student_em_relation'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="student_em_relation" value="<?php echo h($student['student_em_relation'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
-        <?php if ($can_mutate): ?>
+        <?php if ($can_edit_profile): ?>
           <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Profile</button>
         <?php endif; ?>
       </form>
@@ -305,15 +347,16 @@ include_once __DIR__ . '/../menu.php';
         <div class="form-row">
           <div class="form-group col-md-6">
             <label>Course</label>
-            <select class="form-control" name="course_id" <?php echo $can_mutate?'':'disabled'; ?>>
-              <?php foreach ($courses as $c): ?>
+            <select class="form-control" name="course_id" <?php echo $can_change_enroll?'':'disabled'; ?>>
+              <?php $enrollDeptId = $enroll['department_id'] ?? null; foreach ($courses as $c): ?>
+                <?php if ($is_in3 && $enrollDeptId && (string)$c['department_id'] !== (string)$enrollDeptId) continue; ?>
                 <option value="<?php echo h($c['course_id']); ?>" <?php echo (($enroll['course_id'] ?? '')===$c['course_id']?'selected':''); ?>><?php echo h($c['course_name']); ?></option>
               <?php endforeach; ?>
             </select>
           </div>
           <div class="form-group col-md-2">
             <label>Mode</label>
-            <select class="form-control" name="course_mode" <?php echo $can_mutate?'':'disabled'; ?>>
+            <select class="form-control" name="course_mode" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
               <?php foreach (["Full","Part"] as $m): ?>
                 <option value="<?php echo h($m); ?>" <?php echo (($enroll['course_mode'] ?? '')===$m?'selected':''); ?>><?php echo h($m==='Full'?'Full Time':'Part Time'); ?></option>
               <?php endforeach; ?>
@@ -321,11 +364,11 @@ include_once __DIR__ . '/../menu.php';
           </div>
           <div class="form-group col-md-2">
             <label>Academic Year</label>
-            <input type="text" class="form-control" name="academic_year" value="<?php echo h($enroll['academic_year'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="text" class="form-control" name="academic_year" value="<?php echo h($enroll['academic_year'] ?? ''); ?>" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-2">
             <label>Status</label>
-            <select class="form-control" name="student_enroll_status" <?php echo $can_mutate?'':'disabled'; ?>>
+            <select class="form-control" name="student_enroll_status" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
               <?php foreach (["Following","Completed","Dropout","Long Absent"] as $st): ?>
                 <option value="<?php echo h($st); ?>" <?php echo (($enroll['student_enroll_status'] ?? '')===$st?'selected':''); ?>><?php echo h($st); ?></option>
               <?php endforeach; ?>
@@ -335,14 +378,14 @@ include_once __DIR__ . '/../menu.php';
         <div class="form-row">
           <div class="form-group col-md-3">
             <label>Enroll Date</label>
-            <input type="date" class="form-control" name="student_enroll_date" value="<?php echo h($enroll['student_enroll_date'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="date" class="form-control" name="student_enroll_date" value="<?php echo h($enroll['student_enroll_date'] ?? ''); ?>" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
             <label>Exit Date</label>
-            <input type="date" class="form-control" name="student_enroll_exit_date" value="<?php echo h($enroll['student_enroll_exit_date'] ?? ''); ?>" <?php echo $can_mutate?'':'disabled'; ?>>
+            <input type="date" class="form-control" name="student_enroll_exit_date" value="<?php echo h($enroll['student_enroll_exit_date'] ?? ''); ?>" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
           </div>
         </div>
-        <?php if ($can_mutate): ?>
+        <?php if ($can_change_enroll): ?>
           <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Enrollment</button>
         <?php endif; ?>
       </form>

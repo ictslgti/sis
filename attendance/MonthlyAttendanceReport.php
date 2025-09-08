@@ -3,8 +3,8 @@
 <?php 
 $title="Monthly Attendance Report | SLGTI";    
 include_once ("../config.php");
-// Allow HODs and SAO (and ADM) to use this page
-require_roles(['HOD','SAO','ADM']);
+// Allow HODs, IN3, SAO, and ADM to use this page
+require_roles(['HOD','IN3','SAO','ADM']);
 ?>
 <!-- end dont change the order-->
 <?php

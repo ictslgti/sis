@@ -5,8 +5,8 @@ include_once ("../config.php");
 include_once ("../head.php");
 include_once ("../menu.php");
 include_once ("Attendancenav.php");
-// Only HODs can use this page
-require_roles(['HOD']);
+// HOD and IN3 can use this page
+require_roles(['HOD','IN3']);
 ?>
 <!-- end dont change the order-->
 <style>
