@@ -190,6 +190,7 @@ $baseSql = "SELECT DISTINCT
               `s`.`student_fullname`,
               `s`.`student_email`,
               `s`.`student_phone`,
+              `s`.`student_nic`,
               `s`.`student_status`,
               `s`.`student_gender`,
               `s`.`student_conduct_accepted_at`,
@@ -268,7 +269,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
   echo "\xEF\xBB\xBF";
   $out = fopen('php://output', 'w');
   // Header row
-  fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Phone', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At']);
+  fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Phone', 'NIC', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At']);
   if ($qr = mysqli_query($con, $sqlExport)) {
     while ($r = mysqli_fetch_assoc($qr)) {
       fputcsv($out, [
@@ -276,6 +277,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         display_name($r['student_fullname'] ?? ''),
         $r['student_email'] ?? '',
         $r['student_phone'] ?? '',
+        $r['student_nic'] ?? '',
         $r['student_status'] ?? '',
         $r['student_gender'] ?? '',
         $r['course_name'] ?? '',
@@ -356,7 +358,7 @@ include_once __DIR__ . '/../menu.php';
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fa fa-search"></i></span>
                 </div>
-                <input type="text" id="quickSearch" class="form-control" placeholder="Quick search... (ID, name, email, phone)">
+                <input type="text" id="quickSearch" class="form-control" placeholder="Quick search... (ID, name, email, phone, NIC)">
               </div>
             </div>
             <button class="btn btn-sm btn-outline-secondary d-md-none ml-auto" type="button" data-toggle="collapse" data-target="#filtersBox" aria-expanded="false" aria-controls="filtersBox">
@@ -551,7 +553,7 @@ include_once __DIR__ . '/../menu.php';
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fa fa-search"></i></span>
                 </div>
-                <input type="text" id="quickSearchMobile" class="form-control" placeholder="Quick search (ID, name, email, phone)">
+                <input type="text" id="quickSearchMobile" class="form-control" placeholder="Quick search (ID, name, email, phone, NIC)">
               </div>
             </div>
           </div>
@@ -567,6 +569,7 @@ include_once __DIR__ . '/../menu.php';
                     <th>No</th>
                     <th>Student ID</th>
                     <th>Full Name</th>
+                    <th class="d-none d-md-table-cell">NIC</th>
                     <th class="d-none d-md-table-cell">Status</th>
                     <th class="d-none d-lg-table-cell">Conduct</th>
                     <th class="d-none d-md-table-cell">Actions</th>
@@ -575,7 +578,7 @@ include_once __DIR__ . '/../menu.php';
                 <tbody>
                   <?php if ($res && mysqli_num_rows($res) > 0): $i = 0;
                     while ($row = mysqli_fetch_assoc($res)): ?>
-                      <tr data-sid="<?php echo h($row['student_id']); ?>" data-rowtext="<?php echo h(strtolower(trim(($row['student_id'] ?? '') . ' ' . ($row['student_fullname'] ?? '') . ' ' . ($row['student_email'] ?? '') . ' ' . ($row['student_phone'] ?? '')))); ?>">
+                      <tr data-sid="<?php echo h($row['student_id']); ?>" data-rowtext="<?php echo h(strtolower(trim(($row['student_id'] ?? '') . ' ' . ($row['student_fullname'] ?? '') . ' ' . ($row['student_email'] ?? '') . ' ' . ($row['student_phone'] ?? '') . ' ' . ($row['student_nic'] ?? '')))); ?>">
                         <?php if ($is_admin): ?>
                           <td class="d-none d-sm-table-cell"><input type="checkbox" class="sel" name="sids[]" value="<?php echo h($row['student_id']); ?>"></td>
                         <?php endif; ?>
@@ -592,6 +595,7 @@ include_once __DIR__ . '/../menu.php';
                             <span class="badge badge-warning ml-1">No enrollment</span>
                           <?php endif; ?>
                         </td>
+                        <td class="d-none d-md-table-cell"><?php echo h($row['student_nic'] ?? ''); ?></td>
                         <td class="d-none d-md-table-cell">
                           <?php
                           $st = $row['student_status'] ?: '';
@@ -636,7 +640,7 @@ include_once __DIR__ . '/../menu.php';
                       </tr>
                       <!-- Mobile details row -->
                       <tr class="details-row d-md-none" id="det-<?php echo h($row['student_id']); ?>">
-                        <td colspan="<?php echo $is_admin ? 8 : 7; ?>" class="bg-light">
+                        <td colspan="<?php echo $is_admin ? 9 : 8; ?>" class="bg-light">
                           <div class="p-2 small">
                             <div><strong>Status:</strong> <span class="badge badge-<?php echo ($row['student_status'] === 'Active' ? 'success' : ($row['student_status'] === 'Inactive' ? 'secondary' : 'info')); ?>"><?php echo h($row['student_status'] ?: '—'); ?></span></div>
                             <div><strong>Conduct:</strong>
@@ -647,6 +651,9 @@ include_once __DIR__ . '/../menu.php';
                                 <span class="badge badge-warning">Pending</span>
                               <?php endif; ?>
                             </div>
+                            <?php if (!empty($row['student_nic'])): ?>
+                              <div><strong>NIC:</strong> <?php echo h($row['student_nic']); ?></div>
+                            <?php endif; ?>
                             <div class="mt-2">
                               <div class="btn-group btn-group-sm flex-wrap" role="group" aria-label="Actions">
                                 <?php if ($can_mutate): ?>
@@ -679,7 +686,7 @@ include_once __DIR__ . '/../menu.php';
                     <?php endwhile;
                   else: ?>
                     <tr>
-                      <td colspan="<?php echo $is_admin ? 8 : 7; ?>" class="text-center py-5 text-muted">
+                      <td colspan="<?php echo $is_admin ? 9 : 8; ?>" class="text-center py-5 text-muted">
                         <div><i class="fa fa-user-graduate fa-2x mb-2"></i></div>
                         <div><strong>No students found</strong></div>
                         <div class="small">Try adjusting filters or clearing them to see more results.</div>
