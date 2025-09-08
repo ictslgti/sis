@@ -619,8 +619,10 @@ include_once __DIR__ . '/../menu.php';
                           <?php
                           $viewUrl = $base . '/student/Student_profile.php?Sid=' . urlencode($row['student_id']);
                           $editUrl = $base . '/student/StudentEditAdmin.php?Sid=' . urlencode($row['student_id']);
+                          $unifiedUrl = $base . '/student/StudentUnifiedEdit.php?Sid=' . urlencode($row['student_id']);
                           ?>
                           <div class="btn-group btn-group-sm flex-wrap" role="group">
+                            <a class="btn btn-secondary" title="Unified Edit" href="<?php echo $unifiedUrl; ?>"><i class="fas fa-user-cog"></i></a>
                             <?php if ($can_mutate): ?>
                               <a class="btn btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
                             <?php endif; ?>

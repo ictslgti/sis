@@ -1,4 +1,7 @@
 <?php
+if (session_status() === PHP_SESSION_NONE) {
+  session_start();
+}
 // controller/HostelAllocationActions.php
 // JSON endpoint to move a student between rooms or mark as left
 require_once __DIR__ . '/../config.php';
