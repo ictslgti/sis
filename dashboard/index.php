@@ -360,9 +360,17 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
         <div class="font-weight-semibold"><i class="fas fa-list-ol mr-1 text-primary"></i> Course-wise Students</div>
-        <?php if (!empty($selectedYear)) : ?>
-          <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
-        <?php endif; ?>
+        <div class="d-flex align-items-center">
+          <?php if (!empty($selectedYear)) : ?>
+            <span class="badge badge-light mr-2">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
+          <?php endif; ?>
+          <?php $role = isset($_SESSION['user_type']) ? strtoupper(trim($_SESSION['user_type'])) : ''; if (in_array($role, ['SAO','DIR'])): ?>
+            <?php $base = (defined('APP_BASE') ? APP_BASE : ''); $q = $selectedYear !== '' ? ('?academic_year=' . urlencode($selectedYear)) : ''; ?>
+            <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/dashboard/course_wise_export.php<?php echo $q; ?>">
+              <i class="fas fa-file-excel"></i> Export Excel
+            </a>
+          <?php endif; ?>
+        </div>
       </div>
       <div class="card-body p-0">
         <?php if (empty($courseRows)): ?>
@@ -381,7 +389,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
                 <?php foreach ($courseRows as $row): ?>
                   <tr>
                     <td><?php echo htmlspecialchars($row['department_name'] ?? ''); ?></td>
-                    <td><?php echo htmlspecialchars(($row['course_name'] ?? '') . (isset($row['course_id']) ? ' ('.$row['course_id'].')' : '')); ?></td>
+                    <td><?php echo htmlspecialchars($row['course_name'] ?? ''); ?></td>
                     <td class="text-right font-weight-bold"><?php echo (int)($row['total'] ?? 0); ?></td>
                   </tr>
                 <?php endforeach; ?>

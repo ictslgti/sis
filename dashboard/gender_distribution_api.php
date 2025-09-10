@@ -45,9 +45,8 @@ $accCase = ($conduct === 'accepted') ? " AND s.student_conduct_accepted_at IS NO
 $sql = "
 SELECT 
   d.department_name AS department,
-  SUM(CASE WHEN s.student_gender = 'Male'$accCase THEN 1 ELSE 0 END) AS male,
-  SUM(CASE WHEN s.student_gender = 'Female'$accCase THEN 1 ELSE 0 END) AS female,
-  SUM(CASE WHEN 1=1$accCase THEN 1 ELSE 0 END) AS total
+  COUNT(DISTINCT CASE WHEN s.student_gender = 'Male'$accCase AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS male,
+  COUNT(DISTINCT CASE WHEN s.student_gender = 'Female'$accCase AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS female
 FROM department d
 LEFT JOIN course c ON c.department_id = d.department_id
 LEFT JOIN student_enroll e ON e.course_id = c.course_id$whereEnroll
@@ -67,8 +66,7 @@ while ($row = mysqli_fetch_assoc($res)) {
     $data[] = [
         'department' => $row['department'],
         'male' => (int)($row['male'] ?? 0),
-        'female' => (int)($row['female'] ?? 0),
-        'total' => (int)($row['total'] ?? 0)
+        'female' => (int)($row['female'] ?? 0)
     ];
 }
 

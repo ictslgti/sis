@@ -65,20 +65,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_bank'])) {
               $errors[] = 'Destination directory is not writable: ' . htmlspecialchars($destDir);
             }
             $safeId = preg_replace('/[^A-Za-z0-9_-]/', '_', $studentId);
-            $destPath = $destDir . '/' . $safeId . '_bankfront.' . $ext;
+            // Helper to compress to JPEG
+            if (!function_exists('sis_compress_to_jpeg_file')) {
+              function sis_compress_to_jpeg_file(string $srcPath, string $destPath, int $maxDim = 1400, int $quality = 82): bool {
+                $info = @getimagesize($srcPath);
+                if ($info === false) return false;
+                $mime = strtolower($info['mime'] ?? '');
+                switch ($mime) {
+                  case 'image/jpeg': $src = @imagecreatefromjpeg($srcPath); break;
+                  case 'image/png':  $src = @imagecreatefrompng($srcPath); break;
+                  case 'image/gif':  $src = @imagecreatefromgif($srcPath); break;
+                  case 'image/webp': $src = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($srcPath) : false; break;
+                  default: $src = false; break;
+                }
+                if (!$src) return false;
+                $sw = imagesx($src); $sh = imagesy($src);
+                $scale = 1.0; $maxSide = max($sw, $sh);
+                if ($maxSide > $maxDim) { $scale = $maxDim / $maxSide; }
+                $dw = (int)max(1, round($sw * $scale));
+                $dh = (int)max(1, round($sh * $scale));
+                $dst = imagecreatetruecolor($dw, $dh);
+                // Fill white for formats with transparency
+                if (in_array($mime, ['image/png','image/gif'], true)) {
+                  $white = imagecolorallocate($dst, 255,255,255);
+                  imagefilledrectangle($dst, 0,0, $dw,$dh, $white);
+                }
+                imagecopyresampled($dst, $src, 0,0,0,0, $dw,$dh, $sw,$sh);
+                imagedestroy($src);
+                $ok = imagejpeg($dst, $destPath, max(0, min(100, $quality)));
+                imagedestroy($dst);
+                return (bool)$ok;
+              }
+            }
+
+            // Decide final path and save
+            $isPdf = ($ext === 'pdf');
+            $outExt = $isPdf ? 'pdf' : 'jpg';
+            $destPath = $destDir . '/' . $safeId . '_bankfront.' . $outExt;
             if (empty($errors)) {
-              if (!move_uploaded_file($tmp, $destPath)) {
-                $data = @file_get_contents($tmp);
-                if ($data === false || @file_put_contents($destPath, $data) === false) {
-                  $lastErr = error_get_last();
-                  $errors[] = 'Failed to save bank front page on server at ' . htmlspecialchars($destPath) .
-                              (isset($lastErr['message']) ? (' | Reason: ' . htmlspecialchars($lastErr['message'])) : '');
+              if ($isPdf) {
+                if (!move_uploaded_file($tmp, $destPath)) {
+                  $data = @file_get_contents($tmp);
+                  if ($data === false || @file_put_contents($destPath, $data) === false) {
+                    $lastErr = error_get_last();
+                    $errors[] = 'Failed to save bank front page on server at ' . htmlspecialchars($destPath) .
+                                (isset($lastErr['message']) ? (' | Reason: ' . htmlspecialchars($lastErr['message'])) : '');
+                  }
+                }
+              } else {
+                // Compress to JPEG
+                if (!sis_compress_to_jpeg_file($tmp, $destPath, 1400, 82)) {
+                  // fallback to original move if compression fails
+                  if (!move_uploaded_file($tmp, $destPath)) {
+                    $data = @file_get_contents($tmp);
+                    if ($data === false || @file_put_contents($destPath, $data) === false) {
+                      $lastErr = error_get_last();
+                      $errors[] = 'Failed to save bank front page on server at ' . htmlspecialchars($destPath) .
+                                  (isset($lastErr['message']) ? (' | Reason: ' . htmlspecialchars($lastErr['message'])) : '');
+                    }
+                  }
                 }
               }
             }
             if (empty($errors)) {
               @chmod($destPath, 0664);
-              $frontRelPath = 'student/documentation/' . $safeId . '_bankfront.' . $ext;
+              $frontRelPath = 'student/documentation/' . $safeId . '_bankfront.' . $outExt;
             }
           }
         }

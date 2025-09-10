@@ -31,9 +31,9 @@ $accCase = ($conduct === 'accepted') ? " AND s.student_conduct_accepted_at IS NO
 $sqlProv = "
   SELECT 
     TRIM(s.student_provice) AS province,
-    SUM(CASE WHEN s.student_gender='Male'   " . $accCase . " THEN 1 ELSE 0 END) AS male,
-    SUM(CASE WHEN s.student_gender='Female' " . $accCase . " THEN 1 ELSE 0 END) AS female,
-    SUM(CASE WHEN 1=1 " . $accCase . " THEN 1 ELSE 0 END) AS total
+    COUNT(DISTINCT CASE WHEN s.student_gender='Male'   " . $accCase . " AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS male,
+    COUNT(DISTINCT CASE WHEN s.student_gender='Female' " . $accCase . " AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS female,
+    COUNT(DISTINCT CASE WHEN 1=1 " . $accCase . " AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS total
   FROM student s
   JOIN student_enroll e ON e.student_id = s.student_id " . $statusCond . $yearCond . "
   WHERE s.student_provice IS NOT NULL AND TRIM(s.student_provice) <> ''
@@ -59,9 +59,9 @@ while ($row = mysqli_fetch_assoc($resProv)) {
 $sqlDist = "
   SELECT 
     TRIM(s.student_district) AS district,
-    SUM(CASE WHEN s.student_gender='Male'   " . $accCase . " THEN 1 ELSE 0 END) AS male,
-    SUM(CASE WHEN s.student_gender='Female' " . $accCase . " THEN 1 ELSE 0 END) AS female,
-    SUM(CASE WHEN 1=1 " . $accCase . " THEN 1 ELSE 0 END) AS total
+    COUNT(DISTINCT CASE WHEN s.student_gender='Male'   " . $accCase . " AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS male,
+    COUNT(DISTINCT CASE WHEN s.student_gender='Female' " . $accCase . " AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS female,
+    COUNT(DISTINCT CASE WHEN 1=1 " . $accCase . " AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS total
   FROM student s
   JOIN student_enroll e ON e.student_id = s.student_id " . $statusCond . $yearCond . "
   WHERE s.student_district IS NOT NULL AND TRIM(s.student_district) <> ''

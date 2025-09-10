@@ -20,6 +20,9 @@ $can_mutate = ($is_admin || $is_sao); // IN3 cannot mutate hostel
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
+// Ensure profile image column exists (path-based)
+@mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_profile_img` VARCHAR(255) NULL");
+
 // Load student ID
 $sid = isset($_GET['Sid']) ? trim($_GET['Sid']) : '';
 if ($sid === '') {
@@ -30,6 +33,7 @@ if ($sid === '') {
 // Fetch base data
 $student = null;
 $enroll  = null;
+$profileImgPath = null;
 $departments = [];
 $courses = [];
 
@@ -46,6 +50,16 @@ $enrollSql = "SELECT e.* , c.course_name, c.department_id FROM student_enroll e
 if ($r = mysqli_query($con, $enrollSql)) {
   $enroll = mysqli_fetch_assoc($r) ?: null;
   mysqli_free_result($r);
+}
+
+// Determine current profile image (by path)
+if ($student) {
+  $tmp = trim((string)($student['student_profile_img'] ?? ''));
+  if ($tmp !== '') {
+    $abs = realpath(__DIR__ . '/../' . $tmp);
+    // If the file exists under the project, use the relative path; otherwise leave null
+    if ($abs && file_exists($abs)) { $profileImgPath = $tmp; }
+  }
 }
 
 // Dropdown data
@@ -87,6 +101,122 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $errors[] = 'Failed to update profile: '.mysqli_error($con);
     } else {
       $messages[] = 'Profile updated successfully';
+    }
+  }
+
+  // Upload profile image (path-based) with auto-compress and optional data URL support
+  if ($form === 'profile_img') {
+    if (!$can_edit_profile) { http_response_code(403); echo 'Forbidden'; exit; }
+
+    // Helper: cover-fit to 600x800 JPEG (target <=200KB via quality search)
+    if (!function_exists('ue_cover_to_id_jpeg')) {
+      function ue_cover_to_id_jpeg($blobOrPath, $isPath = false, $outW = 600, $outH = 800, $quality = 85, $maxBytes = 0) {
+        if (!function_exists('imagecreatefromstring')) return false;
+        $src = $isPath ? @imagecreatefromstring(@file_get_contents($blobOrPath)) : @imagecreatefromstring($blobOrPath);
+        if (!$src) return false;
+        $sw = imagesx($src); $sh = imagesy($src);
+        if ($sw < 1 || $sh < 1) { imagedestroy($src); return false; }
+        $scale = max($outW / $sw, $outH / $sh);
+        $rw = (int)ceil($sw * $scale); $rh = (int)ceil($sh * $scale);
+        $tmp = imagecreatetruecolor($rw, $rh);
+        imagecopyresampled($tmp, $src, 0,0,0,0, $rw,$rh, $sw,$sh);
+        imagedestroy($src);
+        $dx = (int)max(0, ($rw - $outW) / 2);
+        $dy = (int)max(0, ($rh - $outH) / 2);
+        $dst = imagecreatetruecolor($outW, $outH);
+        imagecopy($dst, $tmp, 0,0, $dx,$dy, $outW,$outH);
+        imagedestroy($tmp);
+        // If no max size targeting, single pass
+        $quality = (int)max(1, min(100, $quality));
+        if ($maxBytes <= 0) {
+          ob_start(); imagejpeg($dst, null, $quality); imagedestroy($dst); $out = ob_get_clean();
+          return $out !== false ? $out : false;
+        }
+        // Binary search JPEG quality to target max bytes
+        $lo = 35; // do not go too low to avoid severe artifacts
+        $hi = min(92, max($quality, 80));
+        $best = null; $bestLen = PHP_INT_MAX; $iter = 0; $maxIter = 7;
+        while ($lo <= $hi && $iter++ < $maxIter) {
+          $mid = (int)floor(($lo + $hi) / 2);
+          ob_start(); imagejpeg($dst, null, $mid); $buf = ob_get_clean();
+          if ($buf === false) { break; }
+          $len = strlen($buf);
+          // Track best under limit, or smallest overall
+          if ($len <= $maxBytes) { $best = $buf; $bestLen = $len; $lo = $mid + 1; }
+          else { if ($len < $bestLen) { $best = $buf; $bestLen = $len; } $hi = $mid - 1; }
+        }
+        // Fallback one more try at low quality if still over
+        if ($best === null) { ob_start(); imagejpeg($dst, null, $lo); $best = ob_get_clean(); $bestLen = $best!==false?strlen($best):PHP_INT_MAX; }
+        imagedestroy($dst);
+        return $best !== false ? $best : false;
+      }
+    }
+
+    // Determine output directory and target filename (robust creation without realpath dependency)
+    $baseImg = __DIR__ . '/../img';
+    if (!is_dir($baseImg)) { @mkdir($baseImg, 0777, true); }
+    $dir = rtrim($baseImg, DIRECTORY_SEPARATOR . '/\\') . DIRECTORY_SEPARATOR . 'Studnet_profile';
+    if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
+    // As a final guard, if directory still doesn't exist or not writable, disable compression and bail gracefully later
+    $safeId = preg_replace('/[^A-Za-z0-9_.-]/', '_', $sid);
+    $filename = $safeId . '.jpg'; // normalize to JPEG
+    $dest = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $filename;
+
+    $dataUrl = isset($_POST['profile_img_data']) ? (string)$_POST['profile_img_data'] : '';
+    $saved = false;
+    $canWriteDest = is_dir($dir) && is_writable($dir);
+    $gdAvailable = function_exists('imagecreatefromstring') && function_exists('imagecreatetruecolor') && function_exists('imagejpeg');
+    if ($canWriteDest && $gdAvailable && $dataUrl !== '' && strpos($dataUrl, 'data:image') === 0) {
+      $parts = explode(',', $dataUrl, 2);
+      if (count($parts) === 2) {
+        $raw = base64_decode($parts[1]);
+        if ($raw !== false) {
+          $jpeg = ue_cover_to_id_jpeg($raw, false, 600, 800, 85, 200*1024);
+          if ($jpeg !== false) { $saved = @file_put_contents($dest, $jpeg) !== false; }
+        }
+      }
+    }
+
+    // Fallback: handle uploaded file and compress to JPEG
+    if (!$saved) {
+      if (!isset($_FILES['profile_img']) || $_FILES['profile_img']['error'] !== UPLOAD_ERR_OK) {
+        $errors[] = 'Select an image to upload.';
+      } else {
+        $up = $_FILES['profile_img'];
+        $tmp = $up['tmp_name'];
+        if ($canWriteDest && $gdAvailable) {
+          $jpeg = ue_cover_to_id_jpeg($tmp, true, 600, 800, 85, 200*1024);
+          if ($jpeg === false) {
+            // As a last resort, move original
+            $saved = @move_uploaded_file($tmp, $dest);
+          } else {
+            $saved = @file_put_contents($dest, $jpeg) !== false;
+          }
+        } else if ($canWriteDest) {
+          // GD not available; just move original
+          $saved = @move_uploaded_file($tmp, $dest);
+        } else {
+          $errors[] = 'Upload directory is not writable.';
+        }
+      }
+    }
+
+    if ($saved) {
+      // Remove possible old files with other extensions
+      foreach (['jpeg','png','gif','webp'] as $e) {
+        $old = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $safeId . '.' . $e;
+        if ($e !== 'jpg' && is_file($old)) { @unlink($old); }
+      }
+      $rel = 'img/Studnet_profile/' . $filename;
+      $qs = "UPDATE `student` SET `student_profile_img`='" . mysqli_real_escape_string($con, $rel) . "' WHERE `student_id`='" . mysqli_real_escape_string($con, $sid) . "'";
+      if (!mysqli_query($con, $qs)) {
+        $errors[] = 'Image path save failed: ' . mysqli_error($con);
+      } else {
+        $messages[] = 'Profile image updated (auto-cropped & compressed).';
+        $profileImgPath = $rel;
+      }
+    } else if (empty($errors)) {
+      $errors[] = 'Failed to process and save the image.';
     }
   }
 
@@ -136,54 +266,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       }
     }
 
-    // Check if latest exists
-    $has = false;
-    if ($r = mysqli_query($con, "SELECT id FROM student_enroll WHERE student_id='".mysqli_real_escape_string($con,$sid)."' ORDER BY student_enroll_date DESC LIMIT 1")) {
-      $row = mysqli_fetch_assoc($r);
-      $has = !!$row;
-      mysqli_free_result($r);
-    }
-    if ($has) {
-      $sql = "UPDATE student_enroll SET 
-                course_id='".mysqli_real_escape_string($con,$course_id)."',
-                course_mode='".mysqli_real_escape_string($con,$course_mode)."',
-                academic_year='".mysqli_real_escape_string($con,$academic_year)."',
-                student_enroll_date='".mysqli_real_escape_string($con,$student_enroll_date)."',
-                student_enroll_exit_date=".($student_enroll_exit_date!==''?"'".mysqli_real_escape_string($con,$student_enroll_exit_date)."'":"NULL").",
-                student_enroll_status='".mysqli_real_escape_string($con,$student_enroll_status)."'
-              WHERE student_id='".mysqli_real_escape_string($con,$sid)."' 
-              ORDER BY student_enroll_date DESC LIMIT 1";
-      // MySQL does not support ORDER BY in UPDATE directly without subquery; do a subquery id fetch
-      $rs = mysqli_query($con, "SELECT id FROM student_enroll WHERE student_id='".mysqli_real_escape_string($con,$sid)."' ORDER BY student_enroll_date DESC, id DESC LIMIT 1");
-      $lastId = ($rs && ($tmp=mysqli_fetch_assoc($rs))) ? (int)$tmp['id'] : 0;
-      if ($rs) mysqli_free_result($rs);
-      if ($lastId) {
-        $sql = "UPDATE student_enroll SET 
-                  course_id='".mysqli_real_escape_string($con,$course_id)."',
-                  course_mode='".mysqli_real_escape_string($con,$course_mode)."',
-                  academic_year='".mysqli_real_escape_string($con,$academic_year)."',
-                  student_enroll_date='".mysqli_real_escape_string($con,$student_enroll_date)."',
-                  student_enroll_exit_date=".($student_enroll_exit_date!==''?"'".mysqli_real_escape_string($con,$student_enroll_exit_date)."'":"NULL").",
-                  student_enroll_status='".mysqli_real_escape_string($con,$student_enroll_status)."'
-                WHERE id=$lastId";
-        if (!mysqli_query($con, $sql)) { $errors[] = 'Failed to update enrollment: '.mysqli_error($con); }
-        else { $messages[] = 'Enrollment updated successfully'; }
-      } else {
-        $errors[] = 'Could not locate latest enrollment row.';
+    // Upsert to avoid duplicate key errors and always target the composite key
+    $ins = "INSERT INTO student_enroll(
+              student_id, course_id, course_mode, academic_year, student_enroll_date, student_enroll_exit_date, student_enroll_status
+            ) VALUES (
+              '".mysqli_real_escape_string($con,$sid)."',
+              '".mysqli_real_escape_string($con,$course_id)."',
+              '".mysqli_real_escape_string($con,$course_mode)."',
+              '".mysqli_real_escape_string($con,$academic_year)."',
+              '".mysqli_real_escape_string($con,$student_enroll_date)."',
+              ".($student_enroll_exit_date!==''?"'".mysqli_real_escape_string($con,$student_enroll_exit_date)."'":"NULL").",
+              '".mysqli_real_escape_string($con,$student_enroll_status)."'
+            )
+            ON DUPLICATE KEY UPDATE
+              course_mode=VALUES(course_mode),
+              student_enroll_date=VALUES(student_enroll_date),
+              student_enroll_exit_date=VALUES(student_enroll_exit_date),
+              student_enroll_status=VALUES(student_enroll_status)";
+    if (!mysqli_query($con, $ins)) { $errors[] = 'Failed to save enrollment: '.mysqli_error($con); }
+    else {
+      $messages[] = 'Enrollment saved successfully';
+      // If set to Dropout, inactivate student and disable login
+      if (strcasecmp($student_enroll_status, 'Dropout') === 0) {
+        // Update student status to Inactive (string schema)
+        if ($st = mysqli_prepare($con, "UPDATE student SET student_status='Inactive' WHERE student_id=?")) {
+          mysqli_stmt_bind_param($st, 's', $sid);
+          mysqli_stmt_execute($st);
+          mysqli_stmt_close($st);
+        }
+        // Deactivate user login
+        if ($us = mysqli_prepare($con, "UPDATE `user` SET `user_active`=0 WHERE `user_name`=?")) {
+          mysqli_stmt_bind_param($us, 's', $sid);
+          mysqli_stmt_execute($us);
+          mysqli_stmt_close($us);
+        }
       }
-    } else {
-      $sql = "INSERT INTO student_enroll(student_id, course_id, course_mode, academic_year, student_enroll_date, student_enroll_exit_date, student_enroll_status)
-              VALUES (
-                '".mysqli_real_escape_string($con,$sid)."',
-                '".mysqli_real_escape_string($con,$course_id)."',
-                '".mysqli_real_escape_string($con,$course_mode)."',
-                '".mysqli_real_escape_string($con,$academic_year)."',
-                '".mysqli_real_escape_string($con,$student_enroll_date)."',
-                ".($student_enroll_exit_date!==''?"'".mysqli_real_escape_string($con,$student_enroll_exit_date)."'":"NULL").",
-                '".mysqli_real_escape_string($con,$student_enroll_status)."'
-              )";
-      if (!mysqli_query($con, $sql)) { $errors[] = 'Failed to create enrollment: '.mysqli_error($con); }
-      else { $messages[] = 'Enrollment created successfully'; }
     }
   }
 
@@ -226,6 +343,226 @@ include_once __DIR__ . '/../menu.php';
   <div class="tab-content border-left border-right border-bottom p-3 bg-white" id="ueContent">
     <!-- Profile Tab -->
     <div class="tab-pane fade show active" id="profile" role="tabpanel">
+      <div class="d-flex align-items-start justify-content-between mb-2">
+        <div></div>
+        <div class="text-right">
+          <?php if ($profileImgPath): ?>
+            <img src="<?php echo $base . '/' . h($profileImgPath); ?>" alt="Profile Photo" class="img-thumbnail" style="width:120px;height:160px;object-fit:cover;">
+          <?php endif; ?>
+          <?php if ($can_edit_profile): ?>
+            <form method="post" enctype="multipart/form-data" class="mt-2" id="profileImgForm">
+              <input type="hidden" name="form" value="profile_img">
+              <input type="hidden" name="profile_img_data" id="profile_img_data">
+              <div class="form-row align-items-center">
+                <div class="col-auto">
+                  <input type="file" name="profile_img" id="profile_img_file" accept="image/*" class="form-control-file" required>
+                </div>
+                <div class="col-auto">
+                  <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-upload"></i> Upload</button>
+                </div>
+              </div>
+              <div class="mt-2">
+                <img id="profile_img_preview" class="img-thumbnail" style="width:120px;height:160px;object-fit:cover;display:none;" alt="Preview" />
+                <small class="form-text text-muted">Image will be auto-cropped to ID size (3:4) around the face and compressed before upload. You can also adjust the crop before saving.</small>
+              </div>
+            </form>
+            <!-- Cropper.js modal for manual adjustment -->
+            <link rel="stylesheet" href="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.css">
+            <div class="modal fade" id="cropperModal" tabindex="-1" role="dialog" aria-labelledby="cropperModalLabel" aria-hidden="true">
+              <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="cropperModalLabel">Adjust Photo (3:4)</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                  </div>
+                  <div class="modal-body">
+                    <div class="w-100" style="max-height:70vh;">
+                      <img id="cropper_image" src="" alt="Crop" style="max-width:100%; display:block;">
+                    </div>
+                    <div class="btn-toolbar mt-2" role="toolbar">
+                      <div class="btn-group mr-2" role="group">
+                        <button type="button" class="btn btn-sm btn-secondary" id="cropZoomIn">Zoom +</button>
+                        <button type="button" class="btn btn-sm btn-secondary" id="cropZoomOut">Zoom -</button>
+                      </div>
+                      <div class="btn-group mr-2" role="group">
+                        <button type="button" class="btn btn-sm btn-secondary" id="cropRotateL">Rotate -10°</button>
+                        <button type="button" class="btn btn-sm btn-secondary" id="cropRotateR">Rotate +10°</button>
+                      </div>
+                      <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="cropReset">Reset</button>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" id="applyCrop">Apply Crop</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <script src="https://unpkg.com/cropperjs@1.6.2/dist/cropper.min.js"></script>
+            <script>
+              (function(){
+                const form = document.getElementById('profileImgForm');
+                const fileInput = document.getElementById('profile_img_file');
+                const hidden = document.getElementById('profile_img_data');
+                const preview = document.getElementById('profile_img_preview');
+                const OUT_W = 600, OUT_H = 800;
+                let cropper = null;
+                const cropperModal = document.getElementById('cropperModal');
+                const cropperImg = document.getElementById('cropper_image');
+
+                async function detectFaceRect(img){
+                  try {
+                    if ('FaceDetector' in window) {
+                      const fd = new window.FaceDetector({ fastMode: true, maxDetectedFaces: 1 });
+                      const faces = await fd.detect(img);
+                      if (faces && faces.length) {
+                        const b = faces[0].boundingBox; // {x,y,width,height}
+                        return { x: b.x, y: b.y, w: b.width, h: b.height };
+                      }
+                    }
+                  } catch(e) { /* ignore and fallback */ }
+                  return null;
+                }
+
+                function clamp(v, min, max){ return Math.max(min, Math.min(max, v)); }
+
+                async function processFile(file){
+                  return new Promise((resolve, reject) => {
+                    const fr = new FileReader();
+                    fr.onload = async () => {
+                      const url = fr.result;
+                      const img = new Image();
+                      img.onload = async () => {
+                        // Compute crop rect
+                        const sw = img.naturalWidth; const sh = img.naturalHeight;
+                        const face = await detectFaceRect(img);
+                        let cx, cy, cw, ch;
+                        const targetRatio = OUT_W / OUT_H; // 0.75
+                        if (face) {
+                          // ID-card oriented crop: face ~55% of output height, slight upward bias
+                          const fx = face.x, fy = face.y, fw = face.w, fh = face.h;
+                          // Desired crop height so face occupies ~55% of output height
+                          let desiredCh = fh / 0.55; // ~1.82 * fh
+                          // Clamp to sensible range to avoid over-zoom/out
+                          desiredCh = Math.max(fh * 1.6, Math.min(fh * 3.0, desiredCh));
+                          // Ensure not exceeding source bounds
+                          desiredCh = Math.min(desiredCh, sh);
+                          let desiredCw = desiredCh * targetRatio;
+                          if (desiredCw > sw) {
+                            // Reduce proportionally if too wide
+                            const scale = sw / desiredCw;
+                            desiredCw = sw;
+                            desiredCh = desiredCh * scale;
+                          }
+                          cw = desiredCw; ch = desiredCh;
+                          // Center X at face center; Y with slight upward bias (place eyes ~0.42 of crop height)
+                          cx = fx + fw / 2;
+                          cy = fy + fh * 0.6; // bias upwards for headroom
+                        } else {
+                          // Center crop to 3:4
+                          if (sw / sh > targetRatio) { // too wide
+                            ch = sh; cw = ch * targetRatio; cx = sw/2; cy = sh/2;
+                          } else {
+                            cw = sw; ch = cw / targetRatio; cx = sw/2; cy = sh/2;
+                          }
+                        }
+                        // Ensure crop within bounds
+                        let x = clamp(cx - cw/2, 0, sw - cw);
+                        let y = clamp(cy - ch/2, 0, sh - ch);
+
+                        // Draw to output canvas
+                        const canvas = document.createElement('canvas');
+                        canvas.width = OUT_W; canvas.height = OUT_H;
+                        const ctx = canvas.getContext('2d');
+                        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+                        ctx.drawImage(img, x, y, cw, ch, 0, 0, OUT_W, OUT_H);
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                        if (preview) { preview.src = dataUrl; preview.style.display = 'inline-block'; }
+                        resolve(dataUrl);
+                      };
+                      img.onerror = () => reject(new Error('Invalid image'));
+                      img.src = url;
+                    };
+                    fr.onerror = () => reject(new Error('Failed to read file'));
+                    fr.readAsDataURL(file);
+                  });
+                }
+
+                function openCropper(url){
+                  if (!cropperImg || !window.jQuery) return false; // rely on Bootstrap jQuery for modal
+                  cropperImg.src = url;
+                  // Ensure previous instance destroyed
+                  if (cropper) { try { cropper.destroy(); } catch(e) {} cropper = null; }
+                  $('#cropperModal').modal('show');
+                  $('#cropperModal').on('shown.bs.modal', function(){
+                    cropper = new Cropper(cropperImg, {
+                      aspectRatio: OUT_W / OUT_H,
+                      viewMode: 1,
+                      autoCropArea: 0.9,
+                      background: false,
+                      movable: true,
+                      zoomable: true,
+                      rotatable: true,
+                      minCropBoxWidth: 120,
+                      minCropBoxHeight: 160
+                    });
+                  }).on('hidden.bs.modal', function(){
+                    if (cropper) { try { cropper.destroy(); } catch(e) {} cropper = null; }
+                  });
+                  // Controls
+                  document.getElementById('cropZoomIn').onclick = () => { if (cropper) cropper.zoom(0.1); };
+                  document.getElementById('cropZoomOut').onclick = () => { if (cropper) cropper.zoom(-0.1); };
+                  document.getElementById('cropRotateL').onclick = () => { if (cropper) cropper.rotate(-10); };
+                  document.getElementById('cropRotateR').onclick = () => { if (cropper) cropper.rotate(10); };
+                  document.getElementById('cropReset').onclick = () => { if (cropper) cropper.reset(); };
+                  document.getElementById('applyCrop').onclick = () => {
+                    if (!cropper) return;
+                    const canvas = cropper.getCroppedCanvas({ width: OUT_W, height: OUT_H, fillColor: '#fff' });
+                    if (canvas) {
+                      const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+                      hidden.value = dataUrl;
+                      if (preview) { preview.src = dataUrl; preview.style.display = 'inline-block'; }
+                    }
+                    $('#cropperModal').modal('hide');
+                  };
+                  return true;
+                }
+
+                fileInput && fileInput.addEventListener('change', async function(){
+                  hidden.value = '';
+                  const f = this.files && this.files[0];
+                  if (!f) return;
+                  const reader = new FileReader();
+                  reader.onload = async () => {
+                    const url = reader.result;
+                    // If Cropper is available and Bootstrap modal present, use manual adjust; else auto-process
+                    if (window.Cropper && window.jQuery && openCropper(url)) {
+                      // wait for user to click Apply
+                    } else {
+                      try {
+                        const dataUrl = await processFile(f);
+                        hidden.value = dataUrl;
+                      } catch(e) {
+                        console.warn('Preprocess failed, will upload original:', e);
+                      }
+                    }
+                  };
+                  reader.readAsDataURL(f);
+                });
+
+                form && form.addEventListener('submit', function(e){
+                  // If we have generated a data URL, server will use it. Otherwise proceed as-is.
+                  if (!fileInput || !fileInput.files || !fileInput.files.length) {
+                    e.preventDefault(); alert('Select an image to upload.'); return false;
+                  }
+                });
+              })();
+            </script>
+          <?php endif; ?>
+        </div>
+      </div>
       <form method="post">
         <input type="hidden" name="form" value="profile">
         <div class="form-row">
@@ -293,7 +630,11 @@ include_once __DIR__ . '/../menu.php';
           </div>
           <div class="form-group col-md-3">
             <label>Blood</label>
-            <input type="text" class="form-control" name="student_blood" value="<?php echo h($student['student_blood'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
+            <select class="form-control" name="student_blood" <?php echo $can_edit_profile?'':'disabled'; ?>>
+              <?php $bloodOpts = ['','A+','A-','B+','B-','AB+','AB-','O+','O-']; $curBlood = $student['student_blood'] ?? ''; foreach($bloodOpts as $b): ?>
+                <option value="<?php echo h($b); ?>" <?php echo ($curBlood===$b?'selected':''); ?>><?php echo h($b===''?'-- Select --':$b); ?></option>
+              <?php endforeach; ?>
+            </select>
           </div>
         </div>
         <div class="form-row">
@@ -302,19 +643,15 @@ include_once __DIR__ . '/../menu.php';
             <input type="text" class="form-control" name="student_address" value="<?php echo h($student['student_address'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-3">
-            <label>District</label>
-            <input type="text" class="form-control" name="student_district" value="<?php echo h($student['student_district'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
+            <label>Province</label>
+            <select class="form-control" name="student_provice" id="province_select" <?php echo $can_edit_profile?'':'disabled'; ?>></select>
           </div>
           <div class="form-group col-md-3">
-            <label>Divisional Secretariat</label>
-            <input type="text" class="form-control" name="student_divisions" value="<?php echo h($student['student_divisions'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
+            <label>District</label>
+            <select class="form-control" name="student_district" id="district_select" <?php echo $can_edit_profile?'':'disabled'; ?>></select>
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group col-md-3">
-            <label>Province</label>
-            <input type="text" class="form-control" name="student_provice" value="<?php echo h($student['student_provice'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
-          </div>
           <div class="form-group col-md-3">
             <label>Emergency Name</label>
             <input type="text" class="form-control" name="student_em_name" value="<?php echo h($student['student_em_name'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -334,6 +671,46 @@ include_once __DIR__ . '/../menu.php';
             <input type="text" class="form-control" name="student_em_relation" value="<?php echo h($student['student_em_relation'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
         </div>
+        <?php if ($can_edit_profile): ?>
+        <script>
+          (function(){
+            var provinces = [
+              'Northern','Eastern','Western','Southern','Central','North Western','Uva','North Central','Sabaragamuwa'
+            ];
+            var districtsByProvince = {
+              'Northern': ['Jaffna','Kilinochchi','Mannar','Mullaitivu','Vavuniya'],
+              'Eastern': ['Trincomalee','Batticaloa','Ampara'],
+              'Western': ['Colombo','Gampaha','Kalutara'],
+              'Southern': ['Galle','Matara','Hambantota'],
+              'Central': ['Kandy','Matale','Nuwara Eliya'],
+              'North Western': ['Kurunegala','Puttalam'],
+              'Uva': ['Badulla','Monaragala'],
+              'North Central': ['Anuradhapura','Polonnaruwa'],
+              'Sabaragamuwa': ['Ratnapura','Kegalle']
+            };
+            var provSel = document.getElementById('province_select');
+            var distSel = document.getElementById('district_select');
+            if (!provSel || !distSel) return;
+            function fillProvinces(){
+              provSel.innerHTML='';
+              var curProv = <?php echo json_encode($student['student_provice'] ?? ''); ?>;
+              var opt = document.createElement('option'); opt.value=''; opt.text='-- Select Province --'; provSel.add(opt);
+              provinces.forEach(function(p){ var o=document.createElement('option'); o.value=p; o.text=p; if (p===curProv) o.selected=true; provSel.add(o); });
+            }
+            function fillDistricts(){
+              distSel.innerHTML='';
+              var curDist = <?php echo json_encode($student['student_district'] ?? ''); ?>;
+              var p = provSel.value;
+              var list = districtsByProvince[p] || [];
+              var opt = document.createElement('option'); opt.value=''; opt.text='-- Select District --'; distSel.add(opt);
+              list.forEach(function(d){ var o=document.createElement('option'); o.value=d; o.text=d; if (d===curDist) o.selected=true; distSel.add(o); });
+            }
+            provSel.addEventListener('change', function(){ fillDistricts(); });
+            fillProvinces();
+            fillDistricts();
+          })();
+        </script>
+        <?php endif; ?>
         <?php if ($can_edit_profile): ?>
           <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Profile</button>
         <?php endif; ?>

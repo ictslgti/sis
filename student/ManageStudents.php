@@ -115,12 +115,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       $affected = mysqli_stmt_affected_rows($stmt);
       mysqli_stmt_close($stmt);
       if ($affected > 0) {
+        // Also deactivate login for this student
+        if ($u = mysqli_prepare($con, "UPDATE `user` SET `user_active`=0 WHERE `user_name`=?")) {
+          mysqli_stmt_bind_param($u, 's', $sid);
+          mysqli_stmt_execute($u);
+          mysqli_stmt_close($u);
+        }
         $messages[] = "Student $sid set to Inactive";
       } else {
         $errors[] = "No changes for $sid";
       }
     } else {
       $errors[] = 'DB error (single)';
+    }
+  }
+  // Single activate (set status Active and enable login)
+  if (isset($_POST['activate_sid'])) {
+    $sid = $_POST['activate_sid'];
+    $stmt = mysqli_prepare($con, "UPDATE student SET student_status='Active' WHERE student_id=?");
+    if ($stmt) {
+      mysqli_stmt_bind_param($stmt, 's', $sid);
+      mysqli_stmt_execute($stmt);
+      $affected = mysqli_stmt_affected_rows($stmt);
+      mysqli_stmt_close($stmt);
+      if ($affected > 0) {
+        if ($u = mysqli_prepare($con, "UPDATE `user` SET `user_active`=1 WHERE `user_name`=?")) {
+          mysqli_stmt_bind_param($u, 's', $sid);
+          mysqli_stmt_execute($u);
+          mysqli_stmt_close($u);
+        }
+        $messages[] = "Student $sid set to Active";
+      } else {
+        $errors[] = "No changes for $sid";
+      }
+    } else {
+      $errors[] = 'DB error (activate)';
     }
   }
   // Bulk delete (Admin only)
@@ -141,7 +170,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $q = "UPDATE student SET student_status='Inactive' WHERE student_id IN ($in)";
         if (mysqli_query($con, $q)) {
           $affected = mysqli_affected_rows($con);
-          $messages[] = ($affected > 0) ? 'Selected students set to Inactive' : 'No rows updated';
+          // Also deactivate corresponding user accounts
+          $uq = "UPDATE `user` SET `user_active`=0 WHERE `user_name` IN ($in)";
+          mysqli_query($con, $uq);
+          $messages[] = ($affected > 0) ? 'Selected students set to Inactive and logins deactivated' : 'No rows updated';
         } else {
           $errors[] = 'Bulk update failed';
         }
@@ -224,7 +256,8 @@ $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 $sqlWhereFinal = $whereSql; // No Academic Year constraint
 
 // Base ORDER/GROUP for list and export (no pagination)
-$groupOrder = ' ORDER BY s.`student_id` ASC';
+// Prioritize Dropout enrollments and Inactive students first (handle string or numeric status)
+$groupOrder = " ORDER BY (e.student_enroll_status='Dropout') DESC, ((s.student_status='Inactive') OR (s.student_status=0)) DESC, s.`student_id` ASC";
 
 // List and export SQL (full result set)
 $sqlList = $baseSql . $sqlWhereFinal . $groupOrder;
@@ -401,7 +434,7 @@ include_once __DIR__ . '/../menu.php';
                   <label for="fstatus" class="small text-muted mb-1">Status</label>
                   <select id="fstatus" name="status" class="form-control" <?php echo $is_dir ? 'disabled' : ''; ?>>
                     <option value="">-- Any --</option>
-                    <?php foreach (["Active", "Inactive", "Following", "Completed", "Suspended"] as $st): ?>
+                    <?php foreach (["Active", "Inactive", "Following", "Completed", "Suspended", "Dropout"] as $st): ?>
                       <?php if (!$is_dir || $st === 'Active'): ?>
                         <option value="<?php echo h($st); ?>" <?php echo ($fstatus === $st ? 'selected' : ''); ?>><?php echo h($st); ?></option>
                       <?php endif; ?>
@@ -604,6 +637,7 @@ include_once __DIR__ . '/../menu.php';
                           elseif ($st === 'Following') $statusClass = 'info';
                           elseif ($st === 'Completed') $statusClass = 'primary';
                           elseif ($st === 'Suspended') $statusClass = 'danger';
+                          elseif ($st === 'Dropout') $statusClass = 'dark';
                           ?>
                           <span class="badge badge-<?php echo $statusClass; ?>"><?php echo h($st ?: '—'); ?></span>
                         </td>
@@ -628,6 +662,9 @@ include_once __DIR__ . '/../menu.php';
                             <?php endif; ?>
                             <a class="btn btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
                             <?php if ($can_mutate): ?>
+                              <?php if (($row['student_status'] ?? '') === 'Inactive'): ?>
+                                <button type="submit" name="activate_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-outline-success" onclick="return confirm('Activate <?php echo h($row['student_id']); ?>?');"><i class="fa fa-user-check"></i></button>
+                              <?php endif; ?>
                               <?php if (empty($row['student_conduct_accepted_at'])): ?>
                                 <button type="submit" name="mark_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-primary" onclick="return confirm('Mark conduct as accepted for <?php echo h($row['student_id']); ?>?');">Accept</button>
                               <?php else: ?>

@@ -342,7 +342,7 @@ if (isset($_GET['signout'])) {
                       <?php foreach ($courseRows as $row): ?>
                         <tr>
                           <td><?php echo htmlspecialchars($row['department_name'] ?? ''); ?></td>
-                          <td><?php echo htmlspecialchars(($row['course_name'] ?? '') . (isset($row['course_id']) ? ' ('.$row['course_id'].')' : '')); ?></td>
+                          <td><?php echo htmlspecialchars($row['course_name'] ?? ''); ?></td>
                           <td class="text-right font-weight-bold"><?php echo (int)($row['total'] ?? 0); ?></td>
                         </tr>
                       <?php endforeach; ?>

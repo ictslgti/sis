@@ -19,7 +19,7 @@
     <div class="card w-100 shadow-sm">
       <div class="card-header d-flex justify-content-between align-items-center">
         <h6 class="mb-0">Overall Gender (All Departments)</h6>
-        <div class="small text-muted">Male vs Female totals</div>
+        <div class="small text-muted">Male vs Female</div>
       </div>
       <div class="card-body">
         <div class="chart-container" style="position: relative; height:300px;">
@@ -31,7 +31,7 @@
       </div>
       <div class="card-footer d-flex justify-content-between align-items-center small text-muted">
         <span id="gw_dept_count_embed">Departments: —</span>
-        <span id="gw_gender_totals_embed">M: — F: — T: —</span>
+        <span id="gw_gender_totals_embed">M: — F: —</span>
       </div>
     </div>
   </div>
@@ -90,7 +90,7 @@
     var deptEl = document.getElementById('gw_dept_count_embed');
     var totalsEl = document.getElementById('gw_gender_totals_embed');
     if (deptEl) deptEl.textContent = 'Departments: ' + computeDeptCountAll();
-    if (totalsEl) totalsEl.textContent = 'M:' + (counts.male||0) + ' F:' + (counts.female||0) + ' T:' + (total||0);
+    if (totalsEl) totalsEl.textContent = 'M:' + (counts.male||0) + ' F:' + (counts.female||0);
     if (genderPieChart) genderPieChart.destroy();
     if (!total){
       if (emptyEl) emptyEl.style.display = 'flex';
@@ -136,7 +136,7 @@
       var footer = document.createElement('div');
       footer.className = 'small text-muted mt-2 text-right';
       var m = Number(it.male||0), f = Number(it.female||0), t = Number(it.total||(m+f));
-      footer.textContent = 'M:'+m+' F:'+f+' T:'+t;
+      footer.textContent = 'M:'+m+' F:'+f;
       card.appendChild(title); card.appendChild(canvas); card.appendChild(footer);
       col.appendChild(card); container.appendChild(col);
       var ctx = canvas.getContext('2d');

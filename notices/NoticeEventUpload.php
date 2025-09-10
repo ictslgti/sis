@@ -182,9 +182,63 @@ if(isset($_POST['add'])){
 
        
        $t_name = $_FILES["ima"]["tmp_name"];
-       $name = basename($_FILES["ima"]["name"]);
+       $origName = basename($_FILES["ima"]["name"]);
        $test_dir = './docs/events';
-       move_uploaded_file($t_name, $test_dir.'/'.$name);
+       // Ensure destination exists
+       if (!is_dir($test_dir)) { @mkdir($test_dir, 0775, true); }
+       // Helper to compress to JPEG
+       if (!function_exists('ne_compress_to_jpeg_file')) {
+         function ne_compress_to_jpeg_file(string $srcPath, string $destPath, int $maxDim = 1600, int $quality = 82): bool {
+           $info = @getimagesize($srcPath);
+           if ($info === false) return false;
+           $mime = strtolower($info['mime'] ?? '');
+           switch ($mime) {
+             case 'image/jpeg': $src = @imagecreatefromjpeg($srcPath); break;
+             case 'image/png':  $src = @imagecreatefrompng($srcPath); break;
+             case 'image/gif':  $src = @imagecreatefromgif($srcPath); break;
+             case 'image/webp': $src = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($srcPath) : false; break;
+             default: $src = false; break;
+           }
+           if (!$src) return false;
+           $sw = imagesx($src); $sh = imagesy($src);
+           $scale = 1.0; $maxSide = max($sw, $sh);
+           if ($maxSide > $maxDim) { $scale = $maxDim / $maxSide; }
+           $dw = (int)max(1, round($sw * $scale));
+           $dh = (int)max(1, round($sh * $scale));
+           $dst = imagecreatetruecolor($dw, $dh);
+           // Fill white for transparency
+           if (in_array($mime, ['image/png','image/gif'], true)) {
+             $white = imagecolorallocate($dst, 255,255,255);
+             imagefilledrectangle($dst, 0,0, $dw,$dh, $white);
+           }
+           if (!imagecopyresampled($dst, $src, 0,0,0,0, $dw,$dh, $sw,$sh)) { imagedestroy($src); imagedestroy($dst); return false; }
+           imagedestroy($src);
+           $ok = imagejpeg($dst, $destPath, max(0, min(100, $quality)));
+           imagedestroy($dst);
+           return (bool)$ok;
+         }
+       }
+       // Determine mime
+       $mime = function_exists('mime_content_type') ? mime_content_type($t_name) : '';
+       $isImage = is_string($mime) && preg_match('/^image\/(jpeg|png|gif|webp)$/i', $mime);
+       if ($isImage) {
+         $safeBase = preg_replace('/[^A-Za-z0-9_-]/', '_', pathinfo($origName, PATHINFO_FILENAME));
+         if ($safeBase === '') { $safeBase = 'event_' . date('Ymd_His'); }
+         $name = $safeBase . '.jpg';
+         $destPath = rtrim($test_dir,'/\\') . '/' . $name;
+         if (!ne_compress_to_jpeg_file($t_name, $destPath, 1600, 82)) {
+           // Fallback to move original
+           if (!@move_uploaded_file($t_name, $destPath)) {
+             // Last fallback: write contents
+             $data = @file_get_contents($t_name);
+             if ($data !== false) { @file_put_contents($destPath, $data); }
+           }
+         }
+       } else {
+         // Non-image: keep original name
+         $name = $origName;
+         @move_uploaded_file($t_name, rtrim($test_dir,'/\\') . '/' . $name);
+       }
        
        $sql="INSERT INTO `notice_event` (`event_name`,`event_venue`,`event_date`,`event_chief_guest`,`event_comment`,`event_time`,`event_docs_url`,`status`) values('$event_name','$event_venue','$event_date','$event_chief_guest','$event_comment','$event_time','$name','$status')";
        if(mysqli_query($con,$sql)){
@@ -216,9 +270,57 @@ if(isset($_POST['update'])){
           $status = $_POST['status'];
            
        $t_name = $_FILES["ima"]["tmp_name"];
-       $name = basename($_FILES["ima"]["name"]);
+       $origName = basename($_FILES["ima"]["name"]);
        $test_dir = './docs/events';
-       move_uploaded_file($t_name, $test_dir.'/'.$name);
+       if (!is_dir($test_dir)) { @mkdir($test_dir, 0775, true); }
+       // Reuse helper if available; otherwise define
+       if (!function_exists('ne_compress_to_jpeg_file')) {
+         function ne_compress_to_jpeg_file(string $srcPath, string $destPath, int $maxDim = 1600, int $quality = 82): bool {
+           $info = @getimagesize($srcPath);
+           if ($info === false) return false;
+           $mime = strtolower($info['mime'] ?? '');
+           switch ($mime) {
+             case 'image/jpeg': $src = @imagecreatefromjpeg($srcPath); break;
+             case 'image/png':  $src = @imagecreatefrompng($srcPath); break;
+             case 'image/gif':  $src = @imagecreatefromgif($srcPath); break;
+             case 'image/webp': $src = function_exists('imagecreatefromwebp') ? @imagecreatefromwebp($srcPath) : false; break;
+             default: $src = false; break;
+           }
+           if (!$src) return false;
+           $sw = imagesx($src); $sh = imagesy($src);
+           $scale = 1.0; $maxSide = max($sw, $sh);
+           if ($maxSide > $maxDim) { $scale = $maxDim / $maxSide; }
+           $dw = (int)max(1, round($sw * $scale));
+           $dh = (int)max(1, round($sh * $scale));
+           $dst = imagecreatetruecolor($dw, $dh);
+           if (in_array($mime, ['image/png','image/gif'], true)) {
+             $white = imagecolorallocate($dst, 255,255,255);
+             imagefilledrectangle($dst, 0,0, $dw,$dh, $white);
+           }
+           if (!imagecopyresampled($dst, $src, 0,0,0,0, $dw,$dh, $sw,$sh)) { imagedestroy($src); imagedestroy($dst); return false; }
+           imagedestroy($src);
+           $ok = imagejpeg($dst, $destPath, max(0, min(100, $quality)));
+           imagedestroy($dst);
+           return (bool)$ok;
+         }
+       }
+       $mime = function_exists('mime_content_type') ? mime_content_type($t_name) : '';
+       $isImage = is_string($mime) && preg_match('/^image\/(jpeg|png|gif|webp)$/i', $mime);
+       if ($isImage) {
+         $safeBase = preg_replace('/[^A-Za-z0-9_-]/', '_', pathinfo($origName, PATHINFO_FILENAME));
+         if ($safeBase === '') { $safeBase = 'event_' . date('Ymd_His'); }
+         $name = $safeBase . '.jpg';
+         $destPath = rtrim($test_dir,'/\\') . '/' . $name;
+         if (!ne_compress_to_jpeg_file($t_name, $destPath, 1600, 82)) {
+           if (!@move_uploaded_file($t_name, $destPath)) {
+             $data = @file_get_contents($t_name);
+             if ($data !== false) { @file_put_contents($destPath, $data); }
+           }
+         }
+       } else {
+         $name = $origName;
+         @move_uploaded_file($t_name, rtrim($test_dir,'/\\') . '/' . $name);
+       }
 
          $sql =" UPDATE `notice_event` SET
          `event_name`='$event_name',

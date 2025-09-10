@@ -395,7 +395,12 @@ $docPath = null;
 
 // (removed duplicate POST handler; handled at the top before any output)
 // Handle profile image upload for logged-in student (no Sid view)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_upload']) && !isset($_GET['Sid'])) {
+if (
+  $_SERVER['REQUEST_METHOD'] === 'POST'
+  && isset($_POST['do_upload'])
+  && !isset($_GET['Sid'])
+  && isset($_SESSION['user_type']) && $_SESSION['user_type'] !== 'STU' // block students from changing image here
+) {
   if (session_status() === PHP_SESSION_NONE) { session_start(); }
   $loggedUser = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : null;
   // Set maximum file size to 50MB (in bytes)
@@ -409,32 +414,101 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['do_upload']) && !isse
         echo '<div class="alert alert-danger">Error uploading file. Error code: ' . $_FILES['image']['error'] . '</div>';
     } else {
     $tmpName = $_FILES['image']['tmp_name'];
-    // No server-side size limit here; relies on PHP upload_max_filesize/post_max_size
-      $imgData = file_get_contents($tmpName);
-      if ($imgData !== false) {
-        // Optional: basic type check
-        $mime = null;
-        if (class_exists('finfo')) {
-          $fi = new finfo(FILEINFO_MIME_TYPE);
-          $mime = $fi ? $fi->buffer($imgData) : null;
+    // Helper: cover-crop to 600x800 and compress JPEG (target <=200KB)
+    if (!function_exists('sp_cover_to_id_jpeg_from_blob')) {
+      function sp_cover_to_id_jpeg_from_blob(string $blobOrPath, bool $isPath = false, int $outW = 600, int $outH = 800, int $quality = 85, int $maxBytes = 0): ?string {
+        $data = $isPath ? @file_get_contents($blobOrPath) : $blobOrPath;
+        if ($data === false) return null;
+        if (!function_exists('imagecreatefromstring')) return null;
+        $src = @imagecreatefromstring($data);
+        if (!$src) return null;
+        $sw = imagesx($src); $sh = imagesy($src);
+        if ($sw < 1 || $sh < 1) { imagedestroy($src); return null; }
+        $scale = max($outW / $sw, $outH / $sh);
+        $rw = (int)ceil($sw * $scale); $rh = (int)ceil($sh * $scale);
+        $tmpIm = imagecreatetruecolor($rw, $rh);
+        imagecopyresampled($tmpIm, $src, 0,0,0,0, $rw,$rh, $sw,$sh);
+        imagedestroy($src);
+        $dx = (int)max(0, ($rw - $outW) / 2);
+        $dy = (int)max(0, ($rh - $outH) / 2);
+        $dst = imagecreatetruecolor($outW, $outH);
+        imagecopy($dst, $tmpIm, 0,0, $dx,$dy, $outW,$outH);
+        imagedestroy($tmpIm);
+        $quality = (int)max(1, min(100, $quality));
+        if ($maxBytes <= 0) {
+          ob_start(); imagejpeg($dst, null, $quality); imagedestroy($dst); $out = ob_get_clean();
+          return $out !== false ? $out : null;
         }
-        $allowed = ['image/jpeg','image/png','image/gif','image/webp'];
-        if ($mime !== null && !in_array($mime, $allowed, true)) {
-          echo '<div class="alert alert-warning alert-dismissible fade show" role="alert">Unsupported image type. Use JPG, PNG, GIF, or WEBP.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-        } else {
-          $sqlUpdImg = "UPDATE student SET student_profile_img=? WHERE student_id=?";
-          if ($stmt = mysqli_prepare($con, $sqlUpdImg)) {
-            // Bind and execute. MySQLi prepared statements handle BLOBs as strings.
-            mysqli_stmt_bind_param($stmt, 'ss', $imgData, $loggedUser);
-            if (mysqli_stmt_execute($stmt)) {
-              echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-            } else {
-              echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update image.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-            }
-            mysqli_stmt_close($stmt);
-          }
+        // Binary search quality to meet size target
+        $lo = 35; $hi = min(92, max($quality, 80));
+        $best = null; $bestLen = PHP_INT_MAX; $iter = 0; $maxIter = 7;
+        while ($lo <= $hi && $iter++ < $maxIter) {
+          $mid = (int)floor(($lo + $hi) / 2);
+          ob_start(); imagejpeg($dst, null, $mid); $buf = ob_get_clean();
+          if ($buf === false) break;
+          $len = strlen($buf);
+          if ($len <= $maxBytes) { $best = $buf; $bestLen = $len; $lo = $mid + 1; }
+          else { if ($len < $bestLen) { $best = $buf; $bestLen = $len; } $hi = $mid - 1; }
+        }
+        if ($best === null) { ob_start(); imagejpeg($dst, null, $lo); $best = ob_get_clean(); }
+        imagedestroy($dst);
+        return $best !== false ? $best : null;
+      }
+    }
+
+    // If client sent preprocessed base64 image, use that
+    $dataUrl = isset($_POST['img_data']) ? (string)$_POST['img_data'] : '';
+    if ($dataUrl !== '' && strpos($dataUrl, 'data:image') === 0) {
+      $parts = explode(',', $dataUrl, 2);
+      $processed = null;
+      if (count($parts) === 2) {
+        $raw = base64_decode($parts[1]);
+        if ($raw !== false) {
+          $processed = sp_cover_to_id_jpeg_from_blob($raw, false, 600, 800, 85, 200*1024);
         }
       }
+      if ($processed) {
+        $sqlUpdImg = "UPDATE student SET student_profile_img=? WHERE student_id=?";
+        if ($stmt = mysqli_prepare($con, $sqlUpdImg)) {
+          mysqli_stmt_bind_param($stmt, 'ss', $processed, $loggedUser);
+          if (mysqli_stmt_execute($stmt)) {
+            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated (cropped & compressed).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          } else {
+            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update image.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          }
+          mysqli_stmt_close($stmt);
+        }
+        return; // done
+      }
+    }
+
+    // Validate mime using finfo on the tmp file path if available
+    $mime = null;
+    if (function_exists('finfo_open')) {
+      $fi = finfo_open(FILEINFO_MIME_TYPE);
+      if ($fi) { $mime = finfo_file($fi, $tmpName) ?: null; finfo_close($fi); }
+    }
+    $allowed = ['image/jpeg','image/png','image/gif','image/webp'];
+    if ($mime !== null && !in_array(strtolower($mime), $allowed, true)) {
+      echo '<div class="alert alert-warning alert-dismissible fade show" role="alert">Unsupported image type. Use JPG, PNG, GIF, or WEBP.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+    } else {
+      // Server-side crop to 600x800 and compress
+      $cropped = sp_cover_to_id_jpeg_from_blob($tmpName, true, 600, 800, 85, 200*1024);
+      if ($cropped === null) {
+        echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to process the image. Please upload a valid image file.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+      } else {
+        $sqlUpdImg = "UPDATE student SET student_profile_img=? WHERE student_id=?";
+        if ($stmt = mysqli_prepare($con, $sqlUpdImg)) {
+          mysqli_stmt_bind_param($stmt, 'ss', $cropped, $loggedUser);
+          if (mysqli_stmt_execute($stmt)) {
+            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated (cropped & compressed).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          } else {
+            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update image.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          }
+          mysqli_stmt_close($stmt);
+        }
+      }
+    }
   }
 }
 if(isset($_GET['Sid']))
@@ -787,7 +861,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     // echo '';
     // }
     ?>
-    <?php if(!isset($_GET['Sid'])): ?>
+    <?php if(!isset($_GET['Sid']) && isset($_SESSION['user_type']) && $_SESSION['user_type'] !== 'STU'): ?>
       <div class="mt-2 d-flex justify-content-center">
         <div class="form-group mb-2 w-100" style="max-width:260px;">
           <input type="hidden" name="do_upload" value="1" />

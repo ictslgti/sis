@@ -33,6 +33,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
   $data = [];
   foreach ($fields as $f) { $data[$f] = isset($_POST[$f]) ? trim($_POST[$f]) : null; }
 
+  // Normalize optional fields: convert empty strings to NULL to avoid DB errors (e.g., invalid date formats)
+  $nullable = [
+    'student_title','student_ininame','student_email','student_nic','student_dob','student_phone','student_address',
+    'student_zip','student_district','student_divisions','student_provice','student_blood','student_religion','student_civil',
+    'student_em_name','student_em_address','student_em_phone','student_em_relation'
+  ];
+  foreach ($nullable as $nf) {
+    if (array_key_exists($nf, $data) && $data[$nf] === '') { $data[$nf] = null; }
+  }
+
   // New Department/Course from form
   $new_dept = isset($_POST['new_dept']) ? trim($_POST['new_dept']) : '';
   $new_coid = isset($_POST['new_coid']) ? trim($_POST['new_coid']) : '';
@@ -54,6 +64,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save'])) {
     );
     if (!mysqli_stmt_execute($stmt)) { $ok = false; $errors[] = 'Failed to update student core fields: '.mysqli_error($con); }
     mysqli_stmt_close($stmt);
+
+    // Sync account activation with student status
+    if ($ok) {
+      $userActive = (isset($data['student_status']) && strcasecmp($data['student_status'], 'Inactive') === 0) ? 0 : 1;
+      if ($us = mysqli_prepare($con, 'UPDATE `user` SET `user_active`=? WHERE `user_name`=?')) {
+        mysqli_stmt_bind_param($us, 'is', $userActive, $sid);
+        if (!mysqli_stmt_execute($us)) { $ok = false; $errors[] = 'Failed to update user activation status: ' . mysqli_error($con); }
+        mysqli_stmt_close($us);
+      } else {
+        $ok = false; $errors[] = 'DB error preparing user activation update: ' . mysqli_error($con);
+      }
+    }
 
     // If changing Student ID, validate uniqueness then cascade
     if ($ok && $new_sid !== '' && $new_sid !== $sid) {
@@ -331,7 +353,7 @@ include_once __DIR__ . '/../menu.php';
               <div class="form-group col-md-3">
                 <label>Status</label>
                 <select name="student_status" class="form-control">
-                  <?php $statuses=['Active','Following','Completed','Suspended','Inactive']; foreach($statuses as $st): ?>
+                  <?php $statuses=['Active','Following','Completed','Suspended','Dropout','Inactive']; foreach($statuses as $st): ?>
                     <option value="<?php echo h($st); ?>" <?php echo ((($student['student_status'] ?? '')===$st)?'selected':''); ?>><?php echo h($st); ?></option>
                   <?php endforeach; ?>
                 </select>
