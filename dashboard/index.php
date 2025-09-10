@@ -162,6 +162,22 @@ if ($rs = mysqli_query($con, $sqlStu)) {
   if ($r = mysqli_fetch_assoc($rs)) { $studentCount = (int)$r['cnt']; }
   mysqli_free_result($rs);
 }
+
+// NVQ Level 4 & 5 student totals (active)
+$nvq4Count = 0; $nvq5Count = 0;
+$sqlNvq4 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
+            FROM student s
+            JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+            JOIN course c ON c.course_id = e.course_id
+            WHERE COALESCE(s.student_status,'') <> 'Inactive' AND CAST(c.course_nvq_level AS CHAR) = '4'";
+if ($rs = mysqli_query($con, $sqlNvq4)) { if ($r = mysqli_fetch_assoc($rs)) { $nvq4Count = (int)$r['cnt']; } mysqli_free_result($rs); }
+
+$sqlNvq5 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
+            FROM student s
+            JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+            JOIN course c ON c.course_id = e.course_id
+            WHERE COALESCE(s.student_status,'') <> 'Inactive' AND CAST(c.course_nvq_level AS CHAR) = '5'";
+if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $nvq5Count = (int)$r['cnt']; } mysqli_free_result($rs); }
 ?>
 
 <style>
@@ -288,8 +304,96 @@ if ($rs = mysqli_query($con, $sqlStu)) {
       </div>
     </div>
   </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-green shadow-sm" style="background: linear-gradient(135deg,#1cc88a 0%, #13855c 100%);">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div>
+          <div class="stat-label">NVQ Level 4</div>
+          <div class="stat-value"><?php echo $nvq4Count; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-purple shadow-sm" style="background: linear-gradient(135deg,#6f42c1 0%, #4b2f88 100%);">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div>
+          <div class="stat-label">NVQ Level 5</div>
+          <div class="stat-value"><?php echo $nvq5Count; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 <hr>
+
+<!-- Course-wise Students Table (excludes courses with zero students) -->
+<?php
+  // Build course-wise list for the selected academic year
+  $yearCondCourse = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
+  $courseRows = [];
+  $sqlCourses = "
+    SELECT 
+      d.department_name,
+      c.course_id,
+      c.course_name,
+      COUNT(DISTINCT s.student_id) AS total
+    FROM course c
+    LEFT JOIN department d ON d.department_id = c.department_id
+    LEFT JOIN student_enroll e ON e.course_id = c.course_id 
+      AND e.student_enroll_status IN ('Following','Active')" . $yearCondCourse . "
+    LEFT JOIN student s ON s.student_id = e.student_id AND COALESCE(s.student_status,'') <> 'Inactive'
+    WHERE LOWER(TRIM(d.department_name)) NOT IN ('admin','administration')
+    GROUP BY d.department_name, c.course_id, c.course_name
+    HAVING total > 0
+    ORDER BY d.department_name ASC, c.course_name ASC";
+  if ($rs = mysqli_query($con, $sqlCourses)) {
+    while ($r = mysqli_fetch_assoc($rs)) { $courseRows[] = $r; }
+    mysqli_free_result($rs);
+  }
+?>
+
+<div class="row mt-2 mobile-tight">
+  <div class="col-12">
+    <div class="card shadow-sm border-0">
+      <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
+        <div class="font-weight-semibold"><i class="fas fa-list-ol mr-1 text-primary"></i> Course-wise Students</div>
+        <?php if (!empty($selectedYear)) : ?>
+          <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
+        <?php endif; ?>
+      </div>
+      <div class="card-body p-0">
+        <?php if (empty($courseRows)): ?>
+          <div class="p-3 text-center text-muted small">No course-wise student data available<?php echo $selectedYear ? ' for the selected year' : ''; ?>.</div>
+        <?php else: ?>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped mb-0">
+              <thead class="thead-light">
+                <tr>
+                  <th style="width:40%;">Department</th>
+                  <th style="width:50%;">Course</th>
+                  <th class="text-right" style="width:10%;">Students</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($courseRows as $row): ?>
+                  <tr>
+                    <td><?php echo htmlspecialchars($row['department_name'] ?? ''); ?></td>
+                    <td><?php echo htmlspecialchars(($row['course_name'] ?? '') . (isset($row['course_id']) ? ' ('.$row['course_id'].')' : '')); ?></td>
+                    <td class="text-right font-weight-bold"><?php echo (int)($row['total'] ?? 0); ?></td>
+                  </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 <style>
   .rel-card { border: 0; border-radius: .75rem; color: #fff; overflow: hidden; position: relative; }

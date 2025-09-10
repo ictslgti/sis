@@ -292,6 +292,70 @@ if (isset($_GET['signout'])) {
 
         </div>
     </div>
+
+    <?php
+    // Build course-wise students list (exclude courses with zero students)
+    $courseRows = [];
+    $sqlCourses = "
+      SELECT 
+        d.department_name,
+        c.course_id,
+        c.course_name,
+        COUNT(DISTINCT s.student_id) AS total
+      FROM course c
+      LEFT JOIN department d ON d.department_id = c.department_id
+      LEFT JOIN student_enroll e ON e.course_id = c.course_id 
+        AND e.student_enroll_status IN ('Following','Active')
+      LEFT JOIN student s ON s.student_id = e.student_id AND COALESCE(s.student_status,'') <> 'Inactive'
+      WHERE LOWER(TRIM(d.department_name)) NOT IN ('admin','administration')
+      GROUP BY d.department_name, c.course_id, c.course_name
+      HAVING total > 0
+      ORDER BY d.department_name ASC, c.course_name ASC";
+    if ($rs = mysqli_query($con, $sqlCourses)) {
+      while ($r = mysqli_fetch_assoc($rs)) { $courseRows[] = $r; }
+      mysqli_free_result($rs);
+    }
+    ?>
+
+    <div class="container mt-4 mb-5">
+      <div class="row">
+        <div class="col-12">
+          <div class="card shadow-sm">
+            <div class="card-header bg-white">
+              <strong>Course-wise Students</strong>
+              <small class="text-muted d-block">Only courses with at least one active student are shown</small>
+            </div>
+            <div class="card-body p-0">
+              <?php if (empty($courseRows)): ?>
+                <div class="p-3 text-center text-muted small">No course-wise student data available.</div>
+              <?php else: ?>
+                <div class="table-responsive">
+                  <table class="table table-sm table-striped mb-0">
+                    <thead class="thead-light">
+                      <tr>
+                        <th style="width:40%;">Department</th>
+                        <th style="width:50%;">Course</th>
+                        <th class="text-right" style="width:10%;">Students</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <?php foreach ($courseRows as $row): ?>
+                        <tr>
+                          <td><?php echo htmlspecialchars($row['department_name'] ?? ''); ?></td>
+                          <td><?php echo htmlspecialchars(($row['course_name'] ?? '') . (isset($row['course_id']) ? ' ('.$row['course_id'].')' : '')); ?></td>
+                          <td class="text-right font-weight-bold"><?php echo (int)($row['total'] ?? 0); ?></td>
+                        </tr>
+                      <?php endforeach; ?>
+                    </tbody>
+                  </table>
+                </div>
+              <?php endif; ?>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
 </body>
 
 </html>
