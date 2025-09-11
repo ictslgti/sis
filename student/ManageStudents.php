@@ -9,12 +9,13 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-// Access control: Admin, Director (DIR), SAO, or Instructor Level 3 (IN3)
-require_roles(['ADM', 'DIR', 'SAO', 'IN3']);
+// Access control: Admin, Director (DIR), SAO, Instructor Level 3 (IN3), and HOD (view-only)
+require_roles(['ADM', 'DIR', 'SAO', 'IN3', 'HOD']);
 $is_admin = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
 $is_dir   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
 $is_sao   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';
-// Mutations allowed for Admin and SAO; DIR is strictly view-only
+$is_hod   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
+// Mutations allowed for Admin and SAO; DIR and HOD are strictly view-only
 $can_mutate = ($is_admin || $is_sao);
 
 // Helpers
@@ -214,6 +215,12 @@ if ($is_dir) {
   $fstatus = 'Active';
 }
 
+// For HOD, force department to their own and do not allow changing it via UI
+if ($is_hod) {
+  $hodDept = isset($_SESSION['department_code']) ? trim($_SESSION['department_code']) : '';
+  if ($hodDept !== '') { $fdept = $hodDept; }
+}
+
 $where = [];
 $params = [];
 // Base SQL for both list and export
@@ -405,12 +412,16 @@ include_once __DIR__ . '/../menu.php';
               <div class="form-row">
                 <div class="form-group col-12 col-md-4">
                   <label for="fdept" class="small text-muted mb-1">Department</label>
-                  <select id="fdept" name="department_id" class="form-control">
+                  <select id="fdept" name="department_id" class="form-control" <?php echo $is_hod ? 'disabled' : ''; ?>>
                     <option value="">-- Any --</option>
                     <?php foreach ($departments as $d): ?>
                       <option value="<?php echo h($d['department_id']); ?>" <?php echo ($fdept === $d['department_id'] ? 'selected' : ''); ?>><?php echo h($d['department_name']); ?></option>
                     <?php endforeach; ?>
                   </select>
+                  <?php if ($is_hod): ?>
+                    <input type="hidden" name="department_id" value="<?php echo h($fdept); ?>">
+                    <small class="form-text text-muted">Showing students for your department only.</small>
+                  <?php endif; ?>
                 </div>
                 <div class="form-group col-12 col-md-4">
                   <label for="fcourse" class="small text-muted mb-1">Course</label>

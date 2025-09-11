@@ -6,6 +6,12 @@ $u_ta = isset($_SESSION['user_table']) ? $_SESSION['user_table'] : '';
 $u_t  = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $d_c  = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : '';
 
+// Ensure DB connection is available for lookups in this file
+if (!isset($con) || !($con instanceof mysqli)) {
+  $cfg = __DIR__ . '/config.php';
+  if (file_exists($cfg)) { include_once $cfg; }
+}
+
 // Normalize user_type for consistent comparisons
 if (isset($_SESSION['user_type'])) {
   $_SESSION['user_type'] = strtoupper(trim($_SESSION['user_type']));
@@ -13,20 +19,18 @@ if (isset($_SESSION['user_type'])) {
 }
 
 $username = null;
-if($u_ta=='staff'){
-  $sql = "SELECT * FROM `staff` WHERE `staff_id` = '$u_n'";
-  $result = mysqli_query($con, $sql);
-  if (mysqli_num_rows($result) == 1) {
-  $row = mysqli_fetch_assoc($result);
-  $username =  $row['staff_name'];
+if ($u_ta=='staff' && isset($con) && ($con instanceof mysqli)){
+  $sql = "SELECT staff_name FROM `staff` WHERE `staff_id` = '" . mysqli_real_escape_string($con, $u_n) . "'";
+  if ($result = mysqli_query($con, $sql)) {
+    if (mysqli_num_rows($result) == 1) { $row = mysqli_fetch_assoc($result); $username = $row['staff_name'] ?? null; }
+    mysqli_free_result($result);
   }
-
-}if($u_ta=='student'){
-  $sql = "SELECT * FROM `student` WHERE `student_id` = '$u_n'";
-  $result = mysqli_query($con, $sql);
-  if (mysqli_num_rows($result) == 1) {
-  $row = mysqli_fetch_assoc($result);
-  $username =  $row['student_fullname'];
+}
+if ($u_ta=='student' && isset($con) && ($con instanceof mysqli)){
+  $sql = "SELECT student_fullname FROM `student` WHERE `student_id` = '" . mysqli_real_escape_string($con, $u_n) . "'";
+  if ($result = mysqli_query($con, $sql)) {
+    if (mysqli_num_rows($result) == 1) { $row = mysqli_fetch_assoc($result); $username = $row['student_fullname'] ?? null; }
+    mysqli_free_result($result);
   }
 }
 
@@ -79,6 +83,15 @@ if ($u_t === 'IN3') {
   </nav>
   <?php
   return; // prevent sidebar from rendering
+}
+
+// For SAO and HOD, render the dedicated top navbar from menu2.php and do not render the sidebar
+if ($u_t === 'SAO' || $u_t === 'HOD') {
+  $menu2 = __DIR__ . '/menu2.php';
+  if (file_exists($menu2)) {
+    include $menu2;
+  }
+  return; // stop sidebar rendering for SAO
 }
 
 ?>

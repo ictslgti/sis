@@ -57,6 +57,7 @@ if ($selectedYear === '') {
     }
 ?>
 
+
 <!-- Academic Year filter -->
 <div class="row mt-3">
   <div class="col-12">
@@ -84,7 +85,7 @@ if ($selectedYear === '') {
   </div>
 </div>
 
-<div class="row mt-1">
+<div class="row mt-0">
   <div class="col-md-4 col-sm-12">
     <div class="card mb-3 text-center">
       <div class="card-body">
@@ -246,8 +247,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     .chip .count { min-width: 16px; height: 16px; font-size: 10px; }
   }
 </style>
-
-<div class="row mt-2">
+<div class="row mt-1">
   <div class="col-12">
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
       <div class="mb-2 mb-md-0">
@@ -255,12 +255,12 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
         <div class="text-muted small text-center text-md-left">Dashboard Overview</div>
       </div>
     </div>
-    <hr class="mt-2 mb-3">
+    <hr class="mt-1 mb-2">
   </div>
 </div>
 
-<div class="row mt-3 mobile-tight">
-  <div class="col-md-4 col-sm-6 col-12 mb-3">
+<div class="row mt-2 mobile-tight">
+  <div class="col-md-4 col-sm-6 col-12 mb-2">
     <div class="card stat-card bg-black shadow-sm">
       <div class="card-body d-flex align-items-center">
         <div class="icon mr-3"><i class="fas fa-building fa-lg"></i></div>
@@ -355,7 +355,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   }
 ?>
 
-<div class="row mt-2 mobile-tight">
+<div class="row mt-1 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
@@ -743,6 +743,8 @@ function showTeacher() {
 
 
 <!-- Chart and script removed -->
+ 
+ 
 <!--BLOCK#3 START DON'T CHANGE THE ORDER-->
 <?php include_once("../footer.php"); ?>
 <!--END DON'T CHANGE THE ORDER-->
