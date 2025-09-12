@@ -56,9 +56,6 @@ function display_name($name)
   return implode(' ', $out);
 }
 
-// Ensure conduct column exists (no-op if already there)
-@mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_conduct_accepted_at` DATETIME NULL");
-
 // Handle actions
 $messages = [];
 $errors = [];
