@@ -230,6 +230,7 @@ $baseSql = "SELECT DISTINCT
               `s`.`student_status`,
               `s`.`student_gender`,
               `s`.`student_conduct_accepted_at`,
+              `e`.`student_enroll_status`,
               `e`.`course_id`,
               `c`.`course_name`,
               `d`.`department_id`,
@@ -242,8 +243,14 @@ if ($fstatus !== '') {
   $where[] = "s.student_status = '" . mysqli_real_escape_string($con, $fstatus) . "'";
 }
 if ($fdept !== '') {
-  // Filter by the foreign key on course to avoid missing rows when department lookup is absent
-  $where[] = "c.department_id = '" . mysqli_real_escape_string($con, $fdept) . "'";
+  // If a specific course is selected, normal join filter is fine.
+  // If no course is selected, use EXISTS to tolerate missing outer course rows while still enforcing department via enrollment mapping.
+  if ($fcourse !== '') {
+    $where[] = "c.department_id = '" . mysqli_real_escape_string($con, $fdept) . "'";
+  } else {
+    $safeDept = mysqli_real_escape_string($con, $fdept);
+    $where[] = "EXISTS (SELECT 1 FROM `student_enroll` AS `e2` JOIN `course` AS `c2` ON `c2`.`course_id` = `e2`.`course_id` WHERE `e2`.`student_id` = `s`.`student_id` AND `c2`.`department_id` = '" . $safeDept . "')";
+  }
 }
 if ($fcourse !== '') {
   $where[] = "c.course_id = '" . mysqli_real_escape_string($con, $fcourse) . "'";
