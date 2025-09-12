@@ -850,6 +850,19 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
 <div class="container">
 <form method="POST" enctype="multipart/form-data">
 
+<?php
+  $__isStu = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU';
+  $__selfView = ($__isStu && isset($_SESSION['user_name']) && (!isset($_GET['Sid']) || $_GET['Sid'] === $_SESSION['user_name']));
+  $__inEdit = (isset($_GET['edit']) && !isset($_GET['Sid']));
+  if ($__selfView && !$__inEdit) {
+    echo '<div class="d-flex justify-content-end mb-2">'
+      . '<a href="/student/Student_profile.php?edit=1" class="btn btn-sm btn-primary">'
+      . '<i class="fa fa-edit"></i> Edit Profile'
+      . '</a>'
+      . '</div>';
+  }
+?>
+
 <div class="form-row shadow p-2 mb-4 bg-white rounded">
     <div class="col-12 col-md-3 mb-3 text-center"> 
     <img src="/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail img-fluid d-block mx-auto" style="max-width:200px;width:100%;height:auto;object-fit:cover;border-radius:40px;">
