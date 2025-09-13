@@ -93,7 +93,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     ];
     $set = [];
     foreach ($fields as $f) {
-      $val = isset($_POST[$f]) && $_POST[$f] !== '' ? "'".mysqli_real_escape_string($con, $_POST[$f])."'" : 'NULL';
+      if (!array_key_exists($f, $_POST)) {
+        // Field not posted at all: preserve existing value
+        $set[] = "`$f` = `$f`";
+        continue;
+      }
+      $raw = $_POST[$f];
+      // Normalize type-specific behavior: only date field should use NULL when blank
+      if ($f === 'student_dob') {
+        if ($raw === '' || $raw === null) {
+          $val = 'NULL';
+        } else {
+          $val = "'".mysqli_real_escape_string($con, $raw)."'";
+        }
+      } else {
+        // For text fields, write empty string instead of NULL to avoid NOT NULL violations
+        $val = "'".mysqli_real_escape_string($con, (string)$raw)."'";
+      }
       $set[] = "`$f` = $val";
     }
     $sql = "UPDATE `student` SET ".implode(',', $set)." WHERE `student_id`='".mysqli_real_escape_string($con,$sid)."'";
@@ -556,6 +572,13 @@ include_once __DIR__ . '/../menu.php';
                   // If we have generated a data URL, server will use it. Otherwise proceed as-is.
                   if (!fileInput || !fileInput.files || !fileInput.files.length) {
                     e.preventDefault(); alert('Select an image to upload.'); return false;
+                  }
+                  // If a compressed data URL is present, avoid sending the original large file
+                  // to prevent 413 (Request Entity Too Large) at the Nginx layer.
+                  if (hidden && typeof hidden.value === 'string' && hidden.value.indexOf('data:image') === 0) {
+                    // Disable the file input so the browser does not include the original file
+                    // in the multipart/form-data request body. The server will read profile_img_data instead.
+                    fileInput.disabled = true;
                   }
                 });
               })();

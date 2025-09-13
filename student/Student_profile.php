@@ -169,7 +169,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $u_address = isset($_POST['address']) ? trim($_POST['address']) : null;
     $u_zip     = isset($_POST['zip']) ? trim($_POST['zip']) : null;
     $u_district= isset($_POST['district']) ? trim($_POST['district']) : null;
-    $u_division= isset($_POST['division']) ? trim($_POST['division']) : null;
+    // Accept either 'student_divisions' (new) or legacy 'division' name
+    if (isset($_POST['student_divisions'])) {
+      $u_division = trim($_POST['student_divisions']);
+    } else {
+      $u_division= isset($_POST['division']) ? trim($_POST['division']) : null;
+    }
     $u_province= isset($_POST['province']) ? trim($_POST['province']) : null;
     $u_ename   = isset($_POST['ename']) ? trim($_POST['ename']) : null;
     $u_ephone  = isset($_POST['ephone']) ? trim($_POST['ephone']) : null;
@@ -1352,6 +1357,11 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="form-group">
               <label>Divisional Secretariat</label>
               <input type="text" class="form-control" name="division" value="<?php echo htmlspecialchars($division); ?>" />
+            </div>
+            <div class="form-group">
+              <label>Student Divisions</label>
+              <input type="text" class="form-control" name="student_divisions" value="<?php echo htmlspecialchars($u_division); ?>" />
+              <small class="form-text text-muted">Optional text field mapped to student_divisions.</small>
             </div>
             <hr/>
             <h6 class="mt-3">People's Bank Details</h6>
