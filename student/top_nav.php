@@ -6,7 +6,7 @@ $studentId = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : null;
 $studentName = isset($_SESSION['student_name']) ? $_SESSION['student_name'] : '';
 ?>
 <nav id="studentTopBar" class="navbar navbar-expand-md navbar-dark bg-dark shadow-sm sticky-top py-0" style="min-height:44px;">
-  <a class="navbar-brand d-flex align-items-center" href="/student/Student_profile.php" style="font-size: 0.95rem;">
+  <a class="navbar-brand d-flex align-items-center" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/student/StudentDashboard.php" style="font-size: 0.95rem;">
     <span class="font-weight-semibold">Sri Lanka German Training Institute</span>
    
   </a>

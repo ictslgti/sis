@@ -76,9 +76,9 @@ $result_active = mysqli_stmt_get_result($stmt);
 if(mysqli_num_rows($result_active) == 1) {
     $row_active = mysqli_fetch_assoc($result_active);
     if($row_active['user_active'] == 1) {
-        // Redirect based on role: students go to their profile, others to dashboard
+        // Redirect based on role: students to Student Dashboard, others to dashboard
         if (isset($_SESSION['user_table']) && $_SESSION['user_table'] === 'student') {
-            header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/student/Student_profile.php');
+            header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/student/StudentDashboard.php');
         } else {
             header("Location: dashboard/");
         }
@@ -156,9 +156,9 @@ if (isset($_POST['SignIn']) && !empty($_POST['username']) && !empty($_POST['pass
                         mysqli_stmt_close($dept_stmt);
                     }
                     
-                    // Redirect based on role: students to profile, others to dashboard
+                    // Redirect based on role: students to Student Dashboard, others to dashboard
                     if ($row['user_table'] === 'student') {
-                        header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/student/Student_profile.php');
+                        header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/student/StudentDashboard.php');
                     } else {
                         header("Location: dashboard/");
                     }
