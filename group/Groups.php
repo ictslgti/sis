@@ -7,6 +7,7 @@ require_once __DIR__ . '/../menu.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
+$_isADM = ($role === 'ADM');
 
 $canManage = in_array($role, ['HOD']);
 $canAccess = $canManage || in_array($role, ['IN1','IN2','LE1','LE2','ADM']);
@@ -45,7 +46,7 @@ if ($canManage) {
   if ($st) { mysqli_stmt_bind_param($st, 's', $uid); mysqli_stmt_execute($st); $rs = mysqli_stmt_get_result($st); while ($rs && ($r=mysqli_fetch_assoc($rs))) { $groups[]=$r; } mysqli_stmt_close($st); }
 }
 ?>
-<div class="container mt-4">
+<div class="container mt-4<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>">
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Groups</h3>
     <?php if ($canManage): ?>

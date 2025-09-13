@@ -359,8 +359,10 @@ if ($r = mysqli_query($con, "SELECT course_id, course_name, department_id FROM c
 $title = 'Manage Students | SLGTI';
 include_once __DIR__ . '/../head.php';
 include_once __DIR__ . '/../menu.php';
+// Desktop-only offset on non-ADM
+$__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
 ?>
-<div class="container-fluid px-0 px-sm-1 px-md-4">
+<div class="container-fluid px-0 px-sm-1 px-md-4<?php echo $__isADM ? '' : ' hod-desktop-offset'; ?>">
   <div class="row align-items-center mt-2 mb-2 mt-sm-1 mb-sm-3">
     <div class="col">
       <nav aria-label="breadcrumb">
@@ -380,7 +382,7 @@ include_once __DIR__ . '/../menu.php';
 
   <!-- Flash messages rendered below -->
 </div>
-<div class="container-fluid px-0 px-sm-2 px-md-4">
+<div class="container-fluid px-0 px-sm-2 px-md-4<?php echo $__isADM ? '' : ' hod-desktop-offset'; ?>">
   <div class="row">
     <div class="col-12">
 

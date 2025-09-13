@@ -69,7 +69,7 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
 </style>
 <?php } ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top px-2 px-md-3 px-lg-4">
-  <a class="navbar-brand" href="<?php echo $base; ?>/dashboard/index.php">MIS@SLGTI</a>
+  <a class="navbar-brand" href="<?php echo $base; ?><?php echo ($u_t==='HOD') ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">MIS@SLGTI</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#saoNavbar" aria-controls="saoNavbar" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -77,7 +77,7 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
   <div class="collapse navbar-collapse justify-content-end" id="saoNavbar">
     <ul class="navbar-nav">
       <li class="nav-item">
-        <a class="nav-link" href="<?php echo $base; ?>/dashboard/index.php">
+        <a class="nav-link" href="<?php echo $base; ?><?php echo ($u_t==='HOD') ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">
           <i class="fa fa-home"></i> Dashboard
         </a>
       </li>
@@ -120,6 +120,18 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
         <div class="dropdown-menu" aria-labelledby="hodAttendance">
           <a class="dropdown-item" href="<?php echo $base; ?>/attendance/DailyAttendance.php">Daily Attendance</a>
           <a class="dropdown-item" href="<?php echo $base; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
+        </div>
+      </li>
+
+      <!-- Groups: HOD can manage department groups -->
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" id="hodGroups" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <i class="fas fa-users"></i> Groups
+        </a>
+        <div class="dropdown-menu" aria-labelledby="hodGroups">
+          <a class="dropdown-item" href="<?php echo $base; ?>/group/Groups.php?department_id=<?php echo urlencode($d_c); ?>">Manage Groups</a>
+          <a class="dropdown-item" href="<?php echo $base; ?>/group/AddGroup.php?department_id=<?php echo urlencode($d_c); ?>">Add Group</a>
+          <a class="dropdown-item" href="<?php echo $base; ?>/group/Reports.php?department_id=<?php echo urlencode($d_c); ?>">Reports</a>
         </div>
       </li>
       <?php endif; ?>

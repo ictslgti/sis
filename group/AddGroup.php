@@ -7,15 +7,20 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
 if (!in_array($role, ['HOD'])) { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
+$_isADM = ($role === 'ADM');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $name = $course_id = $academic_year = $status = '';
+// If adding a new group, allow preselect course from query
+if ($id === 0 && isset($_GET['course_id'])) {
+  $course_id = trim((string)$_GET['course_id']);
+}
 if ($id > 0) {
   $st = mysqli_prepare($con, 'SELECT * FROM `groups` WHERE id=?');
   if ($st) { mysqli_stmt_bind_param($st,'i',$id); mysqli_stmt_execute($st); $rs = mysqli_stmt_get_result($st); $row = $rs?mysqli_fetch_assoc($rs):null; mysqli_stmt_close($st); if ($row){ $name=$row['name']; $course_id=$row['course_id']; $academic_year=$row['academic_year']; $status=$row['status']; }}
 }
 ?>
-<div class="container mt-4">
+<div class="container mt-4<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>">
   <h3><?php echo $id? 'Edit Group':'Add Group'; ?></h3>
   <form method="POST" action="<?php echo $base; ?>/controller/GroupCreate.php">
     <input type="hidden" name="id" value="<?php echo (int)$id; ?>">

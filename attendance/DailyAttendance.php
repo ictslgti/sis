@@ -4,9 +4,10 @@ $title="Daily Attendance | SLGTI";
 include_once ("../config.php");
 include_once ("../head.php");
 include_once ("../menu.php");
-include_once ("Attendancenav.php");
+
 // HOD and IN3 can use this page
 require_roles(['HOD','IN3']);
+$_isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type']==='ADM');
 ?>
 <!-- end dont change the order-->
 <style>
@@ -52,7 +53,7 @@ $date = isset($_GET['date']) && $_GET['date']!=='' ? $_GET['date'] : date('Y-m-d
 $slot = 1;
 $course = isset($_GET['course']) ? trim($_GET['course']) : '';
 
-// Build holiday set for current month (to disable in picker)
+// Build holiday and vacation sets for current month (to disable in picker)
 $firstDay = date('Y-m-01', strtotime($date));
 $lastDay  = date('Y-m-t', strtotime($date));
 function load_holidays_set_month($con, $firstDay, $lastDay){
@@ -74,6 +75,52 @@ function load_holidays_set_month($con, $firstDay, $lastDay){
   }
   return $set;
 }
+$vacationSet = (function($con, $firstDay, $lastDay){
+  $set = [];
+  // Try single-date tables first
+  $single = [
+    ['table' => 'vacation_days', 'col' => 'vacation_date'],
+    ['table' => 'vacations_days', 'col' => 'date'],
+  ];
+  foreach ($single as $c) {
+    $t = mysqli_real_escape_string($con, $c['table']);
+    $rs = mysqli_query($con, "SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='{$t}' LIMIT 1");
+    if ($rs && mysqli_fetch_row($rs)) {
+      $col = $c['col'];
+      $q = mysqli_query($con, "SELECT `${col}` AS d FROM `${t}` WHERE `${col}` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'");
+      if ($q) { while($r=mysqli_fetch_assoc($q)){ if (!empty($r['d'])) { $set[$r['d']] = true; } } }
+      return $set;
+    }
+  }
+  // Range-based definitions
+  $ranges = [
+    ['table' => 'vacations', 'start' => 'start_date', 'end' => 'end_date'],
+    ['table' => 'academic_vacations', 'start' => 'start_date', 'end' => 'end_date'],
+    ['table' => 'institution_vacations', 'start' => 'from_date', 'end' => 'to_date'],
+  ];
+  foreach ($ranges as $c) {
+    $t = mysqli_real_escape_string($con, $c['table']);
+    $rs = mysqli_query($con, "SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='{$t}' LIMIT 1");
+    if ($rs && mysqli_fetch_row($rs)) {
+      $colS = $c['start']; $colE = $c['end'];
+      $q = mysqli_query($con, "SELECT `${colS}` AS s, `${colE}` AS e FROM `${t}` WHERE NOT(`${colE}` < '".mysqli_real_escape_string($con,$firstDay)."' OR `${colS}` > '".mysqli_real_escape_string($con,$lastDay)."')");
+      if ($q) {
+        while ($r = mysqli_fetch_assoc($q)) {
+          $s = !empty($r['s']) ? max($firstDay, $r['s']) : $firstDay;
+          $e = !empty($r['e']) ? min($lastDay, $r['e']) : $lastDay;
+          $ds = strtotime($s); $de = strtotime($e);
+          if ($ds && $de && $ds <= $de) {
+            for ($tday = $ds; $tday <= $de; $tday = strtotime('+1 day', $tday)) {
+              $set[date('Y-m-d', $tday)] = true;
+            }
+          }
+        }
+      }
+      break;
+    }
+  }
+  return $set;
+})($con, $firstDay, $lastDay);
 $holidaySet = load_holidays_set_month($con, $firstDay, $lastDay);
 
 // Load department courses
@@ -141,7 +188,8 @@ if (!empty($students)) {
 }
 ?>
 
-<div class="container" style="margin-top:30px">
+<div class="container<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>" style="margin-top:30px">
+  <?php include_once ("Attendancenav.php"); ?>
   <div class="card">
     <div class="card-header">
       <div class="d-flex justify-content-between align-items-center">
@@ -173,6 +221,26 @@ if (!empty($students)) {
       <?php if ($deptCode===''): ?>
         <div class="alert alert-warning">Department not configured for your account. Please contact admin.</div>
       <?php else: ?>
+        <?php
+          $isWeekend = in_array((int)date('w', strtotime($date)), [0,6], true);
+          $isHoliday = isset($holidaySet[$date]);
+          $isVacation = isset($vacationSet[$date]);
+          $isNonWorking = $isWeekend || $isHoliday || $isVacation;
+        ?>
+        <div class="mb-2">
+          <?php if ($isNonWorking): ?>
+            <div class="alert alert-warning py-2 mb-2">
+              <strong>Note:</strong> <?php echo htmlspecialchars($date); ?> is a
+              <?php
+                $types=[]; if($isWeekend) $types[]='Weekend'; if($isHoliday) $types[]='Holiday'; if($isVacation) $types[]='Vacation';
+                echo htmlspecialchars(implode(', ', $types));
+              ?>.
+              If you save attendance for this date, it will be counted in the Monthly Report as an <em>exception</em> and included in <strong>Considered Days</strong>.
+            </div>
+          <?php else: ?>
+            <span class="badge badge-success">Working day</span>
+          <?php endif; ?>
+        </div>
         <form method="post" action="<?php echo APP_BASE; ?>/controller/DailyAttendanceSave.php">
           <input type="hidden" name="date" value="<?php echo htmlspecialchars($date); ?>">
           <!-- Single slot only; no slot field needed -->
@@ -182,6 +250,14 @@ if (!empty($students)) {
               <span class="badge badge-info">Excluded <?php echo (int)$excludedCount; ?> not accepted Code of Conduct</span>
             </div>
           <?php endif; ?>
+          <div class="mb-2">
+            <div class="custom-control custom-checkbox d-inline-block mr-3">
+              <input type="checkbox" class="custom-control-input" id="allow-nwd">
+              <label class="custom-control-label" for="allow-nwd">Allow marking on non-working day (weekend/holiday/vacation)</label>
+            </div>
+            <span id="nwd-warning" class="badge badge-warning" style="display:none;">Selected date is a non-working day. Tick the override to proceed.</span>
+            <div id="nwd-info" class="text-muted small mt-1" style="display:none;"></div>
+          </div>
           <div class="mb-2">
             <button type="button" class="btn btn-sm btn-secondary" onclick="toggleAll(true)">Mark All Present</button>
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAll(false)">Unmark All</button>
@@ -221,7 +297,7 @@ if (!empty($students)) {
             </table>
           </div>
           <div class="mt-2">
-            <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Attendance</button>
+            <button id="save-btn" type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Attendance</button>
           </div>
         </form>
         <script>
@@ -229,31 +305,46 @@ if (!empty($students)) {
             var dInput = document.getElementById('att-date');
             if (!dInput) return;
             var holidays = <?php echo json_encode(array_keys($holidaySet)); ?>;
-            var hset = {};
+            var vacations = <?php echo json_encode(array_keys($vacationSet)); ?>;
+            var hset = {}, vset = {};
             holidays.forEach(function(d){ hset[d] = true; });
+            vacations.forEach(function(d){ vset[d] = true; });
             function isWorkingDay(iso){
               var dt = new Date(iso);
               if (isNaN(dt)) return true;
               var w = dt.getDay(); // 0=Sun,6=Sat
               if (w===0 || w===6) return false;
-              return !hset[iso];
+              return !(hset[iso] || vset[iso]);
             }
-            var lastValid = dInput.value;
-            // On load, if chosen date invalid, revert to today (if working) or keep as-is
-            try{
-              var cur = dInput.value;
-              if (cur && !isWorkingDay(cur)) { /* keep as-is but record a safe fallback */ lastValid = new Date().toISOString().slice(0,10); }
-              else { lastValid = cur; }
-            }catch(_){ }
-            dInput.addEventListener('change', function(){
+            var allow = document.getElementById('allow-nwd');
+            var warn = document.getElementById('nwd-warning');
+            var info = document.getElementById('nwd-info');
+            var saveBtn = document.getElementById('save-btn');
+            function refreshNWD(){
               var v = dInput.value;
-              if (v && !isWorkingDay(v)) {
-                alert('Selected date is a weekend/holiday. Please pick a working day.');
-                dInput.value = lastValid || '';
+              var nwd = v && !isWorkingDay(v);
+              if (nwd) {
+                warn.style.display = 'inline-block';
+                saveBtn.disabled = !allow.checked;
+                // Build info describing type and effect
+                var dt = new Date(v);
+                var w = dt.getDay();
+                var types = [];
+                if (w===0 || w===6) types.push('Weekend');
+                if (hset[v]) types.push('Holiday');
+                if (vset[v]) types.push('Vacation');
+                var typeStr = types.join(', ') || 'Non-working day';
+                info.textContent = typeStr + ': If you save attendance for this date, it will be included in the Monthly Report as an exception and counted in Considered Days.';
+                info.style.display = 'block';
               } else {
-                lastValid = v;
+                warn.style.display = 'none';
+                saveBtn.disabled = false;
+                info.style.display = 'none';
               }
-            });
+            }
+            try { refreshNWD(); } catch(_){ }
+            dInput.addEventListener('change', refreshNWD);
+            if (allow) allow.addEventListener('change', refreshNWD);
           })();
         </script>
         <script>

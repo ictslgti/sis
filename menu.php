@@ -331,7 +331,7 @@ if ($u_t === 'SAO' || $u_t === 'HOD') {
           <li class="header-menu"><span>Head of Department</span></li>
           <!-- Dashboard -->
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hod/Dashboard.php">
               <i class="fa fa-tachometer-alt"></i>
               <span>Dashboard</span>
             </a>

@@ -9,6 +9,20 @@ CREATE TABLE IF NOT EXISTS groups (
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
+-- Optional: module-wise staff assignment per group
+CREATE TABLE IF NOT EXISTS group_staff_module (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  group_id INT NOT NULL,
+  module_id VARCHAR(30) NOT NULL,
+  staff_id VARCHAR(30) NOT NULL,
+  role ENUM('LECTURER','INSTRUCTOR') NOT NULL,
+  delivery_type ENUM('THEORY','PRACTICAL','BOTH') NOT NULL DEFAULT 'BOTH',
+  assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  active TINYINT(1) DEFAULT 1,
+  UNIQUE KEY uq_group_staff_module (group_id, module_id, staff_id, role, delivery_type),
+  CONSTRAINT fk_group_staff_module_group FOREIGN KEY (group_id) REFERENCES groups(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS group_students (
   id INT AUTO_INCREMENT PRIMARY KEY,
   group_id INT NOT NULL,

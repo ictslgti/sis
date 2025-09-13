@@ -165,7 +165,26 @@ if(!isset($_SESSION['user_name'])){
       });
     </script>
     <?php } ?>
-  </head>
+    <style>
+    /* Desktop-only offset for HOD and similar pages */
+    @media (min-width: 992px) { /* lg and up */
+      .hod-desktop-offset { margin-left: -120px; }
+    }
+    @media (max-width: 991.98px) { /* below lg */
+      .hod-desktop-offset { margin-left: 0 !important; }
+    }
+    /* Utility: Center forms within card bodies (use on cards via class 'center-card-form') */
+    .center-card-form .card-body {
+      display: flex;
+      justify-content: center;
+    }
+    .center-card-form .card-body > form,
+    .center-card-form .card-body > .form-container {
+      width: 100%;
+      max-width: 760px; /* nice readable width */
+    }
+  </style>
+</head>
   <body>
   <div class="page-wrapper chiller-theme toggled">
   <a id="show-sidebar" class="btn btn-sm btn-dark" href="#">
