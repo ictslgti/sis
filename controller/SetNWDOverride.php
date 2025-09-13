@@ -52,19 +52,20 @@ try {
   $upd = "UPDATE attendance a\n          JOIN student s ON s.student_id=a.student_id\n          JOIN student_enroll se ON se.student_id=s.student_id\n          JOIN course c ON c.course_id=se.course_id\n          SET a.attendance_status=-1";
   if ($hasModuleName) { $upd .= ", a.module_name='".mysqli_real_escape_string($con,'NWD')."'"; }
   if ($hasCreatedAt) { $upd .= ", a.created_at='".mysqli_real_escape_string($con,$now)."'"; }
-  $upd .= " WHERE a.date='$dt' AND $where";
+  $upd .= " WHERE a.`date`='$dt' AND $where";
   mysqli_query($con, $upd);
 
-  // Build insert columns dynamically
+  // Build insert columns dynamically (escape reserved names like `date`)
   $cols = ['student_id','date','attendance_status'];
   if ($hasModuleName) $cols[] = 'module_name';
   if ($hasCreatedAt) $cols[] = 'created_at';
-  $colList = '('.implode(', ', $cols).')';
+  $colsSql = array_map(function($c){ return "`".$c."`"; }, $cols);
+  $colList = '('.implode(', ', $colsSql).')';
 
   // Determine students who still do not have any attendance row for this date
   $presentSet = [];
   $inAll = implode(',', array_map(function($x) use ($con){ return "'".mysqli_real_escape_string($con,$x)."'"; }, $ids));
-  $qexist = mysqli_query($con, "SELECT DISTINCT student_id FROM attendance WHERE date='$dt' AND student_id IN ($inAll)");
+  $qexist = mysqli_query($con, "SELECT DISTINCT student_id FROM attendance WHERE `date`='$dt' AND student_id IN ($inAll)");
   if ($qexist) { while($r=mysqli_fetch_assoc($qexist)){ $presentSet[$r['student_id']] = true; } }
   $idsToInsert = array_values(array_filter($ids, function($sid) use ($presentSet){ return !isset($presentSet[$sid]); }));
 
@@ -88,5 +89,8 @@ try {
   redirect_back(['ok'=>'1','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
 } catch (Exception $e) {
   mysqli_rollback($con);
-  redirect_back(['err'=>'db','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
+  $err = mysqli_error($con);
+  $code = mysqli_errno($con);
+  $msg = substr($err ?: $e->getMessage(), 0, 180);
+  redirect_back(['err'=>'db','errm'=>($code?($code.': '):'').$msg,'month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
 }

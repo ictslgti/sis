@@ -466,7 +466,12 @@ if ($isExport) {
           <div class="alert alert-success py-2">Operation completed successfully.</div>
         <?php endif; ?>
         <?php if (isset($_GET['err'])): ?>
-          <div class="alert alert-danger py-2">Operation failed. Code: <?php echo htmlspecialchars($_GET['err']); ?></div>
+          <div class="alert alert-danger py-2">
+            Operation failed. Code: <?php echo htmlspecialchars($_GET['err']); ?>
+            <?php if (!empty($_GET['errm'])): ?>
+              <div class="small mt-1"><strong>Details:</strong> <?php echo htmlspecialchars($_GET['errm']); ?></div>
+            <?php endif; ?>
+          </div>
         <?php endif; ?>
         <div class="mb-2">
           <strong>Department:</strong> <?php echo htmlspecialchars($deptCode); ?> |

@@ -39,12 +39,14 @@ $where = "c.department_id='".mysqli_real_escape_string($con,$dept)."'";
 if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
 $where .= " AND se.student_enroll_status IN ('Following','Active')";
 
-$del = "DELETE a FROM attendance a\n        JOIN student s ON s.student_id=a.student_id\n        JOIN student_enroll se ON se.student_id=s.student_id\n        JOIN course c ON c.course_id=se.course_id\n        WHERE a.date='$dt' AND a.attendance_status=-1 AND $where";
+$del = "DELETE a FROM attendance a\n        JOIN student s ON s.student_id=a.student_id\n        JOIN student_enroll se ON se.student_id=s.student_id\n        JOIN course c ON c.course_id=se.course_id\n        WHERE a.`date`='$dt' AND a.attendance_status=-1 AND $where";
 if ($hasModuleName) { $del .= " AND a.module_name='".mysqli_real_escape_string($con,'NWD')."'"; }
 
 if (!mysqli_query($con, $del)) {
   $err = mysqli_error($con);
-  redirect_back(['err'=>'db','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
+  $code = mysqli_errno($con);
+  $msg = substr($err, 0, 180);
+  redirect_back(['err'=>'db','errm'=>($code?($code.': '):'').$msg,'month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
 }
 
 redirect_back(['ok'=>'1','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
