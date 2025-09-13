@@ -339,7 +339,9 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
       d.department_name,
       c.course_id,
       c.course_name,
-      COUNT(DISTINCT s.student_id) AS total
+      COUNT(DISTINCT s.student_id) AS total,
+      COUNT(DISTINCT CASE WHEN s.student_gender='Male' THEN s.student_id END) AS male,
+      COUNT(DISTINCT CASE WHEN s.student_gender='Female' THEN s.student_id END) AS female
     FROM course c
     LEFT JOIN department d ON d.department_id = c.department_id
     LEFT JOIN student_enroll e ON e.course_id = c.course_id 
@@ -355,79 +357,102 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   }
 ?>
 
+<?php
+  // Group courses under their departments
+  $byDept = [];
+  $deptTotals = [];
+  foreach ($courseRows as $row) {
+    $dn = $row['department_name'] ?? 'Unknown';
+    if (!isset($byDept[$dn])) { $byDept[$dn] = []; $deptTotals[$dn] = 0; }
+    $byDept[$dn][] = $row;
+    $deptTotals[$dn] += (int)($row['total'] ?? 0);
+  }
+  // Compute gender counts per department (Male/Female)
+  $genderByDept = [];
+  $yearCondG = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
+  $sqlG = "
+    SELECT d.department_name AS dep,
+           COUNT(DISTINCT CASE WHEN s.student_gender='Male' AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS male,
+           COUNT(DISTINCT CASE WHEN s.student_gender='Female' AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS female
+    FROM department d
+    LEFT JOIN course c ON c.department_id = d.department_id
+    LEFT JOIN student_enroll e ON e.course_id = c.course_id AND e.student_enroll_status IN ('Following','Active') $yearCondG
+    LEFT JOIN student s ON s.student_id = e.student_id
+    GROUP BY d.department_name
+  ";
+  if ($rsG = mysqli_query($con, $sqlG)) {
+    while ($rg = mysqli_fetch_assoc($rsG)) {
+      $genderByDept[$rg['dep']] = [
+        'male' => (int)($rg['male'] ?? 0),
+        'female' => (int)($rg['female'] ?? 0)
+      ];
+    }
+    mysqli_free_result($rsG);
+  }
+?>
 <div class="row mt-1 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
       <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
-        <div class="font-weight-semibold"><i class="fas fa-list-ol mr-1 text-primary"></i> Course-wise Students</div>
-        <div class="d-flex align-items-center">
-          <?php if (!empty($selectedYear)) : ?>
-            <span class="badge badge-light mr-2">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
-          <?php endif; ?>
-          <?php $role = isset($_SESSION['user_type']) ? strtoupper(trim($_SESSION['user_type'])) : ''; if (in_array($role, ['SAO','DIR'])): ?>
-            <?php $base = (defined('APP_BASE') ? APP_BASE : ''); $q = $selectedYear !== '' ? ('?academic_year=' . urlencode($selectedYear)) : ''; ?>
-            <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/dashboard/course_wise_export.php<?php echo $q; ?>">
-              <i class="fas fa-file-excel"></i> Export Excel
-            </a>
-          <?php endif; ?>
-        </div>
+        <div class="font-weight-semibold"><i class="fas fa-sitemap mr-1 text-primary"></i> Department-wise Course Counts</div>
+        <?php if (!empty($selectedYear)) : ?>
+          <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
+        <?php endif; ?>
       </div>
-      <div class="card-body p-0">
-        <?php if (empty($courseRows)): ?>
-          <div class="p-3 text-center text-muted small">No course-wise student data available<?php echo $selectedYear ? ' for the selected year' : ''; ?>.</div>
+      <div class="card-body">
+        <?php if (empty($byDept)): ?>
+          <div class="text-center text-muted small">No data available<?php echo $selectedYear ? ' for the selected year' : ''; ?>.</div>
         <?php else: ?>
-          <div class="table-responsive">
-            <table class="table table-sm table-striped mb-0">
-              <thead class="thead-light">
-                <tr>
-                  <th style="width:40%;">Department</th>
-                  <th style="width:50%;">Course</th>
-                  <th class="text-right" style="width:10%;">Students</th>
-                </tr>
-              </thead>
-              <tbody>
-                <?php foreach ($courseRows as $row): ?>
-                  <tr>
-                    <td><?php echo htmlspecialchars($row['department_name'] ?? ''); ?></td>
-                    <td><?php echo htmlspecialchars($row['course_name'] ?? ''); ?></td>
-                    <td class="text-right font-weight-bold"><?php echo (int)($row['total'] ?? 0); ?></td>
-                  </tr>
-                <?php endforeach; ?>
-              </tbody>
-            </table>
+          <div class="accordion" id="deptCourseAcc">
+            <?php $i=0; foreach ($byDept as $deptName => $rows): $i++; $collapseId = 'dcoll'.$i; ?>
+              <div class="card mb-2 border-0">
+                <div class="card-header bg-light py-2" id="h<?php echo $i; ?>">
+                  <h6 class="mb-0 d-flex justify-content-between align-items-center">
+                    <button class="btn btn-link p-0" type="button" data-toggle="collapse" data-target="#<?php echo $collapseId; ?>" aria-expanded="<?php echo $i===1?'true':'false'; ?>" aria-controls="<?php echo $collapseId; ?>">
+                      <?php echo htmlspecialchars($deptName); ?>
+                    </button>
+                    <span>
+                      <?php $g = $genderByDept[$deptName] ?? ['male'=>0,'female'=>0]; ?>
+                      <span class="badge badge-primary mr-1" title="Male"><i class="fas fa-male"></i> <?php echo number_format($g['male']); ?></span>
+                      <span class="badge" style="background:#e83e8c;color:#fff" title="Female"><i class="fas fa-female"></i> <?php echo number_format($g['female']); ?></span>
+                      <span class="badge badge-info ml-1">Total: <?php echo number_format($deptTotals[$deptName]); ?></span>
+                    </span>
+                  </h6>
+                </div>
+                <div id="<?php echo $collapseId; ?>" class="collapse <?php echo $i===1?'show':''; ?>" data-parent="#deptCourseAcc">
+                  <div class="card-body p-0">
+                    <div class="table-responsive">
+                      <table class="table table-sm table-striped mb-0">
+                        <thead class="thead-light">
+                          <tr>
+                            <th style="width:70%;">Course</th>
+                            <th class="text-right" style="width:15%;">Male</th>
+                            <th class="text-right" style="width:15%;">Female</th>
+                            <th class="text-right" style="width:30%;">Students</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <?php foreach ($rows as $r): ?>
+                            <tr>
+                              <td><?php echo htmlspecialchars($r['course_name'] ?? ''); ?></td>
+                              <td class="text-right font-weight-bold"><?php echo (int)($r['male'] ?? 0); ?></td>
+                              <td class="text-right font-weight-bold"><?php echo (int)($r['female'] ?? 0); ?></td>
+                              <td class="text-right font-weight-bold"><?php echo (int)($r['total'] ?? 0); ?></td>
+                            </tr>
+                          <?php endforeach; ?>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            <?php endforeach; ?>
           </div>
         <?php endif; ?>
       </div>
     </div>
   </div>
 </div>
-
-
-<style>
-  .rel-card { border: 0; border-radius: .75rem; color: #fff; overflow: hidden; position: relative; }
-  .rel-card .rel-body { display: flex; align-items: center; justify-content: space-between; }
-  .rel-card .rel-icon { width: 42px; height: 42px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: rgba(255,255,255,.2); }
-  .rel-card .rel-name { font-weight: 600; letter-spacing: .2px; }
-  .rel-card .rel-count { font-size: 1.6rem; font-weight: 800; line-height: 1; }
-  .rel-card .rel-percent { font-size: .85rem; opacity: .95; }
-  .rel-grad-0 { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
-  .rel-grad-1 { background: linear-gradient(135deg, #1cc88a 0%, #13855c 100%); }
-  .rel-grad-2 { background: linear-gradient(135deg, #f6c23e 0%, #e0a800 100%); color: #212529; }
-  .rel-grad-3 { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%); }
-  .rel-grad-4 { background: linear-gradient(135deg, #36b9cc 0%, #258391 100%); }
-  .rel-grad-5 { background: linear-gradient(135deg, #6f42c1 0%, #4b2f88 100%); }
-  .rel-grad-6 { background: linear-gradient(135deg, #fd7e14 0%, #c75c0b 100%); }
-  .rel-grad-7 { background: linear-gradient(135deg, #20c997 0%, #0f8f6d 100%); }
-  @media (max-width: 575.98px) {
-    .rel-card .rel-count { font-size: 1.4rem; }
-    .rel-card .rel-name { font-size: .95rem; }
-    .rel-card .rel-percent { font-size: .8rem; }
-  }
-  .rel-empty { border: 1px dashed #e9ecef; background: #f8f9fa; color: #6c757d; border-radius: .75rem; }
-  .rel-empty .card-body { padding: 1.25rem; }
-  .rel-filter .form-control { min-width: 180px; }
-  @media (max-width: 575.98px) { .rel-filter .form-inline { display: block; } .rel-filter .form-control { width: 100%; margin-bottom: .5rem; } }
-</style>
 
 <div class="row mt-3 mobile-tight align-items-center rel-filter">
   <div class="col-md-6 col-sm-12">

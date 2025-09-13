@@ -81,9 +81,28 @@ try {
       if ($hasCreatedAt) { $row[] = "'".mysqli_real_escape_string($con,$now)."'"; }
       $values[] = '('.implode(',', $row).')';
     }
-    $ins = "INSERT INTO attendance $colList VALUES ".implode(',', $values);
-    if (!mysqli_query($con, $ins)) { throw new Exception('insert'); }
+    if (!empty($values)) {
+      $ins = "INSERT INTO attendance $colList VALUES ".implode(',', $values);
+      // If INSERT fails (due to unknown NOT NULL cols), do not hard-fail; we'll persist override in nwd_overrides
+      @mysqli_query($con, $ins);
+    }
   }
+
+  // Ensure an override marker exists in a dedicated table to drive UI logic, independent of attendance rows
+  $create = "CREATE TABLE IF NOT EXISTS `nwd_overrides` (
+              `date` date NOT NULL,
+              `department_id` varchar(32) NOT NULL,
+              `course_id` varchar(32) DEFAULT NULL,
+              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              PRIMARY KEY (`date`,`department_id`,`course_id`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
+  mysqli_query($con, $create);
+
+  $deptEsc = mysqli_real_escape_string($con, $dept);
+  $courseEsc = ($course==='') ? 'NULL' : "'".mysqli_real_escape_string($con,$course)."'";
+  $upsert = "INSERT INTO `nwd_overrides` (`date`,`department_id`,`course_id`) VALUES ('$dt','$deptEsc', $courseEsc)
+             ON DUPLICATE KEY UPDATE `created_at`=VALUES(`created_at`)";
+  if (!mysqli_query($con, $upsert)) { throw new Exception('insert_nwd'); }
 
   mysqli_commit($con);
   redirect_back(['ok'=>'1','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);
