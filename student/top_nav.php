@@ -16,14 +16,6 @@ $studentName = isset($_SESSION['student_name']) ? $_SESSION['student_name'] : ''
 
   <div class="collapse navbar-collapse" id="studentTopNav">
     <ul class="navbar-nav mr-auto">
-      <li class="nav-item">
-        <a class="nav-link" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/onpeak/RequestOnPeak.php">OnPeak Request</a>
-      </li>
-      <li class="nav-item">
-        <a class="nav-link" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/student/request_hostel.php">Hostel</a>
-      </li>
-      
-      
     </ul>
 
     <ul class="navbar-nav ml-auto align-items-center">

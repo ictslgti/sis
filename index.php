@@ -293,6 +293,7 @@ if (isset($_GET['signout'])) {
         </div>
     </div>
 
+    <?php if (false): ?>
     <?php
     // Build course-wise students list (exclude courses with zero students)
     $courseRows = [];
@@ -316,7 +317,6 @@ if (isset($_GET['signout'])) {
       mysqli_free_result($rs);
     }
     ?>
-
     <div class="container mt-4 mb-5">
       <div class="row">
         <div class="col-12">
@@ -355,6 +355,7 @@ if (isset($_GET['signout'])) {
         </div>
       </div>
     </div>
+    <?php endif; ?>
 
 </body>
 
