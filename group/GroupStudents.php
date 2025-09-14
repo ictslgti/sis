@@ -6,7 +6,13 @@ require_once __DIR__ . '/../menu.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
-if ($role !== 'HOD') { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
+$redirect = isset($_GET['redirect']) ? trim($_GET['redirect']) : '';
+
+if ($role !== 'HOD') { 
+    echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; 
+    require_once __DIR__.'/../footer.php'; 
+    exit; 
+}
 
 $group_id = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
 if ($group_id<=0) { echo '<div class="container mt-4"><div class="alert alert-warning">Invalid group</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
@@ -24,7 +30,24 @@ if ($q){ mysqli_stmt_bind_param($q,'i',$group_id); mysqli_stmt_execute($q); $res
 // Candidates: by course + academic year from student_enroll not yet in group
 $candidates = [];
 $qc = mysqli_prepare($con,'SELECT se.student_id, s.student_fullname FROM student_enroll se INNER JOIN student s ON s.student_id=se.student_id WHERE se.course_id=? AND se.academic_year=? AND se.student_id NOT IN (SELECT student_id FROM group_students WHERE group_id=?) ORDER BY s.student_fullname');
-if ($qc){ mysqli_stmt_bind_param($qc,'ssi',$grp['course_id'],$grp['academic_year'],$group_id); mysqli_stmt_execute($qc); $resc=mysqli_stmt_get_result($qc); while($resc && ($r=mysqli_fetch_assoc($resc))){ $candidates[]=$r; } mysqli_stmt_close($qc);} 
+if ($qc){
+  mysqli_stmt_bind_param($qc,'ssi',$grp['course_id'],$grp['academic_year'],$group_id);
+  mysqli_stmt_execute($qc);
+  $resc=mysqli_stmt_get_result($qc);
+  while($resc && ($r=mysqli_fetch_assoc($resc))){ $candidates[]=$r; }
+  mysqli_stmt_close($qc);
+}
+// Fallback: if academic_year does not match, show active enrollments for this course regardless of year
+if (empty($candidates)) {
+  $qf = mysqli_prepare($con,'SELECT DISTINCT se.student_id, s.student_fullname FROM student_enroll se INNER JOIN student s ON s.student_id=se.student_id WHERE se.course_id=? AND COALESCE(se.student_enroll_status,\'\') IN (\'Following\',\'Active\') AND se.student_id NOT IN (SELECT student_id FROM group_students WHERE group_id=?) ORDER BY s.student_fullname');
+  if ($qf){
+    mysqli_stmt_bind_param($qf,'si',$grp['course_id'],$group_id);
+    mysqli_stmt_execute($qf);
+    $resf=mysqli_stmt_get_result($qf);
+    while($resf && ($r=mysqli_fetch_assoc($resf))){ $candidates[]=$r; }
+    mysqli_stmt_close($qf);
+  }
+}
 ?>
 <div class="container mt-4">
   <h3>Manage Students — <?php echo h($grp['name']); ?> (<?php echo h($grp['course_id']); ?>, <?php echo h($grp['academic_year']); ?>)</h3>
@@ -38,22 +61,34 @@ if ($qc){ mysqli_stmt_bind_param($qc,'ssi',$grp['course_id'],$grp['academic_year
   <div class="card mb-3">
     <div class="card-header">Add Students</div>
     <div class="card-body">
-      <form method="POST" action="<?php echo $base; ?>/controller/GroupStudentsUpdate.php">
+      <form method="POST" action="<?php echo $base; ?>/controller/GroupStudentsUpdate.php" class="mb-4">
         <input type="hidden" name="group_id" value="<?php echo (int)$group_id; ?>">
+        <?php if (!empty($redirect)): ?>
+          <input type="hidden" name="redirect" value="<?php echo h($redirect); ?>">
+        <?php endif; ?>
         <div class="form-row">
           <div class="form-group col-md-8">
-            <label>Select Students</label>
-            <input type="text" id="candidateSearch" class="form-control mb-2" placeholder="Search by name or ID...">
-            <select name="student_ids[]" id="candidateList" class="form-control" multiple size="10" required>
-              <?php foreach ($candidates as $c): ?>
-                <option value="<?php echo h($c['student_id']); ?>"><?php echo h($c['student_fullname']).' ('.h($c['student_id']).')'; ?></option>
+            <label for="student_ids">Select Students</label>
+            <select name="student_ids[]" id="student_ids" class="form-control select2" multiple>
+              <?php foreach ($candidates as $s): ?>
+                <option value="<?php echo h($s['student_id']); ?>">
+                  <?php echo h($s['student_id'] . ' - ' . $s['student_fullname']); ?>
+                </option>
               <?php endforeach; ?>
             </select>
             <small class="form-text text-muted">Tip: Hold Ctrl (Cmd on Mac) to select multiple students.</small>
           </div>
           <div class="form-group col-md-4 d-flex align-items-end">
-            <button type="submit" name="action" value="add" class="btn btn-primary">Add to Group</button>
-            <a href="<?php echo $base; ?>/group/Groups.php" class="btn btn-secondary ml-2">Back</a>
+            <button type="submit" name="action" value="add" class="btn btn-primary">
+              <?php echo !empty($redirect) ? 'Continue to Timetable' : 'Add to Group'; ?>
+            </button>
+            <?php if (!empty($redirect)): ?>
+              <a href="<?php echo $base . '/timetable/GroupTimetable.php?group_id=' . $group_id; ?>" class="btn btn-success ml-2">
+                Skip to Timetable
+              </a>
+            <?php else: ?>
+              <a href="<?php echo $base; ?>/group/Groups.php" class="btn btn-secondary ml-2">Back</a>
+            <?php endif; ?>
           </div>
         </div>
       </form>

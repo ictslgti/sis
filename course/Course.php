@@ -8,117 +8,179 @@ include_once("../menu.php");
 	<!-- end dont change the order-->
 
 
-	<!-- Block#2 start your code -->
+	    <!-- Block#2 start your code -->
 
-	<div class="shadow  p-3 mb-1 bg-white rounded">
-	    <div class="highlight-blue">
-	        <h1 class="display-4 text-center">Course Details</h1>
-	        <!-- <p class="text-center"></p> -->
-	    </div>
-	</div>
-    <div class="row">
-    <div class="col-sm-8"></div>
-	<div class="col-sm-4">
-    <form class="form-inline md-form form-sm mt-4" method="GET">
-    </form><br>
-    </div>
-    </div>
-	<div class="row">
-	    <div class="col-md-12 col-sm-12">
-	        <div class="table-responsive table-responsive-sm">
-	            <table class="table table-hover" id="employee_table">
-	                <thead class="thead-dark">
-	                    <tr>
-                            <th scope="col">No.</th>
-	                        <th scope="col">ID</th>
-	                        <th scope="col">Course</th>
-	                        <th scope="col">Department</th>
-	                        <th scope="col">Level (NVQ)</th>
-	                        <?php if(($_SESSION['user_type'] =='ADM')) { ?><th scope="col">Actions</th> <?php }?>
-	                    </tr>
-	                </thead>
+    <?php
+      // Role flags and context
+      $isADM = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
+      $isHOD = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
+      $deptCode = isset($_SESSION['department_code']) ? trim((string)$_SESSION['department_code']) : '';
 
-                <?php
-                    // Role flags
-                    $isADM = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
-                    $isHOD = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
-                    $deptCode = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : null;
+      // Filters
+      $filterDept = isset($_GET['department_id']) ? trim((string)$_GET['department_id']) : '';
+      // Backward compatibility with old param `id`
+      if ($filterDept === '' && isset($_GET['id'])) { $filterDept = trim((string)$_GET['id']); }
+      $q = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
 
-                    // Handle admin-only delete
-                    if (isset($_GET['delete_id']) && $isADM) {                
-                        $c_id = $_GET['delete_id'];
-                        $sql = "DELETE FROM course WHERE course_id = '".mysqli_real_escape_string($con, $c_id)."'";
-                        if (mysqli_query($con, $sql)) {
-                            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">'
-                               .'<strong> '.htmlspecialchars($c_id).' </strong> Record has been deleted successfully'
-                               .'<button type="button" class="close" data-dismiss="alert" aria-label="Close">'
-                               .'<span aria-hidden="true">&times;</span>'
-                               .'</button>'
-                               .'</div>';
-                        } else {
-                            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">'
-                               .'<strong> '.htmlspecialchars($c_id).' </strong> is used in another table'
-                               .'</div>';
-                        }
-                    }
-                ?>
+      // Enforce HOD scoping
+      if ($isHOD && $deptCode !== '') { $filterDept = $deptCode; }
 
+      // Handle delete (ADM or HOD) with prepared statements
+      $flash = '';
+      if ((($isADM) || ($isHOD && $deptCode !== '')) && isset($_GET['delete_id']) && $_GET['delete_id'] !== '') {
+        $cid = $_GET['delete_id'];
+        // ADM can delete any course; HOD can delete only within their department
+        if ($isADM) {
+          $sqlDel = 'DELETE FROM course WHERE course_id=?';
+        } else {
+          $sqlDel = 'DELETE FROM course WHERE course_id=? AND department_id=?';
+        }
+        if ($stmt = mysqli_prepare($con, $sqlDel)) {
+          if ($isADM) { mysqli_stmt_bind_param($stmt, 's', $cid); }
+          else { mysqli_stmt_bind_param($stmt, 'ss', $cid, $deptCode); }
+          if (@mysqli_stmt_execute($stmt)) {
+            if (mysqli_affected_rows($con) > 0) {
+              $flash = '<div class="alert alert-success alert-dismissible fade show" role="alert">Deleted: <strong>'.htmlspecialchars($cid).'</strong><button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            } else {
+              $flash = '<div class="alert alert-warning alert-dismissible fade show" role="alert">No course deleted (may not exist or not in your department).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            }
+          } else {
+            $flash = '<div class="alert alert-danger alert-dismissible fade show" role="alert">Cannot delete course. It may be referenced elsewhere.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          }
+          mysqli_stmt_close($stmt);
+        }
+      }
+    ?>
 
-                <tbody>
-                    <?php 
-                    // Build base query
-                    $sql = "SELECT c.course_id AS course_id, 
-                                     c.course_name AS course_name, 
-                                     d.department_name AS department_name,
-                                     c.course_nvq_level AS course_nvq_level
-                              FROM course c
-                              JOIN department d ON c.department_id = d.department_id
-                              WHERE 1=1";
-
-                    // If HOD is logged in, always scope to their own department
-                    if ($isHOD && !empty($deptCode)) {
-                        $id = $deptCode;
-                        $sql .= " AND c.department_id='".mysqli_real_escape_string($con, $id)."'";
-                    } elseif (isset($_GET['id'])) {
-                        $id = $_GET['id'];
-                        $sql .= " AND c.department_id='".mysqli_real_escape_string($con, $id)."'";
-                    }
-
-                    $result = mysqli_query($con, $sql);
-
-                    if ($result && mysqli_num_rows($result) > 0) { 
-                        $count = 1;
-                        while ($row = mysqli_fetch_assoc($result)) {
-                            echo '<tr>';
-                            echo '  <td>'. $count.'.'. "<br>" .'</td>';
-                            echo '  <td scope="row">'. htmlspecialchars($row['course_id']) . "<br>" .'</td>';
-                            echo '  <td>'. htmlspecialchars($row['course_name']) .  "<br>" .'</td>';
-                            echo '  <td>'. htmlspecialchars($row['department_name']) .  "<br>" .'</td>';
-                            echo '  <td>'. htmlspecialchars($row['course_nvq_level']) .  "<br>" .'</td>';
-                            if (($_SESSION['user_type'] == 'ADM')) {
-                                echo '  <td>';
-                                echo '    <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/course/Module.php?course_id='.urlencode($row['course_id']).'" class="btn btn-primary btn-sm btn-icon-split"><span class="text">Modules</span></a> ';
-                                echo '    <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/batch/BatchDetails.php?course_id='.urlencode($row['course_id']).'" class="btn btn-sm btn-primary btn-icon-split"><span class="text">Batch</span></a> ';
-                                echo '    <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/course/AddCourse.php?edits='.urlencode($row['course_id']).'" class="btn btn-sm btn-warning"><i class="far fa-edit"></i></a> ';
-                                echo '    <button class="btn btn-sm btn-danger" data-href="?delete_id='.htmlspecialchars($row['course_id']).'" data-toggle="modal" data-target="#confirm-delete"><i class="fas fa-trash"></i></button>';
-                                echo '  </td>';
-                            }
-                            echo '</tr>';
-                            $count++;
-                        }
-                    } else {
-                        echo "0 results";
-                    }
-                    ?>
-                </tbody>
-            </table>
-            <?php if(($_SESSION['user_type'] =='ADM') || ($_SESSION['user_type'] =='HOD')) { ?><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php" style="text-align:center;font-weight: 900;font-size:15px;" class="text-primary page-link"><i class="fas fa-plus">&nbsp;&nbsp;ADD COURSE</a></i><?php }?>
-       
+    <div class="container-fluid">
+      <?php echo $flash; ?>
+      <div class="card shadow-sm mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center bg-white">
+          <div>
+            <h5 class="mb-0">Course Details</h5>
+            <small class="text-muted">Browse and manage courses</small>
+          </div>
+          <div class="d-flex align-items-center">
+            <?php if ($isADM || $isHOD) { ?>
+              <a href="<?php echo (defined('APP_BASE')?APP_BASE:''); ?>/course/AddCourse.php" class="btn btn-primary btn-sm"><i class="fas fa-plus mr-1"></i>Add Course</a>
+            <?php } ?>
+          </div>
         </div>
-    </div>
-</div>
+        <div class="card-body">
+          <form class="form-row mb-3" method="get">
+            <div class="form-group col-md-4 mb-2">
+              <label class="small text-muted">Department</label>
+              <select class="custom-select" name="department_id" <?php echo ($isHOD && $deptCode!=='')?'disabled':''; ?>>
+                <option value="">All</option>
+                <?php
+                  $depRs = mysqli_query($con, 'SELECT department_id, department_name FROM department ORDER BY department_name');
+                  if ($depRs) {
+                    while ($d = mysqli_fetch_assoc($depRs)) {
+                      $sel = ($filterDept !== '' && $filterDept === $d['department_id']) ? 'selected' : '';
+                      echo '<option value="'.htmlspecialchars($d['department_id']).'" '.$sel.'>'.htmlspecialchars($d['department_name']).'</option>';
+                    }
+                    mysqli_free_result($depRs);
+                  }
+                ?>
+              </select>
+              <?php if ($isHOD && $deptCode!=='') { echo '<input type="hidden" name="department_id" value="'.htmlspecialchars($deptCode).'">'; } ?>
+            </div>
+            <div class="form-group col-md-4 mb-2">
+              <label class="small text-muted">Search</label>
+              <input type="text" class="form-control" name="q" placeholder="Course ID or Name" value="<?php echo htmlspecialchars($q); ?>">
+            </div>
+            <div class="form-group col-md-4 d-flex align-items-end mb-2">
+              <button class="btn btn-outline-primary mr-2" type="submit">Apply</button>
+              <a class="btn btn-outline-secondary" href="<?php echo (defined('APP_BASE')?APP_BASE:''); ?>/course/Course.php<?php echo $isHOD && $deptCode!=='' ? ('?department_id='.urlencode($deptCode)) : ''; ?>">Reset</a>
+            </div>
+          </form>
 
-<!-- end your code -->
+          <div class="table-responsive">
+            <table class="table table-hover table-striped mb-0">
+              <thead class="thead-dark">
+                <tr>
+                  <th style="width:60px">#</th>
+                  <th style="width:120px">ID</th>
+                  <th>Course</th>
+                  <th>Department</th>
+                  <th style="width:120px">NVQ Level</th>
+                  <?php if ($isADM || $isHOD) { ?><th style="width:210px">Actions</th><?php } ?>
+                </tr>
+              </thead>
+              <tbody>
+                <?php
+                  // Build query with filters
+                  $where = [];
+                  if ($filterDept !== '') { $where[] = "c.department_id='".mysqli_real_escape_string($con,$filterDept)."'"; }
+                  if ($q !== '') {
+                    $qEsc = mysqli_real_escape_string($con, $q);
+                    $where[] = "(c.course_id LIKE '%$qEsc%' OR c.course_name LIKE '%$qEsc%')";
+                  }
+                  $sql = "SELECT c.course_id, c.course_name, c.course_nvq_level, d.department_name
+                          FROM course c
+                          INNER JOIN department d ON d.department_id=c.department_id
+                          ".(!empty($where)?('WHERE '.implode(' AND ',$where)):'')."
+                          ORDER BY d.department_name, c.course_name";
+                  $result = mysqli_query($con, $sql);
+                  $i = 1;
+                  if ($result && mysqli_num_rows($result) > 0) {
+                    while ($row = mysqli_fetch_assoc($result)) {
+                      echo '<tr>';
+                      echo '<td>'.($i++).'</td>';
+                      echo '<td>'.htmlspecialchars($row['course_id']).'</td>';
+                      echo '<td>'.htmlspecialchars($row['course_name']).'</td>';
+                      echo '<td>'.htmlspecialchars($row['department_name']).'</td>';
+                      echo '<td>'.htmlspecialchars($row['course_nvq_level']).'</td>';
+                      if ($isADM || $isHOD) {
+                        $base = (defined('APP_BASE')?APP_BASE:'');
+                        $cid = htmlspecialchars($row['course_id']);
+                        echo '<td>'
+                          .'<div class="btn-group btn-group-sm" role="group">'
+                          .'<a class="btn btn-light border" href="'.$base.'/course/Module.php?course_id='.urlencode($row['course_id']).'" title="Modules"><i class="fas fa-th-list"></i></a>'
+                          .'<a class="btn btn-light border" href="'.$base.'/batch/BatchDetails.php?course_id='.urlencode($row['course_id']).'" title="Batches"><i class="fas fa-layer-group"></i></a>'
+                          .'<a class="btn btn-warning" href="'.$base.'/course/AddCourse.php?edits='.urlencode($row['course_id']).'" title="Edit"><i class="far fa-edit"></i></a>'
+                          .'<button type="button" class="btn btn-danger" data-toggle="modal" data-target="#confirm-delete" data-href="?'.http_build_query(array_merge($_GET,['delete_id'=>$row['course_id']])).'" title="Delete"><i class="fas fa-trash"></i></button>'
+                          .'</div>'
+                          .'</td>';
+                      }
+                      echo '</tr>';
+                    }
+                    mysqli_free_result($result);
+                  } else {
+                    echo '<tr><td colspan="'.($isADM?6:5).'" class="text-center text-muted">No courses found</td></tr>';
+                  }
+                ?>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div class="modal fade" id="confirm-delete" tabindex="-1" role="dialog" aria-labelledby="confirmDeleteLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h6 class="modal-title" id="confirmDeleteLabel">Confirm delete</h6>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          </div>
+          <div class="modal-body">This action cannot be undone. Do you really want to delete this course?</div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+            <a href="#" class="btn btn-danger btn-ok">Delete</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script>
+      $('#confirm-delete').on('show.bs.modal', function(e){
+        var href = $(e.relatedTarget).data('href') || '#';
+        $(this).find('.btn-ok').attr('href', href);
+      });
+    </script>
+
+    <!-- end your code -->
 
 
 <!--Block#3 start dont change the order-->

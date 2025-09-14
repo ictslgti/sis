@@ -25,8 +25,18 @@ if ($action === 'add') {
     if (!mysqli_stmt_execute($st)) { $ok = false; break; }
   }
   mysqli_stmt_close($st);
-  if ($ok) { mysqli_commit($con); header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&ok=1'); }
-  else { mysqli_rollback($con); header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=dbexec'); }
+  if ($ok) { 
+    mysqli_commit($con); 
+    $redirect = isset($_POST['redirect']) ? trim($_POST['redirect']) : '';
+    if ($redirect === 'group_timetable') {
+      header('Location: '.$base.'/timetable/GroupTimetable.php?group_id='.$group_id);
+    } else {
+      header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&ok=1');
+    }
+  } else { 
+    mysqli_rollback($con); 
+    header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=dbexec'); 
+  }
   exit;
 } elseif ($action === 'remove') {
   // Soft remove: set status left
@@ -55,8 +65,18 @@ if ($action === 'add') {
     if (!mysqli_stmt_execute($st)) { $ok = false; break; }
   }
   mysqli_stmt_close($st);
-  if ($ok) { mysqli_commit($con); header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&ok=1'); }
-  else { mysqli_rollback($con); header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=dbexec'); }
+  if ($ok) { 
+    mysqli_commit($con); 
+    $redirect = isset($_POST['redirect']) ? trim($_POST['redirect']) : '';
+    if ($redirect === 'group_timetable') {
+      header('Location: '.$base.'/timetable/GroupTimetable.php?group_id='.$group_id);
+    } else {
+      header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&ok=1');
+    }
+  } else { 
+    mysqli_rollback($con); 
+    header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=dbexec'); 
+  }
   exit;
 } else {
   header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=invalid_action');

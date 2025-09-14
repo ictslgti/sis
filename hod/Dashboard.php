@@ -14,6 +14,25 @@ $hodId = $_SESSION['user_name'] ?? '';
 $deptId = isset($_SESSION['department_code']) ? trim((string)$_SESSION['department_code']) : '';
 $deptName = '';
 
+// Lightweight AJAX: fetch staff details
+if (isset($_GET['ajax']) && $_GET['ajax'] === 'staff') {
+  header('Content-Type: application/json');
+  $sid = isset($_GET['staff_id']) ? trim((string)$_GET['staff_id']) : '';
+  if ($sid === '') {
+    echo json_encode(['ok' => false, 'error' => 'missing_id']);
+    exit;
+  }
+  $whereDept = ($deptId !== '') ? " AND department_id='" . mysqli_real_escape_string($con, $deptId) . "'" : '';
+  $sql = "SELECT staff_id, staff_name, COALESCE(staff_address,'') AS staff_address, COALESCE(staff_dob,'') AS staff_dob, COALESCE(staff_date_of_join,'') AS staff_date_of_join, COALESCE(staff_email,'') AS staff_email, COALESCE(staff_pno,'') AS staff_pno, COALESCE(staff_nic,'') AS staff_nic, COALESCE(staff_gender,'') AS staff_gender, COALESCE(staff_epf,'') AS staff_epf, COALESCE(staff_position,'') AS staff_position, COALESCE(staff_type,'') AS staff_type, COALESCE(staff_status,'') AS staff_status FROM staff WHERE staff_id='" . mysqli_real_escape_string($con, $sid) . "'" . $whereDept . " LIMIT 1";
+  $rs = mysqli_query($con, $sql);
+  if ($rs && ($row = mysqli_fetch_assoc($rs))) {
+    echo json_encode(['ok' => true, 'data' => $row]);
+  } else {
+    echo json_encode(['ok' => false, 'error' => 'not_found']);
+  }
+  exit;
+}
+
 // Resolve department name
 if ($deptId !== '') {
   $q = sprintf("SELECT department_name FROM department WHERE department_id='%s' LIMIT 1", mysqli_real_escape_string($con, $deptId));
@@ -53,12 +72,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['op_action'], $_POST['
       mysqli_free_result($r0);
     }
     $targetDept = ($deptId !== '') ? $deptId : $reqDept;
-    if ($targetDept !== '') {
-      $sql = "UPDATE onpeak_request SET onpeak_request_status='" . mysqli_real_escape_string($con, $newStatus) . "' WHERE id=" . $id . " AND department_id='" . mysqli_real_escape_string($con, $targetDept) . "' AND TRIM(LOWER(onpeak_request_status)) LIKE 'pending%'";
-      if (mysqli_query($con, $sql) && mysqli_affected_rows($con) > 0) {
-        $_op_msg = '<div class="alert alert-success alert-dismissible fade show m-2" role="alert">Action completed.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+    if ($targetDept !== '' || $id > 0) { // allow update by id even if department_id is NULL
+      // Consider anything that is not already approved/rejected as actionable
+      $sql = "UPDATE onpeak_request 
+              SET onpeak_request_status='" . mysqli_real_escape_string($con, $newStatus) . "' 
+              WHERE id=" . $id . " 
+                AND COALESCE(TRIM(LOWER(onpeak_request_status)),'') NOT LIKE 'approv%'
+                AND COALESCE(TRIM(LOWER(onpeak_request_status)),'') NOT LIKE 'not%'";
+      $ok = mysqli_query($con, $sql);
+      if ($ok) {
+        if (mysqli_affected_rows($con) > 0) {
+          $_op_msg = '<div class="alert alert-success alert-dismissible fade show m-2" role="alert">Action completed.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        } else {
+          // If status already equals desired value, treat as success (idempotent)
+          $chk = mysqli_query($con, 'SELECT onpeak_request_status FROM onpeak_request WHERE id=' . (int)$id . ' LIMIT 1');
+          $cur = ($chk && ($rr = mysqli_fetch_assoc($chk))) ? trim((string)$rr['onpeak_request_status']) : '';
+          if ($chk) mysqli_free_result($chk);
+          if (strcasecmp($cur, $newStatus) === 0) {
+            $_op_msg = '<div class="alert alert-success alert-dismissible fade show m-2" role="alert">Already ' + htmlspecialchars($newStatus) + '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          } else {
+            $_op_msg = '<div class="alert alert-warning alert-dismissible fade show m-2" role="alert">No change made. Current status: ' . htmlspecialchars($cur ?: 'Unknown') . '.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+          }
+        }
       } else {
-        $_op_msg = '<div class="alert alert-warning alert-dismissible fade show m-2" role="alert">No change made. The request may no longer be pending or you lack access.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        $_op_msg = '<div class="alert alert-danger alert-dismissible fade show m-2" role="alert">DB error while updating OnPeak: ' . htmlspecialchars(mysqli_error($con)) . '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
       }
     } else {
       $_op_msg = '<div class="alert alert-danger alert-dismissible fade show m-2" role="alert">Cannot determine department for this request.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
@@ -241,6 +278,21 @@ if ($qpos) {
     </div>
   </div>
 
+  <!-- Course Edit Modal -->
+  <div class="modal fade" id="courseEditModal" tabindex="-1" role="dialog" aria-labelledby="courseEditModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl" role="document">
+      <div class="modal-content">
+        <div class="modal-header py-2">
+          <h6 class="modal-title" id="courseEditModalLabel"><i class="fas fa-graduation-cap mr-1"></i> Edit Course</h6>
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        </div>
+        <div class="modal-body p-0" style="height: 80vh;">
+          <iframe id="courseEditFrame" src="" style="border:0;width:100%;height:100%" title="Course Edit"></iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="row">
     <div class="col-6 col-lg-3 mb-3">
       <div class="card metric-card shadow-sm">
@@ -303,8 +355,7 @@ if ($qpos) {
         <div class="card-header d-flex justify-content-between align-items-center">
           <strong><i class="fas fa-user-tie mr-1"></i> Staff Management</strong>
           <div>
-            <button class="btn btn-sm btn-primary" data-toggle="modal" data-target="#staffFormModal" data-mode="add"><i class="fas fa-plus mr-1"></i>Add Staff</button>
-            <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/staff/StaffManage.php?department_id=<?php echo urlencode($deptId); ?>">Enroll</a>
+            <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/staff/StaffManage.php?department_id=<?php echo urlencode($deptId); ?>">Manage</a>
           </div>
         </div>
         <div class="card-body p-0">
@@ -315,12 +366,29 @@ if ($qpos) {
                   <th>ID</th>
                   <th>Name</th>
                   <th>Position</th>
-                  <th class="text-right">Edit</th>
+
                 </tr>
               </thead>
               <tbody>
                 <?php
-                $staffSql = "SELECT staff_id, staff_name, COALESCE(staff_position,'') AS pos, COALESCE(staff_pno,'') AS pno, COALESCE(staff_email,'') AS email FROM staff WHERE department_id='" . mysqli_real_escape_string($con, $deptId) . "' ORDER BY staff_name LIMIT 10";
+                $staffSql = "SELECT 
+                              staff_id, 
+                              staff_name, 
+                              COALESCE(staff_address,'') AS addr,
+                              COALESCE(staff_dob,'') AS dob,
+                              COALESCE(staff_date_of_join,'') AS doj,
+                              COALESCE(staff_email,'') AS email,
+                              COALESCE(staff_pno,'') AS pno,
+                              COALESCE(staff_nic,'') AS nic,
+                              COALESCE(staff_gender,'') AS gender,
+                              COALESCE(staff_epf,'') AS epf,
+                              COALESCE(staff_position,'') AS pos,
+                              COALESCE(staff_type,'') AS stype,
+                              COALESCE(staff_status,'') AS stat
+                            FROM staff 
+                            WHERE department_id='" . mysqli_real_escape_string($con, $deptId) . "' 
+                            ORDER BY staff_name 
+                            LIMIT 10";
                 if ($rsS = mysqli_query($con, $staffSql)) {
                   if (mysqli_num_rows($rsS) === 0) echo '<tr><td colspan="4" class="text-center text-muted">No staff in department</td></tr>';
                   while ($s = mysqli_fetch_assoc($rsS)) {
@@ -328,15 +396,7 @@ if ($qpos) {
                       . '<td>' . htmlspecialchars($s['staff_id']) . '</td>'
                       . '<td>' . htmlspecialchars($s['staff_name']) . '</td>'
                       . '<td>' . htmlspecialchars($s['pos']) . '</td>'
-                      . '<td class="text-right">'
-                      . '<button type="button" class="btn btn-sm btn-outline-secondary staff-edit" data-toggle="modal" data-target="#staffFormModal"'
-                      . ' data-staff_id="' . htmlspecialchars($s['staff_id']) . '"'
-                      . ' data-staff_name="' . htmlspecialchars($s['staff_name']) . '"'
-                      . ' data-staff_position="' . htmlspecialchars($s['pos']) . '"'
-                      . ' data-staff_pno="' . htmlspecialchars($s['pno']) . '"'
-                      . ' data-staff_email="' . htmlspecialchars($s['email']) . '"'
-                      . '>Edit</button>'
-                      . '</td>'
+
                       . '</tr>';
                   }
                   mysqli_free_result($rsS);
@@ -372,6 +432,7 @@ if ($qpos) {
               $q = "SELECT o.*, s.student_ininame, s.student_fullname FROM onpeak_request o
                   LEFT JOIN student s ON s.student_id = o.student_id
                   WHERE o.department_id='" . mysqli_real_escape_string($con, $deptId) . "'
+                    AND (o.onpeak_request_status IS NULL OR TRIM(LOWER(o.onpeak_request_status)) LIKE 'pending%')
                   ORDER BY o.id DESC LIMIT 8";
               if ($rs = mysqli_query($con, $q)) {
                 if (mysqli_num_rows($rs) === 0) {
@@ -526,14 +587,6 @@ if ($qpos) {
                       . '<div class="btn-group btn-group-sm" role="group">'
                       . '<a class="btn btn-light border btn-icon" href="' . $base . '/module/Module.php?course_id=' . urlencode($cid) . '" title="Modules"><i class="fas fa-th-list"></i></a>'
                       . '<a class="btn btn-light border btn-icon" href="' . $base . '/group/Groups.php?course_id=' . urlencode($cid) . '" title="Groups"><i class="fas fa-users"></i></a>'
-                      . '<a class="btn btn-warning btn-icon" href="' . $editUrl . '" title="Edit Course"><i class="far fa-edit"></i></a>'
-                      . ($isADM
-                        ? '<form action="' . $base . '/course/Course.php" method="get" class="d-inline" onsubmit="return confirm(\'Delete this course? This cannot be undone.\');">'
-                        . '<input type="hidden" name="delete_id" value="' . htmlspecialchars($cid) . '">'
-                        . '<button type="submit" class="btn btn-danger btn-icon" title="Delete Course"><i class="fas fa-trash"></i></button>'
-                        . '</form>'
-                        : '<button class="btn btn-danger btn-icon" title="Delete (Admins only)" disabled><i class="fas fa-trash"></i></button>'
-                      )
                       . '</div>'
                       . '</td>'
                       . '</tr>';
@@ -657,8 +710,12 @@ if ($qpos) {
   (function() {
     if (!window.jQuery) return;
     jQuery('#staffFormModal').on('show.bs.modal', function(e) {
-      var btn = e.relatedTarget || {};
-      var mode = btn.getAttribute ? (btn.getAttribute('data-mode') || 'edit') : 'edit';
+      var btn = e.relatedTarget || null;
+
+      function getAttr(name) {
+        return (btn && typeof btn.getAttribute === 'function') ? btn.getAttribute(name) : null;
+      }
+      var mode = getAttr('data-mode') || 'edit';
       var form = this.querySelector('form');
       var fields = ['staff_id', 'staff_name', 'staff_address', 'staff_dob', 'staff_date_of_join', 'staff_email', 'staff_pno', 'staff_nic', 'staff_gender', 'staff_epf', 'staff_position', 'staff_type', 'staff_status'];
       var delBtn = document.getElementById('staffDeleteBtn');
@@ -677,12 +734,57 @@ if ($qpos) {
         form.staff_action.value = 'edit';
         fields.forEach(function(f) {
           var el = form.querySelector('#' + f);
-          if (el) {
-            var v = btn.getAttribute('data-' + f) || '';
-            if (el.tagName === 'SELECT') el.value = v;
-            else el.value = v;
+          if (!el) return;
+          var v = getAttr('data-' + f);
+          if (v === null || typeof v === 'undefined') {
+            v = getAttr('data-' + f.replace(/_/g, '-'));
           }
+          v = (v == null) ? '' : v;
+          if (el.tagName === 'SELECT') el.value = v;
+          else el.value = v;
         });
+        // If key fields are empty, fetch via AJAX as fallback
+        var needAjax = !form.staff_id.value || !form.staff_name.value || !form.staff_position.value || !form.staff_email.value;
+        if (needAjax) {
+          var sid = getAttr('data-staff_id') || getAttr('data-staff-id') || form.staff_id.value || '';
+          if (sid) {
+            // Always call the same page (Dashboard.php) to avoid base path issues
+            var url = window.location.pathname + '?ajax=staff&staff_id=' + encodeURIComponent(sid);
+            fetch(url)
+              .then(function(r) {
+                return r.json();
+              })
+              .then(function(json) {
+                if (!json || json.ok !== true || !json.data) return;
+                var d = json.data;
+
+                function setVal(id, val) {
+                  var el = form.querySelector('#' + id);
+                  if (!el) return;
+                  if (el.tagName === 'SELECT') {
+                    el.value = val || '';
+                  } else {
+                    el.value = val || '';
+                  }
+                }
+                setVal('staff_id', d.staff_id);
+                setVal('staff_name', d.staff_name);
+                setVal('staff_address', d.staff_address);
+                setVal('staff_dob', d.staff_dob);
+                setVal('staff_date_of_join', d.staff_date_of_join);
+                setVal('staff_email', d.staff_email);
+                setVal('staff_pno', d.staff_pno);
+                setVal('staff_nic', d.staff_nic);
+                setVal('staff_gender', d.staff_gender);
+                setVal('staff_epf', d.staff_epf);
+                setVal('staff_position', d.staff_position);
+                setVal('staff_type', d.staff_type);
+                setVal('staff_status', d.staff_status);
+              })
+              .catch(function() {
+                /* silent */ });
+          }
+        }
         form.querySelector('#staff_id').readOnly = true; // ID cannot be changed on edit
         if (delBtn) {
           delBtn.classList.remove('d-none');
@@ -693,6 +795,21 @@ if ($qpos) {
             }
           };
         }
+      }
+    });
+    // Wire up Course Edit modal (loads AddCourse.php into iframe)
+    jQuery('#courseEditModal').on('show.bs.modal', function(e) {
+      var btn = e.relatedTarget || {};
+      var url = btn.getAttribute ? (btn.getAttribute('data-url') || '') : '';
+      var fr = document.getElementById('courseEditFrame');
+      if (fr && url) {
+        fr.src = url;
+      }
+    });
+    jQuery('#courseEditModal').on('hidden.bs.modal', function() {
+      var fr = document.getElementById('courseEditFrame');
+      if (fr) {
+        fr.src = '';
       }
     });
   })();

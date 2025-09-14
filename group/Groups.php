@@ -9,6 +9,15 @@ $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
 $_isADM = ($role === 'ADM');
 
+// Check for redirect parameter from timetable
+$redirect = isset($_GET['redirect']) ? trim($_GET['redirect']) : '';
+
+// Check for flash messages
+if (isset($_SESSION['info'])) {
+    echo '<div class="container mt-3"><div class="alert alert-info">' . htmlspecialchars($_SESSION['info']) . '</div></div>';
+    unset($_SESSION['info']);
+}
+
 $canManage = in_array($role, ['HOD']);
 $canAccess = $canManage || in_array($role, ['IN1','IN2','LE1','LE2','ADM']);
 if (!$canAccess) { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
@@ -47,6 +56,12 @@ if ($canManage) {
 }
 ?>
 <div class="container mt-4<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>">
+  <?php if (!empty($redirect) && $redirect === 'group_timetable'): ?>
+    <div class="alert alert-info">
+      <i class="fas fa-info-circle"></i> Please select a group to view its timetable.
+    </div>
+  <?php endif; ?>
+  
   <div class="d-flex justify-content-between align-items-center mb-3">
     <h3>Groups</h3>
     <?php if ($canManage): ?>
@@ -77,11 +92,22 @@ if ($canManage) {
               <td><?php echo h($g['academic_year']); ?></td>
               <td><?php echo h($g['status']); ?></td>
               <td>
-                <?php if ($canManage): ?>
-                  <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/group/AddGroup.php?id=<?php echo (int)$g['id']; ?>">Edit</a>
-                  <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/group/GroupStudents.php?group_id=<?php echo (int)$g['id']; ?>">Students</a>
-                  <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/group/GroupStaff.php?group_id=<?php echo (int)$g['id']; ?>">Staff</a>
-                <?php endif; ?>
+                <div class="btn-group">
+                  <?php $studentsUrl = $base . '/group/GroupStudents.php?group_id=' . $g['id'] . (!empty($redirect) ? '&redirect=' . urlencode($redirect) : ''); ?>
+                  <a class="btn btn-sm btn-outline-primary" href="<?php echo $studentsUrl; ?>">
+                    <i class="fas fa-users"></i> Students
+                  </a>
+                  <?php if ($canManage): ?>
+                  <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/group/EditGroup.php?id=<?php echo $g['id']; ?>">
+                    <i class="fas fa-edit"></i> Edit
+                  </a>
+                  <?php endif; ?>
+                  <?php if (!empty($redirect) && $redirect === 'group_timetable'): ?>
+                  <a class="btn btn-sm btn-success" href="<?php echo $base; ?>/timetable/GroupTimetable.php?group_id=<?php echo $g['id']; ?>">
+                    <i class="fas fa-calendar-alt"></i> View Timetable
+                  </a>
+                  <?php endif; ?>
+                </div>
                 <a class="btn btn-sm btn-info" href="<?php echo $base; ?>/group/GroupSessions.php?group_id=<?php echo (int)$g['id']; ?>">Sessions</a>
               </td>
             </tr>
