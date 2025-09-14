@@ -92,17 +92,18 @@ try {
   $create = "CREATE TABLE IF NOT EXISTS `nwd_overrides` (
               `date` date NOT NULL,
               `department_id` varchar(32) NOT NULL,
-              `course_id` varchar(32) DEFAULT NULL,
+              `course_id` varchar(32) NOT NULL DEFAULT '',
               `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
               PRIMARY KEY (`date`,`department_id`,`course_id`)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
   mysqli_query($con, $create);
 
   $deptEsc = mysqli_real_escape_string($con, $dept);
-  $courseEsc = ($course==='') ? 'NULL' : "'".mysqli_real_escape_string($con,$course)."'";
+  // course_id participates in PRIMARY KEY, so avoid NULL; use empty string when not specified
+  $courseEsc = ($course==='') ? "''" : "'".mysqli_real_escape_string($con,$course)."'";
   $upsert = "INSERT INTO `nwd_overrides` (`date`,`department_id`,`course_id`) VALUES ('$dt','$deptEsc', $courseEsc)
              ON DUPLICATE KEY UPDATE `created_at`=VALUES(`created_at`)";
-  if (!mysqli_query($con, $upsert)) { throw new Exception('insert_nwd'); }
+  if (!mysqli_query($con, $upsert)) { throw new Exception('insert_nwd: '.mysqli_error($con)); }
 
   mysqli_commit($con);
   redirect_back(['ok'=>'1','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);

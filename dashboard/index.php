@@ -239,6 +239,12 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     font-size: 11px; 
     padding: 0 6px; 
   }
+  /* Ensure department titles in accordion headers are left-aligned and can wrap */
+  .accordion .card-header .btn-link { text-align: left; white-space: normal; }
+  @media (max-width: 575.98px) {
+    .accordion .card-header h6 { justify-content: space-between; }
+    .accordion .card-header .btn-link { text-align: left; }
+  }
   /* Footer-specific tweaks: remove divider inside card-footer */
   .card-footer .chip-list { border-top: 0; padding-top: 0; }
   .card-footer .chip-list-label { margin-bottom: .25rem; }
@@ -251,8 +257,8 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   <div class="col-12">
     <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
       <div class="mb-2 mb-md-0">
-        <h4 class="mb-0 font-weight-bold text-dark text-center text-md-left">Sri Lanka German Training Institute - MIS</h4>
-        <div class="text-muted small text-center text-md-left">Dashboard Overview</div>
+        <h4 class="mb-0 font-weight-bold text-dark text-left text-md-left">Sri Lanka German Training Institute - MIS</h4>
+        <div class="text-muted small text-left text-md-left">Dashboard Overview</div>
       </div>
     </div>
     <hr class="mt-1 mb-2">
@@ -393,7 +399,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 <div class="row mt-1 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
+      <div class="card-header bg-white d-flex justify-content-between py-2">
         <div class="font-weight-semibold"><i class="fas fa-sitemap mr-1 text-primary"></i> Department-wise Course Counts</div>
         <?php if (!empty($selectedYear)) : ?>
           <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
@@ -415,7 +421,6 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
                       <?php $g = $genderByDept[$deptName] ?? ['male'=>0,'female'=>0]; ?>
                       <span class="badge badge-primary mr-1" title="Male"><i class="fas fa-male"></i> <?php echo number_format($g['male']); ?></span>
                       <span class="badge" style="background:#e83e8c;color:#fff" title="Female"><i class="fas fa-female"></i> <?php echo number_format($g['female']); ?></span>
-                      <span class="badge badge-info ml-1">Total: <?php echo number_format($deptTotals[$deptName]); ?></span>
                     </span>
                   </h6>
                 </div>
