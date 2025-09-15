@@ -9,6 +9,23 @@ $group_id = isset($_POST['group_id']) ? (int)$_POST['group_id'] : 0;
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 if ($group_id<=0) { header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=invalid'); exit; }
 
+// Verify HOD belongs to the same department as the group's course
+$deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+if ($deptId <= 0) { http_response_code(403); echo 'Forbidden'; exit; }
+$chk = mysqli_prepare($con, 'SELECT c.department_id FROM `groups` g LEFT JOIN course c ON c.course_id = g.course_id WHERE g.id = ?');
+if ($chk) {
+  mysqli_stmt_bind_param($chk, 'i', $group_id);
+  mysqli_stmt_execute($chk);
+  $res = mysqli_stmt_get_result($chk);
+  $row = $res ? mysqli_fetch_assoc($res) : null;
+  mysqli_stmt_close($chk);
+  if (!$row || (int)($row['department_id'] ?? 0) !== $deptId) {
+    http_response_code(403); echo 'Forbidden'; exit;
+  }
+} else {
+  http_response_code(500); echo 'Database error'; exit;
+}
+
 if ($action === 'add') {
   // Bulk add: accept student_ids[] array
   $ids = isset($_POST['student_ids']) && is_array($_POST['student_ids']) ? $_POST['student_ids'] : [];

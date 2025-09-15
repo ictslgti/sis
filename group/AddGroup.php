@@ -34,17 +34,26 @@ if ($id > 0) {
         <select name="course_id" class="form-control" required>
           <option value="">Select</option>
           <?php
-            $deptCode = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : '';
-            $isHOD = ($role === 'HOD' && $deptCode !== '');
-            $sql = "SELECT course_id, course_name FROM course";
+            $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+            $isHOD = ($role === 'HOD' && $deptId > 0);
             if ($isHOD) {
-              $sql .= " WHERE department_id='".mysqli_real_escape_string($con, $deptCode)."'";
-            }
-            $sql .= " ORDER BY course_name";
-            $q = mysqli_query($con, $sql);
-            while ($q && ($r = mysqli_fetch_assoc($q))) {
-              $sel = ($course_id === $r['course_id']) ? ' selected' : '';
-              echo '<option value="'.htmlspecialchars($r['course_id']).'"'.$sel.'>'.htmlspecialchars($r['course_name']).' ('.htmlspecialchars($r['course_id']).')'.'</option>';
+              $stc = mysqli_prepare($con, 'SELECT course_id, course_name FROM course WHERE department_id = ? ORDER BY course_name');
+              if ($stc) {
+                mysqli_stmt_bind_param($stc, 'i', $deptId);
+                mysqli_stmt_execute($stc);
+                $rc = mysqli_stmt_get_result($stc);
+                while ($rc && ($r = mysqli_fetch_assoc($rc))) {
+                  $sel = ($course_id === $r['course_id']) ? ' selected' : '';
+                  echo '<option value="'.htmlspecialchars($r['course_id']).'"'.$sel.'>'.htmlspecialchars($r['course_name']).' ('.htmlspecialchars($r['course_id']).')'.'</option>';
+                }
+                mysqli_stmt_close($stc);
+              }
+            } else {
+              $q = mysqli_query($con, 'SELECT course_id, course_name FROM course ORDER BY course_name');
+              while ($q && ($r = mysqli_fetch_assoc($q))) {
+                $sel = ($course_id === $r['course_id']) ? ' selected' : '';
+                echo '<option value="'.htmlspecialchars($r['course_id']).'"'.$sel.'>'.htmlspecialchars($r['course_name']).' ('.htmlspecialchars($r['course_id']).')'.'</option>';
+              }
             }
           ?>
         </select>

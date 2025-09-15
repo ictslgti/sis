@@ -43,18 +43,18 @@ class GroupTimetableController {
     }
 
     private function hasPermission() {
-        // Allow admin or HOD of the department
-        return $this->user_role === 'ADMIN' || $this->user_role === 'HOD';
+        // Allow admin (ADM/ADMIN) or HOD of the department
+        return in_array($this->user_role, ['ADMIN', 'ADM', 'HOD'], true);
     }
 
     private function validateGroupAccess($group_id) {
-        if ($this->user_role === 'ADMIN') return true;
+        if ($this->user_role === 'ADMIN' || $this->user_role === 'ADM') return true;
         
-        // For HOD, verify the group's course belongs to their department
+        // For HOD, verify the group's course belongs to their department (note: table is `groups`, PK `id`)
         $stmt = $this->con->prepare("
-            SELECT 1 FROM `group` g 
+            SELECT 1 FROM `groups` g 
             JOIN course c ON g.course_id = c.course_id 
-            WHERE g.group_id = ? AND c.department_id = ?
+            WHERE g.id = ? AND c.department_id = ?
         ");
         $stmt->bind_param('ii', $group_id, $this->department_id);
         $stmt->execute();
@@ -64,8 +64,8 @@ class GroupTimetableController {
 
     private function saveTimetable() {
         $group_id = intval($_POST['group_id'] ?? 0);
-        $module_id = intval($_POST['module_id'] ?? 0);
-        $staff_id = intval($_POST['staff_id'] ?? 0);
+        $module_id = trim($_POST['module_id'] ?? '');
+        $staff_id = trim($_POST['staff_id'] ?? '');
         $weekday = intval($_POST['weekday'] ?? 0);
         $period = trim($_POST['period'] ?? '');
         $classroom = trim($_POST['classroom'] ?? '');
@@ -75,7 +75,7 @@ class GroupTimetableController {
 
         // Validate inputs
         if (!$this->validateGroupAccess($group_id) || 
-            $module_id <= 0 || $staff_id <= 0 || 
+            $module_id === '' || $staff_id === '' || 
             $weekday < 1 || $weekday > 7 || 
             !in_array($period, ['P1', 'P2', 'P3', 'P4']) || 
             empty($classroom) || empty($start_date) || empty($end_date)) {
@@ -85,11 +85,11 @@ class GroupTimetableController {
 
         // Check if module belongs to group's course
         $stmt = $this->con->prepare("
-            SELECT 1 FROM `group` g 
+            SELECT 1 FROM `groups` g 
             JOIN module m ON g.course_id = m.course_id 
-            WHERE g.group_id = ? AND m.module_id = ?
+            WHERE g.id = ? AND m.module_id = ?
         ");
-        $stmt->bind_param('ii', $group_id, $module_id);
+        $stmt->bind_param('is', $group_id, $module_id);
         $stmt->execute();
         if ($stmt->get_result()->num_rows === 0) {
             echo json_encode(['success' => false, 'message' => 'Invalid module for group']);
@@ -114,7 +114,7 @@ class GroupTimetableController {
                     updated_at = NOW()
                 WHERE timetable_id = ? AND group_id = ?
             ");
-            $stmt->bind_param('iiissssii', 
+            $stmt->bind_param('ssissssii', 
                 $module_id, $staff_id, $weekday, 
                 $period, $classroom, 
                 $start_date, $end_date,
@@ -127,7 +127,7 @@ class GroupTimetableController {
                 (group_id, module_id, staff_id, weekday, period, classroom, start_date, end_date, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ");
-            $stmt->bind_param('iiiissss', 
+            $stmt->bind_param('ississss', 
                 $group_id, $module_id, $staff_id, 
                 $weekday, $period, $classroom, 
                 $start_date, $end_date
@@ -172,7 +172,8 @@ class GroupTimetableController {
             $params[] = $exclude_id;
         }
         
-        $types = str_repeat('i', count($params));
+        $types = 'iissssss';
+        if ($exclude_id > 0) { $types .= 'i'; }
         $stmt = $this->con->prepare($sql);
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
@@ -299,10 +300,11 @@ class GroupTimetableController {
 }
 
 // Initialize and run controller
-if (isset($_SESSION['user_id'])) {
+$uid = $_SESSION['user_id'] ?? ($_SESSION['user_name'] ?? null);
+if ($uid !== null && isset($_SESSION['user_type'])) {
     $controller = new GroupTimetableController(
         $con, 
-        $_SESSION['user_id'],
+        $uid,
         $_SESSION['user_type'] ?? '',
         $_SESSION['department_id'] ?? 0
     );

@@ -24,30 +24,19 @@ if (!$canAccess) { echo '<div class="container mt-4"><div class="alert alert-dan
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
-// Fetch groups: HOD sees all; others see assigned groups
+// Fetch groups: HOD sees only groups under own department; others see assigned groups
 $groups = [];
 if ($canManage) {
   // HOD: only groups whose course belongs to HOD's department
-  $dep = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : '';
-  $sql = "SELECT g.*, c.course_name FROM `groups` g LEFT JOIN course c ON c.course_id=g.course_id WHERE (? = '' OR c.department_code = ?) ORDER BY g.created_at DESC";
+  $dep = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  $sql = "SELECT g.*, c.course_name FROM `groups` g LEFT JOIN course c ON c.course_id=g.course_id WHERE c.department_id = ? ORDER BY g.created_at DESC";
   $st = mysqli_prepare($con, $sql);
   if ($st) {
-    mysqli_stmt_bind_param($st, 'ss', $dep, $dep);
+    mysqli_stmt_bind_param($st, 'i', $dep);
     mysqli_stmt_execute($st);
     $rs = mysqli_stmt_get_result($st);
     while ($rs && ($r = mysqli_fetch_assoc($rs))) { $groups[] = $r; }
     mysqli_stmt_close($st);
-    // Fallback: if no groups found under department filter, try unfiltered to ensure visibility
-    if (empty($groups) && $dep !== '') {
-      $sql2 = "SELECT g.*, c.course_name FROM `groups` g LEFT JOIN course c ON c.course_id=g.course_id ORDER BY g.created_at DESC";
-      $q2 = mysqli_query($con, $sql2);
-      while ($q2 && ($r2 = mysqli_fetch_assoc($q2))) { $groups[] = $r2; }
-    }
-  } else {
-    // Prepare failed: show unfiltered as a safe fallback
-    $sql2 = "SELECT g.*, c.course_name FROM `groups` g LEFT JOIN course c ON c.course_id=g.course_id ORDER BY g.created_at DESC";
-    $q2 = mysqli_query($con, $sql2);
-    while ($q2 && ($r2 = mysqli_fetch_assoc($q2))) { $groups[] = $r2; }
   }
 } else {
   $uid = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';

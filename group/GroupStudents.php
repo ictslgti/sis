@@ -15,12 +15,44 @@ if ($role !== 'HOD') {
 }
 
 $group_id = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
-if ($group_id<=0) { echo '<div class="container mt-4"><div class="alert alert-warning">Invalid group</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
+if ($group_id<=0) {
+  if (!empty($redirect) && $redirect === 'group_timetable') {
+    $_SESSION['info'] = 'Please select a group to view its timetable';
+    header('Location: '.($base ?: '').'/group/Groups.php?redirect=group_timetable');
+    exit;
+  }
+  echo '<div class="container mt-4"><div class="alert alert-warning">Invalid group</div><a class="btn btn-secondary mt-2" href="'.($base ?: '').'/group/Groups.php">Back to Groups</a></div>';
+  require_once __DIR__.'/../footer.php';
+  exit; 
+}
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // Group info
-$grp = null; $stg = mysqli_prepare($con,'SELECT * FROM `groups` WHERE id=?'); if($stg){ mysqli_stmt_bind_param($stg,'i',$group_id); mysqli_stmt_execute($stg); $rg=mysqli_stmt_get_result($stg); $grp=$rg?mysqli_fetch_assoc($rg):null; mysqli_stmt_close($stg);} if(!$grp){ echo '<div class="container mt-4"><div class="alert alert-warning">Group not found</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
+$grp = null; 
+$stg = mysqli_prepare($con,'SELECT g.*, c.department_id FROM `groups` g LEFT JOIN course c ON c.course_id = g.course_id WHERE g.id=?');
+if($stg){ 
+  mysqli_stmt_bind_param($stg,'i',$group_id); 
+  mysqli_stmt_execute($stg); 
+  $rg=mysqli_stmt_get_result($stg); 
+  $grp=$rg?mysqli_fetch_assoc($rg):null; 
+  mysqli_stmt_close($stg);
+}
+if(!$grp){ 
+  echo '<div class="container mt-4"><div class="alert alert-warning">Group not found</div></div>'; 
+  require_once __DIR__.'/../footer.php'; 
+  exit; 
+}
+
+// Enforce department ownership for HOD
+if ($role === 'HOD') {
+  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  if (!$deptId || (int)($grp['department_id'] ?? 0) !== $deptId) {
+    echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>';
+    require_once __DIR__.'/../footer.php';
+    exit;
+  }
+}
 
 // Current students
 $cur = [];
@@ -99,18 +131,17 @@ if (empty($candidates)) {
     <div class="card-header d-flex justify-content-between align-items-center">
       <span>Current Students</span>
       <?php if (!empty($cur)): ?>
-      <form method="POST" action="<?php echo $base; ?>/controller/GroupStudentsUpdate.php" class="m-0 p-0">
+      <!-- Bulk remove form lives separately to avoid nesting forms in the table -->
+      <form method="POST" action="<?php echo $base; ?>/controller/GroupStudentsUpdate.php" id="bulkRemoveForm" class="m-0 p-0">
         <input type="hidden" name="group_id" value="<?php echo (int)$group_id; ?>">
-        <button type="submit" name="action" value="bulk_remove" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove selected students from the group?');">Remove Selected</button>
+        <input type="hidden" name="action" value="bulk_remove">
       </form>
+      <button type="submit" form="bulkRemoveForm" class="btn btn-sm btn-outline-danger" onclick="return confirm('Remove selected students from the group?');">Remove Selected</button>
       <?php endif; ?>
     </div>
     <div class="card-body">
       <div class="table-responsive">
-        <form method="POST" action="<?php echo $base; ?>/controller/GroupStudentsUpdate.php" id="bulkRemoveForm">
-          <input type="hidden" name="group_id" value="<?php echo (int)$group_id; ?>">
-          <input type="hidden" name="action" value="bulk_remove">
-          <table class="table table-striped">
+        <table class="table table-striped">
             <thead>
               <tr>
                 <th style="width:40px"><input type="checkbox" id="selectAll"></th>
@@ -121,7 +152,8 @@ if (empty($candidates)) {
             <tbody>
               <?php foreach ($cur as $r): ?>
                 <tr>
-                  <td><input type="checkbox" name="student_ids[]" value="<?php echo h($r['student_id']); ?>"></td>
+                  <!-- Associate checkboxes with the standalone bulkRemoveForm using the form attribute -->
+                  <td><input type="checkbox" name="student_ids[]" value="<?php echo h($r['student_id']); ?>" form="bulkRemoveForm"></td>
                   <td><?php echo h($r['student_fullname']).' ('.h($r['student_id']).')'; ?></td>
                   <td>
                     <form method="POST" action="<?php echo $base; ?>/controller/GroupStudentsUpdate.php" onsubmit="return confirm('Remove this student from the group?');" class="d-inline">
@@ -136,8 +168,7 @@ if (empty($candidates)) {
                 <tr><td colspan="3" class="text-center text-muted">No students in this group yet</td></tr>
               <?php endif; ?>
             </tbody>
-          </table>
-        </form>
+        </table>
         <?php if (!empty($cur)): ?>
         <button type="submit" form="bulkRemoveForm" class="btn btn-outline-danger" onclick="return confirm('Remove selected students from the group?');">Remove Selected</button>
         <?php endif; ?>

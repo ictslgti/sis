@@ -16,8 +16,8 @@ $nav_active = 'timetable';
 $group_id = $_GET['group_id'] ?? 0;
 $academic_year = $_GET['academic_year'] ?? date('Y');
 
-// Check permissions
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADMIN', 'HOD'])) {
+// Check permissions (support 'ADM' role code used elsewhere)
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM', 'HOD', 'ADMIN'])) {
     $_SESSION['error'] = 'You do not have permission to access this page.';
     header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/home/home.php');
     exit();
@@ -57,7 +57,7 @@ if ($stmt) {
 
 if ($result->num_rows === 0) {
     $_SESSION['error'] = "Group not found";
-    header('Location: ../group/GroupStudents.php');
+    header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/group/Groups.php?redirect=group_timetable');
     exit;
 }
 
@@ -66,7 +66,7 @@ $group = $result->fetch_assoc();
 // Verify HOD has access to this group's department
 if ($_SESSION['user_type'] === 'HOD' && $group['department_id'] != $_SESSION['department_id']) {
     $_SESSION['error'] = "You don't have permission to access this group";
-    header('Location: ../group/GroupStudents.php');
+    header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/group/Groups.php?redirect=group_timetable');
     exit;
 }
 
@@ -102,7 +102,7 @@ include('../head.php');
                     <i class="fas fa-calendar-alt mr-2"></i>Group Timetable
                 </h1>
                 <div>
-                    <a href="../group/GroupStudents.php" class="btn btn-outline-secondary">
+                    <a href="../group/Groups.php?redirect=group_timetable" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left mr-1"></i> Back to Groups
                     </a>
                 </div>
@@ -113,7 +113,7 @@ include('../head.php');
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-4">
-                            <h5 class="mb-1"><?= htmlspecialchars($group['group_name']) ?></h5>
+                            <h5 class="mb-1"><?= htmlspecialchars($group['group_name'] ?? $group['name'] ?? 'Group') ?></h5>
                             <p class="text-muted mb-1"><?= htmlspecialchars($group['group_code'] ?? 'N/A') ?></p>
                         </div>
                         <div class="col-md-4">
@@ -157,11 +157,11 @@ include('../head.php');
                         <table class="table table-bordered table-hover mb-0" id="timetableTable">
                             <thead class="thead-light">
                                 <tr>
-                                    <th width="10%">Day/Period</th>
-                                    <th width="22.5%" class="text-center">P1<br>8:30 - 10:00</th>
-                                    <th width="22.5%" class="text-center">P2<br>10:15 - 11:45</th>
-                                    <th width="22.5%" class="text-center">P3<br>12:30 - 14:00</th>
-                                    <th width="22.5%" class="text-center">P4<br>14:15 - 15:45</th>
+                                    <th width="10%">Day/Session</th>
+                                    <th width="22.5%" class="text-center">Session 1<br>08:30 - 10:00</th>
+                                    <th width="22.5%" class="text-center">Session 2<br>10:30 - 12:00</th>
+                                    <th width="22.5%" class="text-center">Session 3<br>13:00 - 14:30</th>
+                                    <th width="22.5%" class="text-center">Session 4<br>14:45 - 16:15</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -258,12 +258,12 @@ include('../head.php');
                         
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label for="period">Period <span class="text-danger">*</span></label>
+                                <label for="period">Session <span class="text-danger">*</span></label>
                                 <select class="form-control" id="period" name="period" required>
-                                    <option value="P1">P1 (8:30 - 10:00)</option>
-                                    <option value="P2">P2 (10:15 - 11:45)</option>
-                                    <option value="P3">P3 (12:30 - 14:00)</option>
-                                    <option value="P4">P4 (14:15 - 15:45)</option>
+                                    <option value="P1">Session 1 (08:30 - 10:00)</option>
+                                    <option value="P2">Session 2 (10:30 - 12:00)</option>
+                                    <option value="P3">Session 3 (13:00 - 14:30)</option>
+                                    <option value="P4">Session 4 (14:45 - 16:15)</option>
                                 </select>
                             </div>
                         </div>

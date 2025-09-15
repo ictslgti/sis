@@ -15,6 +15,25 @@ if ($name === '' || $course_id === '' || $academic_year === '') {
   header('Location: '.$base.'/group/AddGroup.php?err=invalid'.($id?'&id='.$id:'')); exit;
 }
 
+// Ensure HOD can only create/edit groups for courses in their own department
+$deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+if ($deptId <= 0) { http_response_code(403); echo 'Forbidden'; exit; }
+$chk = mysqli_prepare($con, 'SELECT 1 FROM course WHERE course_id = ? AND department_id = ?');
+if ($chk) {
+  mysqli_stmt_bind_param($chk, 'si', $course_id, $deptId);
+  mysqli_stmt_execute($chk);
+  $rs = mysqli_stmt_get_result($chk);
+  $okCourse = ($rs && $rs->num_rows > 0);
+  mysqli_stmt_close($chk);
+  if (!$okCourse) {
+    header('Location: '.$base.'/group/AddGroup.php?err=dept_mismatch'.($id?'&id='.$id:''));
+    exit;
+  }
+} else {
+  header('Location: '.$base.'/group/AddGroup.php?err=dbprep'.($id?'&id='.$id:''));
+  exit;
+}
+
 if ($id > 0) {
   $st = mysqli_prepare($con, 'UPDATE `groups` SET name=?, course_id=?, academic_year=?, status=? WHERE id=?');
   if (!$st) { header('Location: '.$base.'/group/AddGroup.php?err=dbprep&id='.(int)$id); exit; }
