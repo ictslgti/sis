@@ -9,10 +9,10 @@ ini_set('display_errors', 1);
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-// Access control: Admin, Director (DIR), SAO, Instructor Level 3 (IN3), and HOD (view-only)
-require_roles(['ADM', 'DIR', 'SAO', 'IN3', 'HOD']);
+// Access control: Admin, Director (DIR), Accounts (ACC) same as DIR, SAO, IN3, and HOD (view-only)
+require_roles(['ADM', 'DIR', 'ACC', 'SAO', 'IN3', 'HOD']);
 $is_admin = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
-$is_dir   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
+$is_dir   = isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['DIR','ACC'], true);
 $is_sao   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';
 $is_hod   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
 // Mutations allowed for Admin and SAO; DIR and HOD are strictly view-only

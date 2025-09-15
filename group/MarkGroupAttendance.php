@@ -23,6 +23,26 @@ if ($role !== 'HOD') {
   if ($st2) { mysqli_stmt_bind_param($st2,'is',$sess['group_id'],$uid); mysqli_stmt_execute($st2); $rs2=mysqli_stmt_get_result($st2); $ok = ($rs2 && mysqli_fetch_row($rs2)); mysqli_stmt_close($st2); if(!$ok){ echo '<div class="container mt-4"><div class="alert alert-danger">Not assigned to this group</div></div>'; require_once __DIR__.'/../footer.php'; exit; } }
 }
 
+// HODs: verify department ownership for the group's course
+if ($role === 'HOD') {
+  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  if ($deptId > 0) {
+    $chk = mysqli_prepare($con, 'SELECT c.department_id FROM groups g LEFT JOIN course c ON c.course_id=g.course_id WHERE g.id=?');
+    if ($chk) {
+      mysqli_stmt_bind_param($chk, 'i', $sess['group_id']);
+      mysqli_stmt_execute($chk);
+      $rs2 = mysqli_stmt_get_result($chk);
+      $row2 = $rs2 ? mysqli_fetch_assoc($rs2) : null;
+      mysqli_stmt_close($chk);
+      if (!$row2 || (int)($row2['department_id'] ?? 0) !== $deptId) {
+        echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>';
+        require_once __DIR__.'/../footer.php';
+        exit;
+      }
+    }
+  }
+}
+
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // Fetch group students

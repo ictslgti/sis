@@ -11,6 +11,26 @@ if ($role !== 'HOD') { echo '<div class="container mt-4"><div class="alert alert
 $group_id = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
 if ($group_id<=0) { echo '<div class="container mt-4"><div class="alert alert-warning">Invalid group</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
 
+// Enforce department ownership for HODs
+if ($role === 'HOD') {
+  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  if ($deptId > 0) {
+    $chk = mysqli_prepare($con, 'SELECT c.department_id FROM groups g LEFT JOIN course c ON c.course_id=g.course_id WHERE g.id=?');
+    if ($chk) {
+      mysqli_stmt_bind_param($chk, 'i', $group_id);
+      mysqli_stmt_execute($chk);
+      $rs = mysqli_stmt_get_result($chk);
+      $row = $rs ? mysqli_fetch_assoc($rs) : null;
+      mysqli_stmt_close($chk);
+      if (!$row || (int)($row['department_id'] ?? 0) !== $deptId) {
+        echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>';
+        require_once __DIR__.'/../footer.php';
+        exit;
+      }
+    }
+  }
+}
+
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // Group info (fallback to group_students presence)

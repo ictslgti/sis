@@ -13,6 +13,25 @@ $delivery_type = isset($_POST['delivery_type']) ? trim($_POST['delivery_type']) 
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 if ($group_id<=0 || $staff_id==='') { header('Location: '.$base.'/group/GroupStaff.php?group_id='.$group_id.'&err=invalid'); exit; }
 
+// Department ownership enforcement for HODs
+$deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+if ($deptId <= 0) { http_response_code(403); echo 'Forbidden'; exit; }
+$chkDept = mysqli_prepare($con, 'SELECT c.department_id FROM groups g LEFT JOIN course c ON c.course_id=g.course_id WHERE g.id=?');
+if ($chkDept) {
+  mysqli_stmt_bind_param($chkDept, 'i', $group_id);
+  mysqli_stmt_execute($chkDept);
+  $rsDept = mysqli_stmt_get_result($chkDept);
+  $rowDept = $rsDept ? mysqli_fetch_assoc($rsDept) : null;
+  mysqli_stmt_close($chkDept);
+  if (!$rowDept || (int)($rowDept['department_id'] ?? 0) !== $deptId) {
+    header('Location: '.$base.'/group/Groups.php?err=dept');
+    exit;
+  }
+} else {
+  header('Location: '.$base.'/group/GroupStaff.php?group_id='.$group_id.'&err=dbprep');
+  exit;
+}
+
 // Detect module-wise table
 $hasGsm = false;
 $ck = mysqli_query($con, "SHOW TABLES LIKE 'group_staff_module'");

@@ -18,6 +18,12 @@ if ($id === 0 && isset($_GET['course_id'])) {
 if ($id > 0) {
   $st = mysqli_prepare($con, 'SELECT * FROM `groups` WHERE id=?');
   if ($st) { mysqli_stmt_bind_param($st,'i',$id); mysqli_stmt_execute($st); $rs = mysqli_stmt_get_result($st); $row = $rs?mysqli_fetch_assoc($rs):null; mysqli_stmt_close($st); if ($row){ $name=$row['name']; $course_id=$row['course_id']; $academic_year=$row['academic_year']; $status=$row['status']; }}
+  // HODs: ensure the group's course belongs to their department
+  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  if ($role === 'HOD' && $deptId > 0 && $course_id !== '') {
+    $chk = mysqli_prepare($con, 'SELECT 1 FROM course WHERE course_id=? AND department_id=?');
+    if ($chk) { mysqli_stmt_bind_param($chk,'si',$course_id,$deptId); mysqli_stmt_execute($chk); $rs2 = mysqli_stmt_get_result($chk); $ok = ($rs2 && mysqli_num_rows($rs2)>0); mysqli_stmt_close($chk); if(!$ok){ echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>'; require_once __DIR__.'/../footer.php'; exit; } }
+  }
 }
 ?>
 <div class="container mt-4<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>">

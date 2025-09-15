@@ -23,6 +23,26 @@ function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 // Group info
 $grp = null; $stg = mysqli_prepare($con,'SELECT * FROM `groups` WHERE id=?'); if($stg){ mysqli_stmt_bind_param($stg,'i',$group_id); mysqli_stmt_execute($stg); $rg=mysqli_stmt_get_result($stg); $grp=$rg?mysqli_fetch_assoc($rg):null; mysqli_stmt_close($stg);} if(!$grp){ echo '<div class="container mt-4"><div class="alert alert-warning">Group not found</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
 
+// Enforce department ownership for HODs
+if ($role === 'HOD') {
+  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  if ($deptId > 0) {
+    $chk = mysqli_prepare($con, 'SELECT c.department_id FROM groups g LEFT JOIN course c ON c.course_id=g.course_id WHERE g.id=?');
+    if ($chk) {
+      mysqli_stmt_bind_param($chk, 'i', $group_id);
+      mysqli_stmt_execute($chk);
+      $rs = mysqli_stmt_get_result($chk);
+      $row = $rs ? mysqli_fetch_assoc($rs) : null;
+      mysqli_stmt_close($chk);
+      if (!$row || (int)($row['department_id'] ?? 0) !== $deptId) {
+        echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>';
+        require_once __DIR__.'/../footer.php';
+        exit;
+      }
+    }
+  }
+}
+
 // Create session form (all allowed roles)
 ?>
 <div class="container mt-4">

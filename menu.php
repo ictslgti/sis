@@ -244,9 +244,9 @@ if ($u_t === 'SAO' || $u_t === 'HOD') {
             </a>
           </li>
         </ul>
-        <?php } elseif ($u_t === 'DIR') { ?>
+        <?php } elseif (in_array($u_t, ['DIR','ACC'], true)) { ?>
         <ul>
-          <li class="header-menu"><span>Director</span></li>
+          <li class="header-menu"><span><?php echo ($u_t==='ACC') ? 'Accounts (Director View)' : 'Director'; ?></span></li>
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
               <i class="fa fa-home"></i>

@@ -22,6 +22,21 @@ if (!in_array($role, ['HOD'])) {
   if ($st) { mysqli_stmt_bind_param($st,'is',$group_id,$uid); mysqli_stmt_execute($st); $rs=mysqli_stmt_get_result($st); $ok = ($rs && mysqli_fetch_row($rs)); mysqli_stmt_close($st); if(!$ok){ http_response_code(403); echo 'Not assigned'; exit; } }
 }
 
+// HODs: verify the group belongs to their department
+if ($role === 'HOD') {
+  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  if ($deptId <= 0) { http_response_code(403); echo 'Forbidden'; exit; }
+  $chk = mysqli_prepare($con, 'SELECT c.department_id FROM groups g LEFT JOIN course c ON c.course_id=g.course_id WHERE g.id=?');
+  if ($chk) {
+    mysqli_stmt_bind_param($chk, 'i', $group_id);
+    mysqli_stmt_execute($chk);
+    $rs = mysqli_stmt_get_result($chk);
+    $row = $rs ? mysqli_fetch_assoc($rs) : null;
+    mysqli_stmt_close($chk);
+    if (!$row || (int)($row['department_id'] ?? 0) !== $deptId) { http_response_code(403); echo 'Forbidden'; exit; }
+  }
+}
+
 $st = mysqli_prepare($con,'INSERT INTO group_sessions (group_id, session_date, start_time, end_time, coverage_title, coverage_notes, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)');
 mysqli_stmt_bind_param($st,'issssss', $group_id, $session_date, $start_time, $end_time, $coverage_title, $coverage_notes, $uid);
 mysqli_stmt_execute($st);
