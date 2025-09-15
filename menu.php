@@ -85,13 +85,13 @@ if ($u_t === 'IN3') {
   return; // prevent sidebar from rendering
 }
 
-// For SAO and HOD, render the dedicated top navbar from menu2.php and do not render the sidebar
-if ($u_t === 'SAO' || $u_t === 'HOD') {
+// For SAO, HOD, and ACC, render the dedicated top navbar from menu2.php and do not render the sidebar
+if ($u_t === 'SAO' || $u_t === 'HOD' || $u_t === 'ACC') {
   $menu2 = __DIR__ . '/menu2.php';
   if (file_exists($menu2)) {
     include $menu2;
   }
-  return; // stop sidebar rendering for SAO
+  return; // stop sidebar rendering for SAO/HOD/ACC
 }
 
 ?>
