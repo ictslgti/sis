@@ -179,6 +179,8 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
           <?php if ($u_t === 'SAO'): ?>
             <a class="dropdown-item" href="<?php echo $base; ?>/student/ImportStudentEnroll.php">Add a Student</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/student/AllowanceEligibility.php">Allowance Eligibility</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/student/ExportStudents.php">Export Students (CSV)</a>
           <?php endif; ?>
         </div>
       </li>

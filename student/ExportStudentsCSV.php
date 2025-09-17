@@ -13,9 +13,12 @@ if ($role !== 'SAO' && $role !== 'ADM') {
 }
 
 // Optional filters
-$onlyActive = isset($_GET['active']) ? (trim($_GET['active']) === '1') : false;
-$deptFilter = isset($_GET['department_id']) ? trim((string)$_GET['department_id']) : '';
+$onlyActive   = isset($_GET['active']) ? (trim($_GET['active']) === '1') : false;
+$deptFilter   = isset($_GET['department_id']) ? trim((string)$_GET['department_id']) : '';
 $courseFilter = isset($_GET['course_id']) ? trim((string)$_GET['course_id']) : '';
+$genderFilter = isset($_GET['gender']) ? trim((string)$_GET['gender']) : '';
+$provFilter   = isset($_GET['province']) ? trim((string)$_GET['province']) : '';
+$distFilter   = isset($_GET['district']) ? trim((string)$_GET['district']) : '';
 
 // Build query: base student table, left join latest enrollment to get department/course
 $sql = "SELECT 
@@ -83,6 +86,18 @@ if ($deptFilter !== '') {
 if ($courseFilter !== '') {
   $where[] = "(c.course_id = ?)";
   $params[] = $courseFilter; $types .= 's';
+}
+if ($genderFilter !== '') {
+  $where[] = "(COALESCE(s.student_gender,'') = ?)";
+  $params[] = $genderFilter; $types .= 's';
+}
+if ($provFilter !== '') {
+  $where[] = "(COALESCE(s.student_provice,'') = ?)";
+  $params[] = $provFilter; $types .= 's';
+}
+if ($distFilter !== '') {
+  $where[] = "(COALESCE(s.student_district,'') = ?)";
+  $params[] = $distFilter; $types .= 's';
 }
 if (!empty($where)) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 $sql .= ' ORDER BY s.student_fullname';

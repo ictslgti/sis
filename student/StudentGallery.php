@@ -21,12 +21,30 @@ function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
 // Optional search
 $q = isset($_GET['q']) ? trim((string)$_GET['q']) : '';
+// New filters
+$filterDept = isset($_GET['department_id']) ? trim((string)$_GET['department_id']) : '';
+$filterProv = isset($_GET['province']) ? trim((string)$_GET['province']) : '';
+$filterDist = isset($_GET['district']) ? trim((string)$_GET['district']) : '';
+
 $where = '';
 $params = [];
 $types = '';
 if ($q !== '') {
   $where = "WHERE s.student_fullname LIKE CONCAT('%', ?, '%') OR s.student_id LIKE CONCAT('%', ?, '%')";
   $params[] = $q; $params[] = $q; $types .= 'ss';
+}
+// Append filters
+if ($filterDept !== '') {
+  $where .= ($where === '' ? 'WHERE ' : ' AND ') . ' d.department_id = ? ';
+  $params[] = $filterDept; $types .= 's';
+}
+if ($filterProv !== '') {
+  $where .= ($where === '' ? 'WHERE ' : ' AND ') . ' COALESCE(s.student_provice,\'\') = ? ';
+  $params[] = $filterProv; $types .= 's';
+}
+if ($filterDist !== '') {
+  $where .= ($where === '' ? 'WHERE ' : ' AND ') . ' COALESCE(s.student_district,\'\') = ? ';
+  $params[] = $filterDist; $types .= 's';
 }
 
 // Build query: latest enrollment (if any) to get department, else NULL
@@ -53,6 +71,23 @@ if ($stmt = mysqli_prepare($con, $sql)) {
   $rs = mysqli_stmt_get_result($stmt);
   while ($rs && ($r = mysqli_fetch_assoc($rs))) { $rows[] = $r; }
   mysqli_stmt_close($stmt);
+}
+
+// Build filter option lists
+$departments = [];
+if ($dres = mysqli_query($con, 'SELECT department_id, department_name FROM department ORDER BY department_name')) {
+  while ($dr = mysqli_fetch_assoc($dres)) { $departments[] = $dr; }
+  mysqli_free_result($dres);
+}
+$provinces = [];
+if ($pres = mysqli_query($con, "SELECT DISTINCT COALESCE(NULLIF(TRIM(student_provice), ''),'') AS v FROM student ORDER BY v")) {
+  while ($pr = mysqli_fetch_assoc($pres)) { if ($pr['v'] !== '') $provinces[] = $pr['v']; }
+  mysqli_free_result($pres);
+}
+$districts = [];
+if ($dres2 = mysqli_query($con, "SELECT DISTINCT COALESCE(NULLIF(TRIM(student_district), ''),'') AS v FROM student ORDER BY v")) {
+  while ($dr2 = mysqli_fetch_assoc($dres2)) { if ($dr2['v'] !== '') $districts[] = $dr2['v']; }
+  mysqli_free_result($dres2);
 }
 
 // Helpers
@@ -160,7 +195,25 @@ function student_img_src_fs(array $row, string $baseWeb, string $baseFs): string
     <h3 class="mb-0">Student Photo Gallery</h3>
     <form class="form-inline" method="get" action="">
       <input class="form-control form-control-sm mr-2" type="text" name="q" placeholder="Search name or ID" value="<?php echo h($q); ?>">
-      <button class="btn btn-sm btn-outline-primary" type="submit">Search</button>
+      <select class="form-control form-control-sm mr-2" name="department_id">
+        <option value="">All Departments</option>
+        <?php foreach ($departments as $dep): ?>
+          <option value="<?php echo h($dep['department_id']); ?>" <?php echo ($filterDept === (string)$dep['department_id'] ? 'selected' : ''); ?>><?php echo h($dep['department_name']); ?></option>
+        <?php endforeach; ?>
+      </select>
+      <select class="form-control form-control-sm mr-2" name="province">
+        <option value="">All Provinces</option>
+        <?php foreach ($provinces as $pv): ?>
+          <option value="<?php echo h($pv); ?>" <?php echo ($filterProv === (string)$pv ? 'selected' : ''); ?>><?php echo h($pv); ?></option>
+        <?php endforeach; ?>
+      </select>
+      <select class="form-control form-control-sm mr-2" name="district">
+        <option value="">All Districts</option>
+        <?php foreach ($districts as $dv): ?>
+          <option value="<?php echo h($dv); ?>" <?php echo ($filterDist === (string)$dv ? 'selected' : ''); ?>><?php echo h($dv); ?></option>
+        <?php endforeach; ?>
+      </select>
+      <button class="btn btn-sm btn-outline-primary" type="submit">Filter</button>
     </form>
   </div>
 
