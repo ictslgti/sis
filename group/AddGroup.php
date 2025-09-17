@@ -6,7 +6,8 @@ require_once __DIR__ . '/../menu.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
-if (!in_array($role, ['HOD'])) { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
+// Permit HOD, IN1, IN2, and IN3 to add/edit groups
+if (!in_array($role, ['HOD','IN1','IN2','IN3'])) { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
 $_isADM = ($role === 'ADM');
 
 $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
@@ -18,11 +19,17 @@ if ($id === 0 && isset($_GET['course_id'])) {
 if ($id > 0) {
   $st = mysqli_prepare($con, 'SELECT * FROM `groups` WHERE id=?');
   if ($st) { mysqli_stmt_bind_param($st,'i',$id); mysqli_stmt_execute($st); $rs = mysqli_stmt_get_result($st); $row = $rs?mysqli_fetch_assoc($rs):null; mysqli_stmt_close($st); if ($row){ $name=$row['name']; $course_id=$row['course_id']; $academic_year=$row['academic_year']; $status=$row['status']; }}
-  // HODs: ensure the group's course belongs to their department
-  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
-  if ($role === 'HOD' && $deptId > 0 && $course_id !== '') {
+  // HOD/IN1/IN2/IN3: ensure the group's course belongs to their department
+  // Prefer department_code (could be string like 'ICT'), else department_id
+  $deptId = '';
+  if (!empty($_SESSION['department_code'])) {
+    $deptId = trim((string)$_SESSION['department_code']);
+  } elseif (!empty($_SESSION['department_id'])) {
+    $deptId = trim((string)$_SESSION['department_id']);
+  }
+  if (in_array($role, ['HOD','IN1','IN2','IN3'], true) && $deptId !== '' && $course_id !== '') {
     $chk = mysqli_prepare($con, 'SELECT 1 FROM course WHERE course_id=? AND department_id=?');
-    if ($chk) { mysqli_stmt_bind_param($chk,'si',$course_id,$deptId); mysqli_stmt_execute($chk); $rs2 = mysqli_stmt_get_result($chk); $ok = ($rs2 && mysqli_num_rows($rs2)>0); mysqli_stmt_close($chk); if(!$ok){ echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>'; require_once __DIR__.'/../footer.php'; exit; } }
+    if ($chk) { mysqli_stmt_bind_param($chk,'ss',$course_id,$deptId); mysqli_stmt_execute($chk); $rs2 = mysqli_stmt_get_result($chk); $ok = ($rs2 && mysqli_num_rows($rs2)>0); mysqli_stmt_close($chk); if(!$ok){ echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>'; require_once __DIR__.'/../footer.php'; exit; } }
   }
 }
 ?>
@@ -40,12 +47,18 @@ if ($id > 0) {
         <select name="course_id" class="form-control" required>
           <option value="">Select</option>
           <?php
-            $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
-            $isHOD = ($role === 'HOD' && $deptId > 0);
-            if ($isHOD) {
+            // Prefer department_code if available (can be string like 'ICT'), otherwise department_id
+            $deptId = '';
+            if (!empty($_SESSION['department_code'])) {
+              $deptId = trim((string)$_SESSION['department_code']);
+            } elseif (!empty($_SESSION['department_id'])) {
+              $deptId = trim((string)$_SESSION['department_id']);
+            }
+            $isScoped = (in_array($role, ['HOD','IN1','IN2','IN3'], true) && $deptId !== '');
+            if ($isScoped) {
               $stc = mysqli_prepare($con, 'SELECT course_id, course_name FROM course WHERE department_id = ? ORDER BY course_name');
               if ($stc) {
-                mysqli_stmt_bind_param($stc, 'i', $deptId);
+                mysqli_stmt_bind_param($stc, 's', $deptId);
                 mysqli_stmt_execute($stc);
                 $rc = mysqli_stmt_get_result($stc);
                 while ($rc && ($r = mysqli_fetch_assoc($rc))) {

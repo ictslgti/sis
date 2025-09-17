@@ -39,59 +39,15 @@ if ($u_t === 'STU') {
   return; // stop including this file silently for students
 }
 
-// For IN3, use a top navbar (no sidebar)
-if ($u_t === 'IN3') {
-  $base = defined('APP_BASE') ? APP_BASE : '';
-  ?>
-  <nav class="navbar navbar-expand-lg navbar-light bg-light shadow-sm mb-3">
-    <a class="navbar-brand font-weight-bold" href="<?php echo $base; ?>/dashboard/index.php">MIS@SLGTI</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#in3Topbar" aria-controls="in3Topbar" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
+// IN roles (IN1, IN2, IN3) will use the unified top navbar in menu2.php
 
-    <div class="collapse navbar-collapse" id="in3Topbar">
-      <ul class="navbar-nav mr-auto">
-        <li class="nav-item">
-          <a class="nav-link" href="<?php echo $base; ?>/student/ManageStudents.php">
-            <i class="fas fa-user-graduate"></i> Manage Students
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="<?php echo $base; ?>/group/Groups.php">
-            <i class="fas fa-users"></i> Manage Groups
-          </a>
-        </li>
-        <li class="nav-item">
-          <a class="nav-link" href="<?php echo $base; ?>/attendance/Attendancenav.php">
-            <i class="fas fa-calendar-check"></i> Attendance (Dept-wise)
-          </a>
-        </li>
-      </ul>
-      <ul class="navbar-nav ml-auto">
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="in3User" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fa fa-user"></i> <?php echo htmlspecialchars($u_n ?: ''); ?>
-          </a>
-          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="in3User">
-            <a class="dropdown-item" href="<?php echo $base; ?>/Profile.php">Profile</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="<?php echo $base; ?>/logout.php">Logout</a>
-          </div>
-        </li>
-      </ul>
-    </div>
-  </nav>
-  <?php
-  return; // prevent sidebar from rendering
-}
-
-// For SAO, HOD, and ACC, render the dedicated top navbar from menu2.php and do not render the sidebar
-if ($u_t === 'SAO' || $u_t === 'HOD' || $u_t === 'ACC') {
+// For SAO, HOD, DIR, ACC and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
+if (in_array($u_t, ['SAO','HOD','DIR','ACC','IN1','IN2','IN3'], true)) {
   $menu2 = __DIR__ . '/menu2.php';
   if (file_exists($menu2)) {
     include $menu2;
   }
-  return; // stop sidebar rendering for SAO/HOD/ACC
+  return; // stop sidebar rendering for SAO/HOD/DIR/ACC
 }
 
 ?>
@@ -246,7 +202,7 @@ if ($u_t === 'SAO' || $u_t === 'HOD' || $u_t === 'ACC') {
         </ul>
         <?php } elseif (in_array($u_t, ['DIR','ACC'], true)) { ?>
         <ul>
-          <li class="header-menu"><span><?php echo ($u_t==='ACC') ? 'Accounts (Director View)' : 'Director'; ?></span></li>
+          <li class="header-menu"><span>Director</span></li>
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
               <i class="fa fa-home"></i>

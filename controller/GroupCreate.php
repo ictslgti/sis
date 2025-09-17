@@ -3,7 +3,8 @@ require_once __DIR__ . '/../config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
-if (!in_array($role, ['HOD'])) { http_response_code(403); echo 'Forbidden'; exit; }
+// Allow HOD, IN1, IN2 and IN3 to create/edit groups
+if (!in_array($role, ['HOD','IN1','IN2','IN3'])) { http_response_code(403); echo 'Forbidden'; exit; }
 
 $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 $name = isset($_POST['name']) ? trim($_POST['name']) : '';
@@ -15,12 +16,17 @@ if ($name === '' || $course_id === '' || $academic_year === '') {
   header('Location: '.$base.'/group/AddGroup.php?err=invalid'.($id?'&id='.$id:'')); exit;
 }
 
-// Ensure HOD can only create/edit groups for courses in their own department
-$deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
-if ($deptId <= 0) { http_response_code(403); echo 'Forbidden'; exit; }
+// Ensure HOD/IN3 can only create/edit groups for courses in their own department
+$deptId = '';
+if (!empty($_SESSION['department_code'])) {
+  $deptId = trim((string)$_SESSION['department_code']);
+} elseif (!empty($_SESSION['department_id'])) {
+  $deptId = trim((string)$_SESSION['department_id']);
+}
+if ($deptId === '') { http_response_code(403); echo 'Forbidden'; exit; }
 $chk = mysqli_prepare($con, 'SELECT 1 FROM course WHERE course_id = ? AND department_id = ?');
 if ($chk) {
-  mysqli_stmt_bind_param($chk, 'si', $course_id, $deptId);
+  mysqli_stmt_bind_param($chk, 'ss', $course_id, $deptId);
   mysqli_stmt_execute($chk);
   $rs = mysqli_stmt_get_result($chk);
   $okCourse = ($rs && $rs->num_rows > 0);

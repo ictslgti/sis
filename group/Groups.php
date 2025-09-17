@@ -18,21 +18,26 @@ if (isset($_SESSION['info'])) {
     unset($_SESSION['info']);
 }
 
-$canManage = in_array($role, ['HOD']);
-$canAccess = $canManage || in_array($role, ['IN1','IN2','LE1','LE2','ADM']);
+$canManage = in_array($role, ['HOD','IN1','IN2','IN3']);
+$canAccess = $canManage || in_array($role, ['LE1','LE2','ADM']);
 if (!$canAccess) { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
-// Fetch groups: HOD sees only groups under own department; others see assigned groups
+// Fetch groups: HOD/IN1/IN2/IN3 see only groups under own department; others see assigned groups
 $groups = [];
 if ($canManage) {
-  // HOD: only groups whose course belongs to HOD's department
-  $dep = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
+  // HOD/IN1/IN2/IN3: only groups whose course belongs to their department
+  $dep = '';
+  if (!empty($_SESSION['department_code'])) {
+    $dep = trim((string)$_SESSION['department_code']);
+  } elseif (!empty($_SESSION['department_id'])) {
+    $dep = trim((string)$_SESSION['department_id']);
+  }
   $sql = "SELECT g.*, c.course_name FROM `groups` g LEFT JOIN course c ON c.course_id=g.course_id WHERE c.department_id = ? ORDER BY g.created_at DESC";
   $st = mysqli_prepare($con, $sql);
   if ($st) {
-    mysqli_stmt_bind_param($st, 'i', $dep);
+    mysqli_stmt_bind_param($st, 's', $dep);
     mysqli_stmt_execute($st);
     $rs = mysqli_stmt_get_result($st);
     while ($rs && ($r = mysqli_fetch_assoc($rs))) { $groups[] = $r; }

@@ -5,14 +5,20 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 
-// Only HODs can access
+// Allow HOD, ADM, and IN3 to access (IN3 view-only)
 require_login();
-require_roles(['HOD', 'ADM']); // allow ADM too for testing
+require_roles(['HOD', 'ADM', 'IN3']);
 
 $base = defined('APP_BASE') ? APP_BASE : '';
 $hodId = $_SESSION['user_name'] ?? '';
 $deptId = isset($_SESSION['department_code']) ? trim((string)$_SESSION['department_code']) : '';
 $deptName = '';
+
+// Role helpers
+$__role = isset($_SESSION['user_type']) ? strtoupper(trim((string)$_SESSION['user_type'])) : '';
+$__is_hod = ($__role === 'HOD');
+$__is_adm = ($__role === 'ADM');
+$__is_in3 = ($__role === 'IN3');
 
 // Lightweight AJAX: fetch staff details
 if (isset($_GET['ajax']) && $_GET['ajax'] === 'staff') {
@@ -55,7 +61,11 @@ $counts = [
 // Handle OnPeak approve/reject actions (HOD)
 $_op_msg = '';
 $_staff_msg = '';
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['op_action'], $_POST['op_id'])) {
+if (($_SERVER['REQUEST_METHOD'] === 'POST') && isset($_POST['op_action'], $_POST['op_id'])) {
+  // Only HOD/ADM can change OnPeak statuses; IN3 is view-only
+  if (!($__is_hod || $__is_adm)) {
+    $_op_msg = '<div class="alert alert-danger alert-dismissible fade show m-2" role="alert">Insufficient permissions.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+  } else {
   $action = strtolower(trim((string)$_POST['op_action']));
   $id = (int) $_POST['op_id'];
   $newStatus = null;
@@ -89,7 +99,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['op_action'], $_POST['
           $cur = ($chk && ($rr = mysqli_fetch_assoc($chk))) ? trim((string)$rr['onpeak_request_status']) : '';
           if ($chk) mysqli_free_result($chk);
           if (strcasecmp($cur, $newStatus) === 0) {
-            $_op_msg = '<div class="alert alert-success alert-dismissible fade show m-2" role="alert">Already ' + htmlspecialchars($newStatus) + '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+            $_op_msg = '<div class="alert alert-success alert-dismissible fade show m-2" role="alert">Already ' . htmlspecialchars($newStatus) . '<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
           } else {
             $_op_msg = '<div class="alert alert-warning alert-dismissible fade show m-2" role="alert">No change made. Current status: ' . htmlspecialchars($cur ?: 'Unknown') . '.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
           }
@@ -102,9 +112,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['op_action'], $_POST['
     }
   }
 }
+}
 
 // Handle Staff add/edit/delete (department-scoped)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['staff_action'])) {
+if (($_SERVER['REQUEST_METHOD'] === 'POST') && isset($_POST['staff_action'])) {
+  // Only HOD/ADM may mutate staff; IN3 view-only
+  if (!($__is_hod || $__is_adm)) {
+    $_staff_msg = '<div class="alert alert-danger alert-dismissible fade show m-2">Insufficient permissions.<button type="button" class="close" data-dismiss="alert"><span>&times;</span></button></div>';
+  } else {
   $act = strtolower(trim((string)$_POST['staff_action']));
   $sid = isset($_POST['staff_id']) ? trim((string)$_POST['staff_id']) : '';
   $name = isset($_POST['staff_name']) ? trim((string)$_POST['staff_name']) : '';
@@ -192,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['staff_action'])) {
       }
     }
   }
+}
 }
 
 // Students actively enrolled in this department
@@ -451,14 +467,14 @@ if ($qpos) {
                     . '<td>' . htmlspecialchars($r['exit_date']) . ' ' . htmlspecialchars($r['exit_time']) . '</td>'
                     . '<td>' . htmlspecialchars($r['return_date']) . ' ' . htmlspecialchars($r['return_time']) . '</td>'
                     . '<td class="text-right">'
-                    . ($isPending
+                    . (($isPending && ($__is_hod || $__is_adm))
                       ? '<form method="post" class="d-inline">'
-                      . '<input type="hidden" name="op_id" value="' . (int)$r['id'] . '">'
-                      . '<div class="btn-group btn-group-sm" role="group">'
-                      . '<button name="op_action" value="approve" class="btn btn-outline-success btn-icon" title="Approve" onclick="return confirm(\'Approve this request?\');"><i class="fas fa-check"></i></button>'
-                      . '<button name="op_action" value="reject" class="btn btn-outline-danger btn-icon" title="Reject" onclick="return confirm(\'Reject this request?\');"><i class="fas fa-times"></i></button>'
-                      . '</div>'
-                      . '</form>'
+                        . '<input type="hidden" name="op_id" value="' . (int)$r['id'] . '">'
+                        . '<div class="btn-group btn-group-sm" role="group">'
+                        . '<button name="op_action" value="approve" class="btn btn-outline-success btn-icon" title="Approve" onclick="return confirm(\'Approve this request?\');"><i class="fas fa-check"></i></button>'
+                        . '<button name="op_action" value="reject" class="btn btn-outline-danger btn-icon" title="Reject" onclick="return confirm(\'Reject this request?\');"><i class="fas fa-times"></i></button>'
+                        . '</div>'
+                        . '</form>'
                       : '<span class="text-muted small">—</span>'
                     )
                     . '</td>'

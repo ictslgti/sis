@@ -79,7 +79,7 @@ if(mysqli_num_rows($result_active) == 1) {
         // Redirect based on role
         if (isset($_SESSION['user_table']) && $_SESSION['user_table'] === 'student') {
             header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/student/StudentDashboard.php');
-        } elseif (isset($_SESSION['user_type']) && strtoupper((string)$_SESSION['user_type']) === 'HOD') {
+        } elseif (isset($_SESSION['user_type']) && in_array(strtoupper((string)$_SESSION['user_type']), ['HOD','IN1','IN2','IN3'], true)) {
             header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/hod/Dashboard.php');
         } else {
             header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/dashboard/');
@@ -161,7 +161,7 @@ if (isset($_POST['SignIn']) && !empty($_POST['username']) && !empty($_POST['pass
                     // Redirect based on role
                     if ($row['user_table'] === 'student') {
                         header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/student/StudentDashboard.php');
-                    } elseif (isset($_SESSION['user_type']) && strtoupper((string)$_SESSION['user_type']) === 'HOD') {
+                    } elseif (isset($_SESSION['user_type']) && in_array(strtoupper((string)$_SESSION['user_type']), ['HOD','IN3'], true)) {
                         header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/hod/Dashboard.php');
                     } else {
                         header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/dashboard/');

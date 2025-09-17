@@ -15,6 +15,7 @@ $is_admin = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
 $is_dir   = isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['DIR','ACC'], true);
 $is_sao   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO';
 $is_hod   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
+$is_in3   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'IN3';
 // Mutations allowed for Admin and SAO; DIR and HOD are strictly view-only
 $can_mutate = ($is_admin || $is_sao);
 
@@ -212,10 +213,10 @@ if ($is_dir) {
   $fstatus = 'Active';
 }
 
-// For HOD, force department to their own and do not allow changing it via UI
-if ($is_hod) {
-  $hodDept = isset($_SESSION['department_code']) ? trim($_SESSION['department_code']) : '';
-  if ($hodDept !== '') { $fdept = $hodDept; }
+// For HOD and IN3, force department to their own and do not allow changing it via UI
+if ($is_hod || $is_in3) {
+  $ownDept = isset($_SESSION['department_code']) ? trim($_SESSION['department_code']) : '';
+  if ($ownDept !== '') { $fdept = $ownDept; }
 }
 
 $where = [];
@@ -418,13 +419,13 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
               <div class="form-row">
                 <div class="form-group col-12 col-md-4">
                   <label for="fdept" class="small text-muted mb-1">Department</label>
-                  <select id="fdept" name="department_id" class="form-control" <?php echo $is_hod ? 'disabled' : ''; ?>>
+                  <select id="fdept" name="department_id" class="form-control" <?php echo ($is_hod || $is_in3) ? 'disabled' : ''; ?>>
                     <option value="">-- Any --</option>
                     <?php foreach ($departments as $d): ?>
                       <option value="<?php echo h($d['department_id']); ?>" <?php echo ($fdept === $d['department_id'] ? 'selected' : ''); ?>><?php echo h($d['department_name']); ?></option>
                     <?php endforeach; ?>
                   </select>
-                  <?php if ($is_hod): ?>
+                  <?php if ($is_hod || $is_in3): ?>
                     <input type="hidden" name="department_id" value="<?php echo h($fdept); ?>">
                     <small class="form-text text-muted">Showing students for your department only.</small>
                   <?php endif; ?>
@@ -673,7 +674,9 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                           $unifiedUrl = $base . '/student/StudentUnifiedEdit.php?Sid=' . urlencode($row['student_id']);
                           ?>
                           <div class="btn-group btn-group-sm flex-wrap" role="group">
-                            <a class="btn btn-secondary" title="Unified Edit" href="<?php echo $unifiedUrl; ?>"><i class="fas fa-user-cog"></i></a>
+                            <?php if ($can_mutate): ?>
+                              <a class="btn btn-secondary" title="Unified Edit" href="<?php echo $unifiedUrl; ?>"><i class="fas fa-user-cog"></i></a>
+                            <?php endif; ?>
                             <?php if ($can_mutate): ?>
                               <a class="btn btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
                             <?php endif; ?>
