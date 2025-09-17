@@ -494,15 +494,19 @@ if (
         }
       }
       if ($processed) {
-        $sqlUpdImg = "UPDATE student SET student_profile_img=? WHERE student_id=?";
-        if ($stmt = mysqli_prepare($con, $sqlUpdImg)) {
-          mysqli_stmt_bind_param($stmt, 'ss', $processed, $loggedUser);
-          if (mysqli_stmt_execute($stmt)) {
-            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated (cropped & compressed).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-          } else {
-            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update image.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-          }
-          mysqli_stmt_close($stmt);
+        // Save to filesystem and store relative path instead of BLOB
+        $safeId = preg_replace('/[^A-Za-z0-9_.-]/', '_', (string)$loggedUser);
+        $dir = realpath(__DIR__ . '/../img') ?: (__DIR__ . '/../img');
+        $dstDir = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'student_profile';
+        if (!is_dir($dstDir)) { @mkdir($dstDir, 0777, true); }
+        $file = $dstDir . DIRECTORY_SEPARATOR . $safeId . '.jpg';
+        @file_put_contents($file, $processed);
+        if (is_file($file)) {
+          $rel = 'img/student_profile/' . $safeId . '.jpg';
+          @mysqli_query($con, "UPDATE student SET student_profile_img='" . mysqli_real_escape_string($con, $rel) . "' WHERE student_id='" . mysqli_real_escape_string($con, $loggedUser) . "'");
+          echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated (cropped & compressed).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        } else {
+          echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to save image file.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
         return; // done
       }
@@ -523,15 +527,19 @@ if (
       if ($cropped === null) {
         echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to process the image. Please upload a valid image file.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
       } else {
-        $sqlUpdImg = "UPDATE student SET student_profile_img=? WHERE student_id=?";
-        if ($stmt = mysqli_prepare($con, $sqlUpdImg)) {
-          mysqli_stmt_bind_param($stmt, 'ss', $cropped, $loggedUser);
-          if (mysqli_stmt_execute($stmt)) {
-            echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated (cropped & compressed).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-          } else {
-            echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to update image.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
-          }
-          mysqli_stmt_close($stmt);
+        // Save to filesystem and store relative path instead of BLOB
+        $safeId = preg_replace('/[^A-Za-z0-9_.-]/', '_', (string)$loggedUser);
+        $dir = realpath(__DIR__ . '/../img') ?: (__DIR__ . '/../img');
+        $dstDir = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . 'student_profile';
+        if (!is_dir($dstDir)) { @mkdir($dstDir, 0777, true); }
+        $file = $dstDir . DIRECTORY_SEPARATOR . $safeId . '.jpg';
+        @file_put_contents($file, $cropped);
+        if (is_file($file)) {
+          $rel = 'img/student_profile/' . $safeId . '.jpg';
+          @mysqli_query($con, "UPDATE student SET student_profile_img='" . mysqli_real_escape_string($con, $rel) . "' WHERE student_id='" . mysqli_real_escape_string($con, $loggedUser) . "'");
+          echo '<div class="alert alert-success alert-dismissible fade show" role="alert">Profile image updated (cropped & compressed).<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
+        } else {
+          echo '<div class="alert alert-danger alert-dismissible fade show" role="alert">Failed to save image file.<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button></div>';
         }
       }
     }
