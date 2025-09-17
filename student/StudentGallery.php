@@ -55,14 +55,85 @@ if ($stmt = mysqli_prepare($con, $sql)) {
   mysqli_stmt_close($stmt);
 }
 
-// Helper for image rendering
-function student_img_src(?string $blob): string {
-  if ($blob !== null && $blob !== '') {
-    $b64 = base64_encode($blob);
-    return 'data:image/jpeg;base64,' . $b64;
-  }
-  // tiny transparent placeholder
+// Helpers
+function gallery_placeholder(): string {
   return 'data:image/svg+xml;utf8,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300"><rect width="100%" height="100%" fill="#f0f0f0"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#9aa0a6" font-family="Arial" font-size="16">No Photo</text></svg>');
+}
+
+function is_probably_blob(?string $val): bool {
+  if ($val === null) return false;
+  // If contains many non-printable characters or is very long, treat as blob
+  if (strlen($val) > 1024) return true;
+  $nonPrintable = preg_match('/[\x00-\x08\x0B\x0C\x0E-\x1F]/', $val);
+  return $nonPrintable === 1;
+}
+
+function student_img_src_fs(array $row, string $baseWeb, string $baseFs): string {
+  $sid = $row['student_id'] ?? '';
+  $sp  = $row['student_profile_img'] ?? '';
+
+  // 1) If DB stores a relative path like 'img/student_profile/ABC.jpg', prefer it
+  if (is_string($sp) && $sp !== '' && !is_probably_blob($sp)) {
+    $raw = trim($sp);
+    // If it's already a data URI, return as-is
+    if (stripos($raw, 'data:image') === 0) {
+      return $raw;
+    }
+    // Normalize slashes and strip query/hash
+    $raw = str_replace('\\', '/', $raw);
+    $raw = preg_replace('#[\?#].*$#', '', $raw);
+    // Remove leading ./ and ../ segments
+    $raw = preg_replace('#^(?:\./|\.\./)+#', '', $raw);
+    // If absolute FS path, take basename
+    if (preg_match('#^[a-zA-Z]:/#', $raw) || strpos($raw, '/www/sis/') !== false) {
+      $raw = basename($raw);
+    }
+    // If it contains student_profile, extract filename after it
+    if (stripos($raw, 'student_profile/') !== false) {
+      $pos = stripos($raw, 'student_profile/');
+      $raw = substr($raw, $pos + strlen('student_profile/'));
+    }
+    // If path contains directories, reduce to filename
+    if (strpos($raw, '/') !== false) {
+      $raw = basename($raw);
+    }
+    // Now $raw should be a filename like STU001.jpg
+    if ($raw !== '') {
+      $fs = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . $raw;
+      if (is_file($fs)) {
+        return rtrim($baseWeb, '/') . '/' . 'img/student_profile/' . rawurlencode($raw);
+      }
+    }
+    // Secondary: if original looked like a full relative path under img/student_profile
+    $rel = ltrim($sp, '/');
+    if (stripos($rel, 'img/student_profile/') === 0) {
+      $fs = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . substr($rel, strlen('img/student_profile/'));
+      if (is_file($fs)) {
+        return rtrim($baseWeb, '/') . '/' . str_replace('\\', '/', $rel);
+      }
+    }
+  }
+
+  // 2) Guess by student_id with common extensions
+  if ($sid !== '') {
+    $candidates = [
+      $sid . '.jpg', $sid . '.jpeg', $sid . '.png', $sid . '.webp'
+    ];
+    foreach ($candidates as $fn) {
+      $fs = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . $fn;
+      if (is_file($fs)) {
+        return rtrim($baseWeb, '/') . '/' . 'img/student_profile/' . rawurlencode($fn);
+      }
+    }
+  }
+
+  // 3) Fallback to DB blob if present
+  if (!empty($sp) && is_probably_blob($sp)) {
+    return 'data:image/jpeg;base64,' . base64_encode($sp);
+  }
+
+  // 4) Placeholder
+  return gallery_placeholder();
 }
 ?>
 <div class="container mt-4">
@@ -81,7 +152,14 @@ function student_img_src(?string $blob): string {
       </div>
     <?php else: ?>
       <?php foreach ($rows as $s): ?>
-        <?php $imgSrc = student_img_src($s['student_profile_img'] ?? null); ?>
+        <?php 
+          $imgSrc = student_img_src_fs(
+            $s,
+            (string)$base,
+            // Filesystem base to sis/img/student_profile/
+            realpath(__DIR__ . '/../img/student_profile') ?: (__DIR__ . '/../img/student_profile')
+          );
+        ?>
         <div class="col-6 col-md-4 col-lg-3 mb-4">
           <div class="card shadow-sm h-100">
             <div class="card-header py-2">
