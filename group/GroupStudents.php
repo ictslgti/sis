@@ -8,10 +8,11 @@ $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
 $redirect = isset($_GET['redirect']) ? trim($_GET['redirect']) : '';
 
-if ($role !== 'HOD') { 
-    echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; 
-    require_once __DIR__.'/../footer.php'; 
-    exit; 
+// Allow HOD/IN1/IN2/IN3 to access; others forbidden
+if (!in_array($role, ['HOD','IN1','IN2','IN3'], true)) {
+    echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>';
+    require_once __DIR__.'/../footer.php';
+    exit;
 }
 
 $group_id = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
@@ -44,10 +45,16 @@ if(!$grp){
   exit; 
 }
 
-// Enforce department ownership for HOD
-if ($role === 'HOD') {
-  $deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
-  if (!$deptId || (int)($grp['department_id'] ?? 0) !== $deptId) {
+// Enforce department ownership for HOD/IN roles: group must belong to user's department
+if (in_array($role, ['HOD','IN1','IN2','IN3'], true)) {
+  $deptId = '';
+  if (!empty($_SESSION['department_code'])) {
+    $deptId = trim((string)$_SESSION['department_code']);
+  } elseif (!empty($_SESSION['department_id'])) {
+    $deptId = trim((string)$_SESSION['department_id']);
+  }
+  $grpDept = isset($grp['department_id']) ? trim((string)$grp['department_id']) : '';
+  if ($deptId === '' || $grpDept === '' || strval($grpDept) !== strval($deptId)) {
     echo '<div class="container mt-4"><div class="alert alert-danger">Access denied for this group</div></div>';
     require_once __DIR__.'/../footer.php';
     exit;

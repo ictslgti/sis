@@ -3,15 +3,22 @@ require_once __DIR__ . '/../config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 $base = defined('APP_BASE') ? APP_BASE : '';
-if ($role !== 'HOD') { http_response_code(403); echo 'Forbidden'; exit; }
+// Allow HOD/IN1/IN2/IN3; others forbidden
+if (!in_array($role, ['HOD','IN1','IN2','IN3'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
 
 $group_id = isset($_POST['group_id']) ? (int)$_POST['group_id'] : 0;
 $action = isset($_POST['action']) ? $_POST['action'] : '';
 if ($group_id<=0) { header('Location: '.$base.'/group/GroupStudents.php?group_id='.$group_id.'&err=invalid'); exit; }
 
-// Verify HOD belongs to the same department as the group's course
-$deptId = isset($_SESSION['department_id']) ? (int)$_SESSION['department_id'] : 0;
-if ($deptId <= 0) { http_response_code(403); echo 'Forbidden'; exit; }
+// Verify user belongs to the same department as the group's course
+// Prefer department_code (may be string like 'ICT'), else department_id
+$deptId = '';
+if (!empty($_SESSION['department_code'])) {
+  $deptId = trim((string)$_SESSION['department_code']);
+} elseif (!empty($_SESSION['department_id'])) {
+  $deptId = trim((string)$_SESSION['department_id']);
+}
+if ($deptId === '') { http_response_code(403); echo 'Forbidden'; exit; }
 $chk = mysqli_prepare($con, 'SELECT c.department_id FROM `groups` g LEFT JOIN course c ON c.course_id = g.course_id WHERE g.id = ?');
 if ($chk) {
   mysqli_stmt_bind_param($chk, 'i', $group_id);
@@ -19,7 +26,8 @@ if ($chk) {
   $res = mysqli_stmt_get_result($chk);
   $row = $res ? mysqli_fetch_assoc($res) : null;
   mysqli_stmt_close($chk);
-  if (!$row || (int)($row['department_id'] ?? 0) !== $deptId) {
+  $grpDept = isset($row['department_id']) ? trim((string)$row['department_id']) : '';
+  if (!$row || $grpDept === '' || strval($grpDept) !== strval($deptId)) {
     http_response_code(403); echo 'Forbidden'; exit;
   }
 } else {
