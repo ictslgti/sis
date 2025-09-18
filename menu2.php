@@ -194,6 +194,8 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
           <div class="dropdown-menu" aria-labelledby="hodAttendance">
             <a class="dropdown-item" href="<?php echo $base; ?>/attendance/DailyAttendance.php">Daily Attendance</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/attendance/BulkMonthlyMark.php">Bulk Monthly Mark</a>
           </div>
         </li>
 
