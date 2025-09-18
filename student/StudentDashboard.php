@@ -94,7 +94,8 @@ if (file_exists($topNav)) {
         <div class="card-body p-3">
           <div class="d-flex align-items-center header-stack flex-wrap">
             <div class="avatar-frame mr-3">
-              <img src="<?php echo $profileImg ? ($base . '/' . htmlspecialchars($profileImg)) : ($base . '/img/profile/user.png'); ?>" alt="Photo" class="avatar-img">
+              <?php $imgUrl = $base . '/student/get_student_image.php?Sid=' . urlencode($studentId); ?>
+              <img src="<?php echo $imgUrl; ?>" alt="Photo" class="avatar-img">
             </div>
             <div class="flex-fill">
               <div class="d-flex align-items-center justify-content-between">
