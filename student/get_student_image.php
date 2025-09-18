@@ -2,10 +2,19 @@
 // Include database configuration
 require_once __DIR__ . '/../config.php';
 
+function nocache_headers() {
+    // Strongly discourage browser/proxy caching so updated images reflect immediately
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Cache-Control: post-check=0, pre-check=0', false);
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 // Get student ID from query string
 $student_id = isset($_GET['Sid']) ? $_GET['Sid'] : null;
 
 function send_default_image() {
+    nocache_headers();
     header('Content-Type: image/png');
     @readfile(__DIR__ . '/../img/profile/user.png');
     exit;
@@ -44,6 +53,7 @@ if ($looksLikePath) {
         if ($ext === 'png') $mime = 'image/png';
         elseif ($ext === 'gif') $mime = 'image/gif';
         elseif ($ext === 'webp') $mime = 'image/webp';
+        nocache_headers();
         header('Content-Type: ' . $mime);
         header('Content-Length: ' . filesize($abs));
         @readfile($abs);
@@ -69,6 +79,7 @@ if (class_exists('finfo')) {
         if ($detected) { $mime = $detected; }
     }
 }
+nocache_headers();
 header('Content-Type: ' . $mime);
 header('Content-Length: ' . strlen($raw));
 echo $raw;

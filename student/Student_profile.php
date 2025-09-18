@@ -425,7 +425,6 @@ if (
   $_SERVER['REQUEST_METHOD'] === 'POST'
   && isset($_POST['do_upload'])
   && !isset($_GET['Sid'])
-  && isset($_SESSION['user_type']) && $_SESSION['user_type'] !== 'STU' // block students from changing image here
 ) {
   if (session_status() === PHP_SESSION_NONE) { session_start(); }
   $loggedUser = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : null;

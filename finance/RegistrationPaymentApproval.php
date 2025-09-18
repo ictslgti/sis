@@ -189,6 +189,7 @@ $addReasonsRes = mysqli_query($con, "SELECT payment_reason FROM payment WHERE pa
               <option value="<?php echo htmlspecialchars($s['student_id']); ?>" <?php echo ($formStudent!=='' && $formStudent===$s['student_id'])?'selected':''; ?>><?php echo htmlspecialchars($s['student_fullname'].' ('.$s['student_id'].')'); ?></option>
             <?php } } ?>
           </select>
+          <input type="text" id="studentSelectFilter" class="form-control mt-1" placeholder="Type to filter by name or ID" <?php echo ($formDept==='')?'disabled':''; ?>>
         </div>
       </div>
       <div class="form-row">
@@ -266,6 +267,35 @@ $addReasonsRes = mysqli_query($con, "SELECT payment_reason FROM payment WHERE pa
           window.location.href = url.toString();
         });
       }
+      // Student typing filter for the Student select
+      var stSel = document.getElementById('studentSelect');
+      var stFilter = document.getElementById('studentSelectFilter');
+      if (stSel && stFilter) {
+        // Cache all options (excluding the first placeholder)
+        var allOpts = Array.prototype.slice.call(stSel.options).map(function(o){ return {value:o.value, text:o.text}; });
+        var placeholder = allOpts.length ? allOpts[0] : {value:'', text:'-- Select Student --'};
+        function rebuild(filterText){
+          var keep = stSel.value;
+          var ft = (filterText||'').toLowerCase();
+          // Remove all options
+          while (stSel.options.length) stSel.remove(0);
+          // Add placeholder
+          var ph = document.createElement('option'); ph.value = placeholder.value; ph.text = placeholder.text; stSel.add(ph);
+          // Add filtered
+          allOpts.forEach(function(it, idx){
+            if (idx === 0) return; // skip placeholder captured
+            if (!ft || it.text.toLowerCase().indexOf(ft) !== -1) {
+              var o = document.createElement('option');
+              o.value = it.value; o.text = it.text;
+              if (it.value === keep) { o.selected = true; }
+              stSel.add(o);
+            }
+          });
+        }
+        stFilter.addEventListener('input', function(){ rebuild(this.value); });
+        // Initialize empty filter
+        rebuild('');
+      }
     })();
   </script>
 <?php
@@ -275,6 +305,9 @@ $paymentType = isset($_GET['payment_type']) ? trim($_GET['payment_type']) : '';
 $paymentReason = isset($_GET['payment_reason']) ? trim($_GET['payment_reason']) : 'Registration Fee';
 $department = isset($_GET['department']) ? trim($_GET['department']) : '';
 $studentId = isset($_GET['student_id']) ? trim($_GET['student_id']) : '';
+// New filters
+$studentName = isset($_GET['student_name']) ? trim($_GET['student_name']) : '';
+$studentExact = isset($_GET['student_exact']) ? trim($_GET['student_exact']) : '';
 
 // Build WHERE clause
 $where = [];
@@ -285,6 +318,8 @@ if ($paymentType !== '') { $where[] = "p.payment_type = '" . mysqli_real_escape_
 if ($paymentReason !== '') { $where[] = "p.payment_reason = '" . mysqli_real_escape_string($con, $paymentReason) . "'"; }
 if ($studentId !== '') { $where[] = "p.student_id LIKE '%" . mysqli_real_escape_string($con, $studentId) . "%'"; }
 if ($department !== '') { $where[] = "c.department_id = '" . mysqli_real_escape_string($con, $department) . "'"; }
+if ($studentExact !== '') { $where[] = "p.student_id = '" . mysqli_real_escape_string($con, $studentExact) . "'"; }
+elseif ($studentName !== '') { $where[] = "s.student_fullname LIKE '%" . mysqli_real_escape_string($con, $studentName) . "%'"; }
 $whereSql = count($where) ? ('WHERE ' . implode(' AND ', $where)) : '';
 
 // Dropdown data
@@ -293,6 +328,11 @@ $reasonsRes = mysqli_query($con, ($paymentType !== '')
   ? "SELECT DISTINCT payment_reason FROM payment WHERE payment_type='" . mysqli_real_escape_string($con, $paymentType) . "' ORDER BY payment_reason"
   : "SELECT DISTINCT payment_reason FROM payment ORDER BY payment_reason");
 $deptRes = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
+// If a department filter is chosen, load its students for an exact dropdown filter
+$studentsFilterRes = false;
+if ($department !== '') {
+  $studentsFilterRes = mysqli_query($con, "SELECT s.student_id, s.student_fullname FROM student s JOIN student_enroll se ON se.student_id=s.student_id AND se.student_enroll_status='Following' JOIN course c ON c.course_id=se.course_id WHERE c.department_id='".mysqli_real_escape_string($con,$department)."' ORDER BY s.student_fullname");
+}
 
 // Data query: join student, enrollment and course to get department
 $sql = "
@@ -351,7 +391,7 @@ $res = mysqli_query($con, $sql);
       </div>
       <div class="form-group col-md-2">
         <label>Department</label>
-        <select name="department" class="form-control">
+        <select name="department" class="form-control" onchange="this.form.submit()">
           <option value="">-- Any --</option>
           <?php if ($deptRes && mysqli_num_rows($deptRes)>0) { while($r=mysqli_fetch_assoc($deptRes)){ ?>
             <option value="<?php echo htmlspecialchars($r['department_id']); ?>" <?php echo ($department===$r['department_id'])?'selected':''; ?>><?php echo htmlspecialchars($r['department_name']); ?></option>
@@ -361,6 +401,20 @@ $res = mysqli_query($con, $sql);
       <div class="form-group col-md-2">
         <label>Student ID</label>
         <input type="text" name="student_id" value="<?php echo htmlspecialchars($studentId); ?>" class="form-control" placeholder="e.g. 2025ICT...">
+      </div>
+      <div class="form-group col-md-3">
+        <label>Student Name</label>
+        <input type="text" name="student_name" value="<?php echo htmlspecialchars($studentName); ?>" class="form-control" placeholder="e.g. AINKARAN">
+      </div>
+      <div class="form-group col-md-4">
+        <label>Student (Exact)</label>
+        <select name="student_exact" class="form-control" <?php echo ($department==='') ? 'disabled' : ''; ?>>
+          <option value="">-- Any --</option>
+          <?php if ($studentsFilterRes && mysqli_num_rows($studentsFilterRes)>0) { while($sx=mysqli_fetch_assoc($studentsFilterRes)) { ?>
+            <option value="<?php echo htmlspecialchars($sx['student_id']); ?>" <?php echo ($studentExact!=='' && $studentExact===$sx['student_id']) ? 'selected' : ''; ?>><?php echo htmlspecialchars($sx['student_fullname'] . ' (' . $sx['student_id'] . ')'); ?></option>
+          <?php } } ?>
+        </select>
+        <small class="form-text text-muted">Select Department to enable exact student filter.</small>
       </div>
     </div>
     <div>

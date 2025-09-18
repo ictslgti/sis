@@ -11,6 +11,10 @@ if (!headers_sent()) { ob_start(); }
 $start  = isset($_GET['start']) ? trim($_GET['start']) : '';
 $end    = isset($_GET['end']) ? trim($_GET['end']) : '';
 $method = isset($_GET['method']) ? trim($_GET['method']) : '';// ''|SLGTI|Bank (case-insensitive)
+// New filters
+$department = isset($_GET['department']) ? trim($_GET['department']) : '';
+$studentName = isset($_GET['student_name']) ? trim($_GET['student_name']) : '';
+$studentExact = isset($_GET['student_exact']) ? trim($_GET['student_exact']) : '';
 $export = isset($_GET['export']) ? strtolower(trim($_GET['export'])) : '';// ''|csv|excel|xls|pdf
 
 // Defaults: last 30 days
@@ -21,8 +25,16 @@ if ($end === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $end)) {
   $end = date('Y-m-d');
 }
 
-// Build SQL (filter by date range and optional method). Include qty*amount as line total
-$sql = "SELECT p.pays_id, p.student_id, p.payment_type, p.payment_reason, COALESCE(p.payment_method,'') AS payment_method, p.pays_note, p.pays_amount, p.pays_qty, p.pays_date, (p.pays_amount * p.pays_qty) AS line_total, p.pays_department FROM pays p WHERE p.approved = 1 AND p.pays_date BETWEEN ? AND ?";
+// Build SQL with optional joins (student/course) for name and department filtering
+$sql = "SELECT 
+          p.pays_id, p.student_id, p.payment_type, p.payment_reason, COALESCE(p.payment_method,'') AS payment_method,
+          p.pays_note, p.pays_amount, p.pays_qty, p.pays_date, (p.pays_amount * p.pays_qty) AS line_total, p.pays_department,
+          s.student_fullname, c.department_id
+        FROM pays p
+        LEFT JOIN student s ON s.student_id = p.student_id
+        LEFT JOIN student_enroll se ON se.student_id = p.student_id AND se.student_enroll_status='Following'
+        LEFT JOIN course c ON c.course_id = se.course_id
+        WHERE p.approved = 1 AND p.pays_date BETWEEN ? AND ?";
 $params = [$start, $end];
 $ptypes = 'ss';
 
@@ -32,6 +44,19 @@ if ($method !== '') {
   $sql .= " AND UPPER(p.payment_method) = ?";
   $params[] = $normMethod;
   $ptypes .= 's';
+}
+
+// Department filter (prefer course mapping, fallback to pays_department)
+if ($department !== '') {
+  $sql .= " AND (c.department_id = ? OR p.pays_department = ?)";
+  $params[] = $department; $params[] = $department; $ptypes .= 'ss';
+}
+
+// Student filters
+if ($studentExact !== '') {
+  $sql .= " AND p.student_id = ?"; $params[] = $studentExact; $ptypes .= 's';
+} elseif ($studentName !== '') {
+  $sql .= " AND s.student_fullname LIKE ?"; $params[] = '%' . $studentName . '%'; $ptypes .= 's';
 }
 
 $sql .= " ORDER BY p.pays_date ASC, p.pays_id ASC";
@@ -188,10 +213,42 @@ require_once __DIR__ . '/../menu.php';
             <option value="Bank" <?php echo $method==='Bank'?'selected':''; ?>>Bank</option>
           </select>
         </div>
+        <div class="form-group col-md-3">
+          <label>Department</label>
+          <select name="department" class="form-control" onchange="this.form.submit()">
+            <option value="">-- Any --</option>
+            <?php 
+              $deptRes = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
+              if ($deptRes && mysqli_num_rows($deptRes)>0) { while($r=mysqli_fetch_assoc($deptRes)){
+                $did = htmlspecialchars($r['department_id']); $dn = htmlspecialchars($r['department_name']);
+                $sel = ($department===$r['department_id']) ? 'selected' : '';
+                echo "<option value=\"$did\" $sel>$dn</option>";
+              } }
+            ?>
+          </select>
+        </div>
+        <div class="form-group col-md-3">
+          <label>Student Name</label>
+          <input type="text" name="student_name" class="form-control" placeholder="e.g. AINKARAN" value="<?php echo htmlspecialchars($studentName); ?>">
+        </div>
+        <div class="form-group col-md-3">
+          <label>Student (Exact)</label>
+          <select name="student_exact" class="form-control" <?php echo ($department==='')?'disabled':''; ?>>
+            <option value="">-- Any --</option>
+            <?php if ($department !== '') {
+              $studRes = mysqli_query($con, "SELECT s.student_id, s.student_fullname FROM student s JOIN student_enroll se ON se.student_id=s.student_id AND se.student_enroll_status='Following' JOIN course c ON c.course_id=se.course_id WHERE c.department_id='".mysqli_real_escape_string($con,$department)."' ORDER BY s.student_fullname");
+              if ($studRes && mysqli_num_rows($studRes)>0) { while($sx=mysqli_fetch_assoc($studRes)) {
+                $sid = htmlspecialchars($sx['student_id']); $sn = htmlspecialchars($sx['student_fullname'].' ('.$sx['student_id'].')');
+                $sel = ($studentExact!=='' && $studentExact===$sx['student_id']) ? 'selected' : '';
+                echo "<option value=\"$sid\" $sel>$sn</option>";
+              } }
+            } ?>
+          </select>
+        </div>
         <div id="actions" class="form-group col-md-3 align-self-end">
           <button type="submit" class="btn btn-primary"><i class="fa fa-filter"></i> Apply</button>
-          <a class="btn btn-outline-secondary" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/finance/RegistrationPaymentReport.php?start=<?php echo urlencode($start); ?>&end=<?php echo urlencode($end); ?>&method=<?php echo urlencode($method); ?>&export=csv"><i class="fa fa-file-excel"></i> Excel (CSV)</a>
-          <a class="btn btn-outline-secondary" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/finance/RegistrationPaymentReport.php?start=<?php echo urlencode($start); ?>&end=<?php echo urlencode($end); ?>&method=<?php echo urlencode($method); ?>&export=pdf"><i class="fa fa-file-pdf"></i> PDF</a>
+          <a class="btn btn-outline-secondary" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/finance/RegistrationPaymentReport.php?start=<?php echo urlencode($start); ?>&end=<?php echo urlencode($end); ?>&method=<?php echo urlencode($method); ?>&department=<?php echo urlencode($department); ?>&student_name=<?php echo urlencode($studentName); ?>&student_exact=<?php echo urlencode($studentExact); ?>&export=csv"><i class="fa fa-file-excel"></i> Excel (CSV)</a>
+          <a class="btn btn-outline-secondary" href="<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/finance/RegistrationPaymentReport.php?start=<?php echo urlencode($start); ?>&end=<?php echo urlencode($end); ?>&method=<?php echo urlencode($method); ?>&department=<?php echo urlencode($department); ?>&student_name=<?php echo urlencode($studentName); ?>&student_exact=<?php echo urlencode($studentExact); ?>&export=pdf"><i class="fa fa-file-pdf"></i> PDF</a>
           <button type="button" class="btn btn-secondary" onclick="window.print()"><i class="fa fa-print"></i> Print</button>
         </div>
       </form>

@@ -41,8 +41,8 @@ if ($u_t === 'STU') {
 
 // IN roles (IN1, IN2, IN3) will use the unified top navbar in menu2.php
 
-// For SAO, HOD, DIR, ACC and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
-if (in_array($u_t, ['SAO','HOD','DIR','ACC','IN1','IN2','IN3'], true)) {
+// For SAO, HOD, DIR, ACC, FIN and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
+if (in_array($u_t, ['SAO','HOD','DIR','ACC','FIN','IN1','IN2','IN3'], true)) {
   $menu2 = __DIR__ . '/menu2.php';
   if (file_exists($menu2)) {
     include $menu2;

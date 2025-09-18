@@ -1,5 +1,5 @@
 <?php
-// menu2.php - Responsive top navbar for SAO, HOD, DIR, ACC (desktop + mobile)
+// menu2.php - Responsive top navbar for SAO, HOD, DIR, ACC, FIN (desktop + mobile)
 // Safe session access
 if (session_status() === PHP_SESSION_NONE) {
   session_start();
@@ -13,9 +13,9 @@ $d_c  = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : '';
 // Base path helper
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-// Only render for SAO, HOD, DIR, ACC and instructor roles (IN1, IN2, IN3);
+// Only render for SAO, HOD, DIR, ACC, FIN and instructor roles (IN1, IN2, IN3);
 // otherwise do nothing to avoid unintended menus
-if (!in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'IN1', 'IN2', 'IN3'], true)) {
+if (!in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], true)) {
   return;
 }
 // Decide content container: full-width on dashboard index, centered elsewhere
@@ -154,6 +154,24 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
             <a class="dropdown-item" href="<?php echo $base; ?>/hostel/BulkRoomAssign.php">Bulk Assign</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/hostel/ManualAllocate.php">Manual Allocate</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/hostel/Payments.php">Hostel Payments</a>
+          </div>
+        </li>
+      <?php endif; ?>
+
+      <!-- Finance dropdown: FIN and ACC roles -->
+      <?php if (in_array($u_t, ['FIN','ACC'], true)): ?>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="finMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-coins"></i> Finance
+          </a>
+          <div class="dropdown-menu" aria-labelledby="finMenu">
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/StudentBankDetails.php"><i class="fas fa-university mr-1"></i> Student Bank Details</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/HostelFeeReports.php"><i class="fa fa-print mr-1"></i> Hostel Fee Reports</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/RegistrationPaymentReport.php"><i class="fa fa-file-invoice-dollar mr-1"></i> Registration Payment Report</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/RegistrationPaymentApproval.php"><i class="fa fa-check-circle mr-1"></i> Registration Payment Approval</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/NormalizeRegistrationReason.php"><i class="fa fa-tools mr-1"></i> Normalize Registration Reason</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/ManagePaymentTypes.php"><i class="fas fa-tags mr-1"></i> Manage Payment Types</a>
           </div>
         </li>
       <?php endif; ?>
