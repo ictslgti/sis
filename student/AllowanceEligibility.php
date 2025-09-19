@@ -19,6 +19,11 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 // Filters
 $fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 $fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
+// Only current allowance-eligible students
+$fonlyAE = isset($_GET['only_allowance']) && $_GET['only_allowance'] === '1' ? '1' : '';
+// Attendance filters: month (YYYY-MM) and minimum percent
+$fmonth  = (isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month'])) ? $_GET['month'] : date('Y-m');
+$fminpct = isset($_GET['min_percent']) && $_GET['min_percent'] !== '' ? max(0, min(100, (int)$_GET['min_percent'])) : '';
 
 // Handle bulk actions (SAO only)
 $messages = [];
@@ -90,6 +95,9 @@ if ($fdept !== '') {
 if ($fcourse !== '') {
   $where[] = "c.course_id = '" . mysqli_real_escape_string($con, $fcourse) . "'";
 }
+if ($fonlyAE === '1') {
+  $where[] = "s.allowance_eligible = 1";
+}
 $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 
 $sql = "SELECT DISTINCT s.student_id, s.student_fullname, s.allowance_eligible, c.course_name, d.department_name
@@ -99,7 +107,141 @@ $sql = "SELECT DISTINCT s.student_id, s.student_fullname, s.allowance_eligible, 
         LEFT JOIN department d ON d.department_id = c.department_id" . $whereSql . "
         ORDER BY s.student_id ASC";
 $res = mysqli_query($con, $sql);
-$total_count = ($res ? mysqli_num_rows($res) : 0);
+// Materialize rows for further processing (attendance filtering)
+$rows = [];
+if ($res) { while ($r = mysqli_fetch_assoc($res)) { $rows[] = $r; } }
+$total_count = count($rows);
+
+// Build considered working days for the selected month (reusing logic from MonthlyAttendanceReport)
+// Compute month range
+$firstDay = $fmonth . '-01';
+$lastDay  = date('Y-m-t', strtotime($firstDay));
+$daysInMonth = (int)date('t', strtotime($firstDay));
+$dayDates = [];
+for ($d = 1; $d <= $daysInMonth; $d++) { $dayDates[$d] = date('Y-m-d', strtotime($fmonth.'-'.str_pad($d,2,'0',STR_PAD_LEFT))); }
+
+// Load holidays and vacations if tables exist (scoped helpers)
+if (!function_exists('load_holidays_set')) {
+  function load_holidays_set($con, $firstDay, $lastDay) {
+    $set = [];
+    $cands = [
+      ['table'=>'holidays_lk','col'=>'date'],
+      ['table'=>'public_holidays','col'=>'holiday_date'],
+      ['table'=>'holidays','col'=>'holiday_date'],
+    ];
+    foreach ($cands as $c) {
+      $t = mysqli_real_escape_string($con, $c['table']);
+      $rs = mysqli_query($con, "SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='{$t}' LIMIT 1");
+      if ($rs && mysqli_fetch_row($rs)) {
+        $col = $c['col'];
+        $q = mysqli_query($con, "SELECT `${col}` AS d FROM `${t}` WHERE `${col}` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'");
+        if ($q) { while($r=mysqli_fetch_assoc($q)){ if (!empty($r['d'])) { $set[$r['d']] = true; } } }
+        break;
+      }
+    }
+    return $set;
+  }
+}
+if (!function_exists('load_vacations_set')) {
+  function load_vacations_set($con, $firstDay, $lastDay) {
+    $set = [];
+    $candsSingle = [
+      ['table' => 'vacation_days', 'col' => 'vacation_date'],
+      ['table' => 'vacations_days', 'col' => 'date'],
+    ];
+    foreach ($candsSingle as $c) {
+      $t = mysqli_real_escape_string($con, $c['table']);
+      $rs = mysqli_query($con, "SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='{$t}' LIMIT 1");
+      if ($rs && mysqli_fetch_row($rs)) {
+        $col = $c['col'];
+        $q = mysqli_query($con, "SELECT `${col}` AS d FROM `${t}` WHERE `${col}` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'");
+        if ($q) { while($r=mysqli_fetch_assoc($q)){ if (!empty($r['d'])) { $set[$r['d']] = true; } } }
+        return $set; // prefer single-date style if found
+      }
+    }
+    $candsRange = [
+      ['table' => 'vacations', 'start' => 'start_date', 'end' => 'end_date'],
+      ['table' => 'academic_vacations', 'start' => 'start_date', 'end' => 'end_date'],
+      ['table' => 'institution_vacations', 'start' => 'from_date', 'end' => 'to_date'],
+    ];
+    foreach ($candsRange as $c) {
+      $t = mysqli_real_escape_string($con, $c['table']);
+      $rs = mysqli_query($con, "SELECT 1 FROM information_schema.tables WHERE table_schema=DATABASE() AND table_name='{$t}' LIMIT 1");
+      if ($rs && mysqli_fetch_row($rs)) {
+        $colS = $c['start']; $colE = $c['end'];
+        $q = mysqli_query($con, "SELECT `${colS}` AS s, `${colE}` AS e FROM `${t}` WHERE NOT(`${colE}` < '".mysqli_real_escape_string($con,$firstDay)."' OR `${colS}` > '".mysqli_real_escape_string($con,$lastDay)."')");
+        if ($q) {
+          while ($r = mysqli_fetch_assoc($q)) {
+            $s = !empty($r['s']) ? max($firstDay, $r['s']) : $firstDay;
+            $e = !empty($r['e']) ? min($lastDay, $r['e']) : $lastDay;
+            $ds = strtotime($s); $de = strtotime($e);
+            if ($ds && $de && $ds <= $de) {
+              for ($tday = $ds; $tday <= $de; $tday = strtotime('+1 day', $tday)) {
+                $set[date('Y-m-d', $tday)] = true;
+              }
+            }
+          }
+        }
+        break;
+      }
+    }
+    return $set;
+  }
+}
+
+$holidaySet = load_holidays_set($con, $firstDay, $lastDay);
+$vacationSet = load_vacations_set($con, $firstDay, $lastDay);
+
+// Exceptional (any day in month with attendance present)
+$exceptionalSet = [];
+$exq = mysqli_query($con, "SELECT DISTINCT date AS d FROM attendance WHERE date BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'");
+if ($exq) { while($row=mysqli_fetch_assoc($exq)){ if (!empty($row['d'])) { $exceptionalSet[$row['d']] = true; } } }
+
+// NWD overrides (attendance_status=-1) never counted
+$nwdOverrideSet = [];
+$nq = mysqli_query($con, "SELECT DISTINCT date AS d FROM attendance WHERE attendance_status=-1 AND date BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'");
+if ($nq) { while($row=mysqli_fetch_assoc($nq)){ if (!empty($row['d'])) { $nwdOverrideSet[$row['d']] = true; } } }
+
+// Compute considered working days
+$workDayDates = [];
+$countWorking = 0;
+foreach ($dayDates as $idx=>$dstr) {
+  $w = (int)date('w', strtotime($dstr)); // 0=Sun,6=Sat
+  if (isset($nwdOverrideSet[$dstr])) { continue; }
+  if ($w === 0 || $w === 6) {
+    if (isset($exceptionalSet[$dstr])) { $workDayDates[$idx] = $dstr; $countWorking++; }
+    continue;
+  }
+  if (isset($holidaySet[$dstr]) || isset($vacationSet[$dstr])) { continue; }
+  $workDayDates[$idx] = $dstr; $countWorking++;
+}
+
+// Compute per-student present days and percentage, then apply min-percent filter if set
+$percentMap = [];
+if (!empty($rows) && $countWorking > 0) {
+  $dateList = implode(',', array_map(function($d){ return "'".addslashes($d)."'"; }, array_values($workDayDates)));
+  if ($dateList === '') { $dateList = "''"; }
+  $ids = [];
+  foreach ($rows as $r2) { $ids[] = "'".mysqli_real_escape_string($con, $r2['student_id'])."'"; }
+  $idList = $ids ? implode(',', $ids) : "''";
+  $q = mysqli_query($con, "SELECT a.student_id, COUNT(*) AS present_days FROM (SELECT student_id, date, MAX(attendance_status) AS st FROM attendance WHERE date IN (".$dateList.") AND student_id IN (".$idList.") GROUP BY student_id, date) a WHERE a.st=1 GROUP BY a.student_id");
+  $presentMap = [];
+  if ($q) { while($r=mysqli_fetch_assoc($q)){ $presentMap[$r['student_id']] = (int)$r['present_days']; } }
+  foreach ($rows as $r3) {
+    $sid = $r3['student_id'];
+    $p = isset($presentMap[$sid]) ? $presentMap[$sid] : 0;
+    $pct = $countWorking > 0 ? round(($p / $countWorking) * 100) : 0;
+    $percentMap[$sid] = $pct;
+  }
+  if ($fminpct !== '') {
+    $rows = array_values(array_filter($rows, function($it) use ($percentMap, $fminpct) {
+      $sid = $it['student_id'];
+      $pct = isset($percentMap[$sid]) ? (int)$percentMap[$sid] : 0;
+      return $pct >= (int)$fminpct;
+    }));
+    $total_count = count($rows);
+  }
+}
 
 // UI
 require_once __DIR__ . '/../head.php';
@@ -159,7 +301,21 @@ require_once __DIR__ . '/../menu.php';
                 <?php endforeach; ?>
               </select>
             </div>
-            <div class="form-group col-12 col-md-4 d-flex align-items-end">
+            <div class="form-group col-6 col-md-2">
+              <label for="fmonth" class="small text-muted mb-1">Month</label>
+              <input type="month" id="fmonth" name="month" class="form-control" value="<?php echo h($fmonth); ?>">
+            </div>
+            <div class="form-group col-6 col-md-2">
+              <label for="fminpct" class="small text-muted mb-1">Min %</label>
+              <input type="number" id="fminpct" name="min_percent" min="0" max="100" step="1" class="form-control" value="<?php echo h($fminpct); ?>" placeholder="e.g. 80">
+            </div>
+            <div class="form-group col-12 col-md-2">
+              <div class="custom-control custom-checkbox mt-4">
+                <input type="checkbox" class="custom-control-input" id="fonlyAE" name="only_allowance" value="1" <?php echo ($fonlyAE==='1')?'checked':''; ?>>
+                <label class="custom-control-label" for="fonlyAE">Only allowance-eligible</label>
+              </div>
+            </div>
+            <div class="form-group col-12 col-md-12 d-flex align-items-end">
               <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
             </div>
           </div>
@@ -204,6 +360,18 @@ require_once __DIR__ . '/../menu.php';
         <button type="submit" name="bulk_action" value="bulk_mark_allowance" class="btn btn-primary btn-sm ml-2" onclick="return confirm('Mark allowance eligible for selected students?');">Mark Eligible</button>
         <button type="submit" name="bulk_action" value="bulk_clear_allowance" class="btn btn-secondary btn-sm ml-1" onclick="return confirm('Clear allowance eligibility for selected students?');">Clear Eligible</button>
       </div>
+      <div class="mb-2 mb-md-0">
+        <?php
+          $repUrl = ($base ?: '') . '/attendance/MonthlyAttendanceReport.php?view=detailed'
+                  . '&month=' . urlencode($fmonth)
+                  . ($fdept !== '' ? ('&department_id=' . urlencode($fdept)) : '')
+                  . ($fcourse !== '' ? ('&course_id=' . urlencode($fcourse)) : '')
+                  . ($fonlyAE === '1' ? '&only_allowance=1' : '');
+        ?>
+        <a class="btn btn-success btn-sm" href="<?php echo $repUrl; ?>" target="_blank" rel="noopener">
+          <i class="fas fa-external-link-alt mr-1"></i> Open Monthly Attendance Report
+        </a>
+      </div>
     </div>
 
     <div class="card shadow-sm border-0">
@@ -220,12 +388,13 @@ require_once __DIR__ . '/../menu.php';
                 <th>Student ID</th>
                 <th>Full Name</th>
                 <th class="d-none d-md-table-cell">Allowance</th>
+                <th class="d-none d-md-table-cell">Attendance %</th>
                 <th class="d-none d-md-table-cell">Course</th>
                 <th class="d-none d-lg-table-cell">Department</th>
               </tr>
             </thead>
             <tbody>
-              <?php if ($res && mysqli_num_rows($res) > 0): $i=0; while ($row = mysqli_fetch_assoc($res)): ?>
+              <?php if (!empty($rows)): $i=0; foreach ($rows as $row): ?>
                 <tr>
                   <td class="align-middle"><input type="checkbox" class="sel" name="sids[]" value="<?php echo h($row['student_id']); ?>"></td>
                   <td class="text-muted align-middle"><?php echo ++$i; ?></td>
@@ -235,11 +404,15 @@ require_once __DIR__ . '/../menu.php';
                     <?php $ae = isset($row['allowance_eligible']) ? (int)$row['allowance_eligible'] : 0; ?>
                     <span class="badge badge-<?php echo $ae ? 'success' : 'secondary'; ?>"><?php echo $ae ? 'Eligible' : 'Not Eligible'; ?></span>
                   </td>
+                  <td class="align-middle d-none d-md-table-cell">
+                    <?php $sid = $row['student_id']; $pct = isset($percentMap[$sid]) ? (int)$percentMap[$sid] : 0; ?>
+                    <span class="badge badge-<?php echo ($pct>=80?'success':($pct>=60?'warning':'secondary')); ?>"><?php echo $pct; ?>%</span>
+                  </td>
                   <td class="align-middle d-none d-md-table-cell"><?php echo h($row['course_name'] ?? ''); ?></td>
                   <td class="align-middle d-none d-lg-table-cell"><?php echo h($row['department_name'] ?? ''); ?></td>
                 </tr>
-              <?php endwhile; else: ?>
-                <tr><td colspan="7" class="text-center text-muted">No students found for the selected filters.</td></tr>
+              <?php endforeach; else: ?>
+                <tr><td colspan="8" class="text-center text-muted">No students found for the selected filters.</td></tr>
               <?php endif; ?>
             </tbody>
           </table>

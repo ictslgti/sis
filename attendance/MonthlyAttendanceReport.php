@@ -59,6 +59,8 @@ $month = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month']) 
 $course = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 // Default to detailed (month all days)
 $view = (isset($_GET['view']) && in_array($_GET['view'], ['summary','detailed'], true)) ? $_GET['view'] : 'detailed';
+// Optional: only allowance-eligible students
+$onlyAE = (isset($_GET['only_allowance']) && $_GET['only_allowance'] === '1') ? '1' : '';
 
 // Compute month range
 $firstDay = $month.'-01';
@@ -251,6 +253,9 @@ if ($deptCode !== '') {
   $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
   if ($course !== '') {
     $where .= " AND c.course_id='".mysqli_real_escape_string($con,$course)."'";
+  }
+  if ($onlyAE === '1') {
+    $where .= " AND s.allowance_eligible=1";
   }
   $sql = "SELECT s.student_id, s.student_fullname, s.student_nic, se.course_id, c.course_name
           FROM student_enroll se
@@ -445,11 +450,17 @@ if ($isExport) {
               <label for="month" class="small mb-1 text-muted">Month</label>
               <input type="month" id="month" name="month" class="form-control form-control-sm" value="<?php echo htmlspecialchars($month); ?>" required>
             </div>
+            <div class="col-12 col-md-3 mb-2">
+              <div class="custom-control custom-checkbox mt-4">
+                <input type="checkbox" class="custom-control-input" id="only_allowance" name="only_allowance" value="1" <?php echo ($onlyAE==='1')?'checked':''; ?> onchange="this.form.submit()">
+                <label class="custom-control-label" for="only_allowance">Only allowance-eligible</label>
+              </div>
+            </div>
             <div class="col-6 col-md-1 mb-2 d-flex justify-content-md-end">
               <div class="btn-group btn-group-sm ml-md-auto" role="group">
                 <input type="hidden" name="view" value="detailed">
                 <button class="btn btn-primary"><i class="fas fa-sync-alt mr-1"></i></button>
-                <a href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php?export=1&view=detailed&month=<?php echo urlencode($month); ?><?php echo $deptCode?('&department_id='.urlencode($deptCode)) : ''; ?><?php echo $course?('&course_id='.urlencode($course)) : ''; ?>" class="btn btn-success" id="exportBtn" title="Export to Excel">
+                <a href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php?export=1&view=detailed&month=<?php echo urlencode($month); ?><?php echo $deptCode?('&department_id='.urlencode($deptCode)) : ''; ?><?php echo $course?('&course_id='.urlencode($course)) : ''; ?><?php echo ($onlyAE==='1')?'&only_allowance=1':''; ?>" class="btn btn-success" id="exportBtn" title="Export to Excel">
                   <i class="fas fa-file-excel mr-1"></i>
                 </a>
               </div>
