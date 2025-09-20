@@ -136,8 +136,6 @@ include_once("../menu.php");
                         $cid = htmlspecialchars($row['course_id']);
                         echo '<td>'
                           .'<div class="btn-group btn-group-sm" role="group">'
-                          .'<a class="btn btn-light border" href="'.$base.'/course/Module.php?course_id='.urlencode($row['course_id']).'" title="Modules"><i class="fas fa-th-list"></i></a>'
-                          .'<a class="btn btn-light border" href="'.$base.'/batch/BatchDetails.php?course_id='.urlencode($row['course_id']).'" title="Batches"><i class="fas fa-layer-group"></i></a>'
                           .'<a class="btn btn-warning" href="'.$base.'/course/AddCourse.php?edits='.urlencode($row['course_id']).'" title="Edit"><i class="far fa-edit"></i></a>'
                           .'<button type="button" class="btn btn-danger" data-toggle="modal" data-target="#confirm-delete" data-href="?'.http_build_query(array_merge($_GET,['delete_id'=>$row['course_id']])).'" title="Delete"><i class="fas fa-trash"></i></button>'
                           .'</div>'
