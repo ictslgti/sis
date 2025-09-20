@@ -1,3 +1,6 @@
+<?php // Start buffering BEFORE any output
+if (!ob_get_level()) { ob_start(); }
+?>
 <!-- BLOCK#1 START DON'T CHANGE THE ORDER -->
 <?php 
 $title = "Add Academic Year | SLGTI" ;
@@ -14,133 +17,132 @@ include_once("../menu.php");
 <!-- END DON'T CHANGE THE ORDER -->
 
 <!-- BLOCK#2 START YOUR CODER HERE -->
-<div class="shadow p-3 mb-5  alert bg-dark rounded  text-white text-center" role="alert">
-
-        <div class="highlight-blue">
-            <div class="container">
-                <div class="intro">
-                    <h1 class="display-4 text-center">SLGTI Academic Year</h1>
-                    
-                   
-                </div>
-            </div>
-        </div>
-    </div>
-    
-
-<table class="table table-hover">
-  <thead class="thead-dark">
-  </tbody>
-    </form>
-    </table>
-  <!-- <tr >
-    <label for="inputPassword5">Add Academic Year</label>
-
-    </tr>
-   -->
-
-<!-- <div class="  p-3 mb-5"> -->
-<!-- <a href="" class="btn btn-success" role="button" aria-pressed="true">Add</a> -->
-<!-- <a href="" class="btn btn-success" role="button" aria-pressed="true">Delete</a> -->
-<!-- <a href="" class="btn btn-success" role="button" aria-pressed="true">Edit</a> -->
-<!-- <a href="AcademicYear" class="btn btn-primary" role="button" aria-pressed="true">Back</a> -->
-<!-- </div> -->
-
 <?php
-$academic_year = $first_semi_start_date = $first_semi_end_date = $second_semi_start_date = $second_semi_end_date = $academic_year_status = null;
+// Helper for safe redirect
+function ay_safe_redirect($url) {
+  if (!headers_sent()) {
+    header('Location: ' . $url);
+  } else {
+    echo '<script>window.location.href=' . json_encode($url) . ';</script>';
+  }
+  exit;
+}
+
+// Preload edit values before rendering
+$academic_year = $first_semi_start_date = $first_semi_end_date = $second_semi_start_date = $second_semi_end_date = $academic_year_status = '';
 if(isset($_GET['edit'])){
-    $academic_year = $_GET['edit'];
-    $sql = "SELECT * FROM `academic` WHERE `academic_year`='$academic_year'";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result)==1){
-    $row = mysqli_fetch_assoc($result);
-    $academic_year = $row['academic_year'];
-    $first_semi_start_date = $row['first_semi_start_date']; 
-    $first_semi_end_date = $row['first_semi_end_date']; 
-    $second_semi_start_date = $row['second_semi_start_date']; 
-    $second_semi_end_date = $row['second_semi_end_date']; 
-    $academic_year_status = $row['academic_year_status']; 
-    
-}
+  $key = $_GET['edit'];
+  if ($stmt = mysqli_prepare($con, 'SELECT academic_year, first_semi_start_date, first_semi_end_date, second_semi_start_date, second_semi_end_date, academic_year_status FROM academic WHERE academic_year = ?')) {
+    mysqli_stmt_bind_param($stmt, 's', $key);
+    mysqli_stmt_execute($stmt);
+    mysqli_stmt_bind_result($stmt, $academic_year, $first_semi_start_date, $first_semi_end_date, $second_semi_start_date, $second_semi_end_date, $academic_year_status);
+    mysqli_stmt_fetch($stmt);
+    mysqli_stmt_close($stmt);
+  }
 }
 
-
+// Handle Add
 if(isset($_POST['Add'])){
-   if (!empty($_POST['academic_year']) && !empty ($_POST['first_semi_start_date']) && !empty ($_POST['first_semi_end_date']) && !empty ($_POST['second_semi_start_date']) 
-   && !empty ($_POST['second_semi_end_date']) && !empty ($_POST['academic_year_status'])){
-    $academic_year = $_POST['academic_year'];
-    $first_semi_start_date = $_POST['first_semi_start_date']; 
-    $first_semi_end_date = $_POST['first_semi_end_date']; 
-    $second_semi_start_date = $_POST['second_semi_start_date']; 
-    $second_semi_end_date = $_POST['second_semi_end_date']; 
-    $academic_year_status = $_POST['academic_year_status']; 
-       $sql = "INSERT INTO `academic` (`academic_year`,`first_semi_start_date`,`first_semi_end_date`,`second_semi_start_date`,`second_semi_end_date`,`academic_year_status`) 
-       VALUE ('$academic_year','$first_semi_start_date','$first_semi_end_date','$second_semi_start_date','$second_semi_end_date','$academic_year_status')";
-       if (mysqli_query($con, $sql)){
-           echo '<a class = "text-success"><div class="fa-1.5x"><i class="fas fa-spinner fa-pulse "></i>Insert Success</div></a>';
-       }else{
-           echo "Error:" .$sql. "<br>". mysqli_error($con);
-       }
-   }
-    // echo "Add";
-}
-if(isset($_POST['Edit'])){
-    if (!empty($_POST['academic_year']) && !empty ($_POST['first_semi_start_date']) && !empty ($_POST['first_semi_end_date']) && !empty ($_POST['second_semi_start_date'])
-     && !empty ($_POST['second_semi_end_date']) && !empty ($_POST['academic_year_status']) && !empty($_GET['edit'])){
-        $academic_year = $_POST['academic_year'];
-    $first_semi_start_date = $_POST['first_semi_start_date']; 
-    $first_semi_end_date = $_POST['first_semi_end_date']; 
-    $second_semi_start_date = $_POST['second_semi_start_date']; 
-    $second_semi_end_date = $_POST['second_semi_end_date']; 
-    $academic_year_status = $_POST['academic_year_status'];
-    $academic_year = $_GET['edit'];
-        $sql = " UPDATE `academic` SET `academic_year`='$academic_year',`first_semi_start_date`='$first_semi_start_date',`first_semi_end_date`='$first_semi_end_date',
-        `second_semi_start_date`='$second_semi_start_date' ,`second_semi_end_date`='$second_semi_end_date' ,`academic_year_status`='$academic_year_status'   WHERE `academic`.`academic_year`= '$academic_year'";
-        if (mysqli_query($con, $sql)){
-            echo '<a class = "text-success"><div class="fa-1.5x"><i class="fas fa-spinner fa-pulse "></i>Edit Success</div></a>';
-        }else{
-            echo "Error:" .$sql. "<br>". mysqli_error($con);
-        }
+  $academic_year = $_POST['academic_year'] ?? '';
+  $first_semi_start_date = $_POST['first_semi_start_date'] ?? '';
+  $first_semi_end_date = $_POST['first_semi_end_date'] ?? '';
+  $second_semi_start_date = $_POST['second_semi_start_date'] ?? '';
+  $second_semi_end_date = $_POST['second_semi_end_date'] ?? '';
+  $academic_year_status = $_POST['academic_year_status'] ?? '';
+  if ($academic_year && $first_semi_start_date && $first_semi_end_date && $second_semi_start_date && $second_semi_end_date && $academic_year_status) {
+    $sql = 'INSERT INTO academic(academic_year, first_semi_start_date, first_semi_end_date, second_semi_start_date, second_semi_end_date, academic_year_status) VALUES (?,?,?,?,?,?)';
+    if ($stmt = mysqli_prepare($con, $sql)) {
+      mysqli_stmt_bind_param($stmt, 'ssssss', $academic_year, $first_semi_start_date, $first_semi_end_date, $second_semi_start_date, $second_semi_end_date, $academic_year_status);
+      if (mysqli_stmt_execute($stmt)) {
+        ay_safe_redirect('AcademicYear.php?status=added');
+      } else {
+        echo '<div class="container mt-3"><div class="alert alert-danger">Error: ' . htmlspecialchars(mysqli_error($con)) . '</div></div>';
+      }
+      mysqli_stmt_close($stmt);
     }
-    // echo "EDIT";
+  }
 }
 
-?>
-<br><br>
-<form method = "POST">
-<div class = "row">
-<div class ="col-6"><label for="Duration-Institute Training">Academic Year</label><input class="form-control" type = "text" name= "academic_year" value ="<?php echo $academic_year;?>" placeholder="Academic Year" required></div>
-<div class ="col-6"><label for="Duration-Institute Training">Academic Year Status</label><select name="academic_year_status" id="academic_year_status" class="form-control">
-          <option selected="" disabled=""> Academic Year Status</option>
-              <option value="Completed">Completed</option><option value="Active">Active</option>
-          </select></div>
-          
-          <!-- <div class ="col-6"><input class="form-control" type = "text" name= "academic_year_status" value ="<?php echo $academic_year_status;?>" placeholder="Academic Year Status" required></div> -->
-<br><br>
-<div class ="col-6"><label for="Duration-Institute Training">First Semester Start Date</label><input class="form-control" type = "date" name= "first_semi_start_date" value ="<?php echo $first_semi_start_date;?>" placeholder="First Semester Start Date" required></div>
-<div class ="col-6"><label for="Duration-Institute Training">First Semester End Date</label><input class="form-control" type = "date" name= "first_semi_end_date" value ="<?php echo $first_semi_end_date;?>" placeholder="First Semester End Date" required></div>
-<br><br>
-<div class ="col-6"><label for="Duration-Institute Training">Second Semester Start Date</label><input class="form-control" type = "date" name= "second_semi_start_date" value ="<?php echo $second_semi_start_date;?>" placeholder="Second Semester Start Date" required></div>
-<div class ="col-6"><label for="Duration-Institute Training">Second Semester End Date</label><input class="form-control" type = "date" name= "second_semi_end_date" value ="<?php echo $second_semi_end_date;?>" placeholder="Second Semester End Date" required></div>
-<br><br>
-</div>
-<br>
-<?php
-if(isset($_GET['edit'])){
-    
-    echo '<input type = "submit" value="Edit" name="Edit"<a href="" class="btn btn-sm btn-success" role="button" aria-pressed="true"></a> '; 
-    echo '<a href="AcademicYear" class="btn btn-sm btn-primary" role="button" aria-pressed="true">Back</a>';
-}else{
-    echo '<input type="submit" value = "Add" name="Add" <a href="" class="btn btn-sm btn-success" role="button" aria-pressed="true"></a> ';
-    echo '<a href="AcademicYear" class="btn btn-sm btn-primary" role="button" aria-pressed="true">Back</a>';
+// Handle Edit
+if(isset($_POST['Edit']) && isset($_GET['edit'])){
+  $key = $_GET['edit'];
+  $first_semi_start_date = $_POST['first_semi_start_date'] ?? '';
+  $first_semi_end_date = $_POST['first_semi_end_date'] ?? '';
+  $second_semi_start_date = $_POST['second_semi_start_date'] ?? '';
+  $second_semi_end_date = $_POST['second_semi_end_date'] ?? '';
+  $academic_year_status = $_POST['academic_year_status'] ?? '';
+  if ($first_semi_start_date && $first_semi_end_date && $second_semi_start_date && $second_semi_end_date && $academic_year_status) {
+    $sql = 'UPDATE academic SET first_semi_start_date=?, first_semi_end_date=?, second_semi_start_date=?, second_semi_end_date=?, academic_year_status=? WHERE academic_year=?';
+    if ($stmt = mysqli_prepare($con, $sql)) {
+      mysqli_stmt_bind_param($stmt, 'ssssss', $first_semi_start_date, $first_semi_end_date, $second_semi_start_date, $second_semi_end_date, $academic_year_status, $key);
+      if (mysqli_stmt_execute($stmt)) {
+        ay_safe_redirect('AcademicYear.php?status=updated');
+      } else {
+        echo '<div class="container mt-3"><div class="alert alert-danger">Error: ' . htmlspecialchars(mysqli_error($con)) . '</div></div>';
+      }
+      mysqli_stmt_close($stmt);
+    }
+  }
 }
-
-
-
-
 ?>
- 
 
+<div class="container my-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <h3 class="mb-0"><?php echo isset($_GET['edit']) ? 'Edit Academic Year' : 'Add Academic Year'; ?></h3>
+    </div>
+    <div class="card-body">
+      <form method="POST">
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="ay">Academic Year</label>
+            <input type="text" id="ay" name="academic_year" class="form-control" placeholder="e.g., 2025/2026" value="<?php echo htmlspecialchars($academic_year); ?>" <?php echo isset($_GET['edit']) ? 'readonly' : 'required'; ?>>
+          </div>
+          <div class="form-group col-md-6">
+            <label for="status">Academic Year Status</label>
+            <select id="status" name="academic_year_status" class="form-control" required>
+              <option value="" disabled <?php echo $academic_year_status === '' ? 'selected' : ''; ?>>Select status</option>
+              <option value="Active" <?php echo strtolower($academic_year_status) === 'active' ? 'selected' : ''; ?>>Active</option>
+              <option value="Completed" <?php echo strtolower($academic_year_status) === 'completed' ? 'selected' : ''; ?>>Completed</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="fsd">First Semester Start Date</label>
+            <input type="date" id="fsd" name="first_semi_start_date" class="form-control" value="<?php echo htmlspecialchars($first_semi_start_date); ?>" required>
+          </div>
+          <div class="form-group col-md-6">
+            <label for="fed">First Semester End Date</label>
+            <input type="date" id="fed" name="first_semi_end_date" class="form-control" value="<?php echo htmlspecialchars($first_semi_end_date); ?>" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label for="ssd">Second Semester Start Date</label>
+            <input type="date" id="ssd" name="second_semi_start_date" class="form-control" value="<?php echo htmlspecialchars($second_semi_start_date); ?>" required>
+          </div>
+          <div class="form-group col-md-6">
+            <label for="sed">Second Semester End Date</label>
+            <input type="date" id="sed" name="second_semi_end_date" class="form-control" value="<?php echo htmlspecialchars($second_semi_end_date); ?>" required>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+          <a href="AcademicYear.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+          <div>
+            <?php if(isset($_GET['edit'])) { ?>
+              <button type="submit" name="Edit" class="btn btn-primary"><i class="far fa-save"></i> Update</button>
+            <?php } else { ?>
+              <button type="submit" name="Add" class="btn btn-success"><i class="fas fa-plus"></i> Add</button>
+            <?php } ?>
+          </div>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 <!-- END YOUR CODER HERE -->
 

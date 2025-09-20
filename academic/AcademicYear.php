@@ -14,92 +14,92 @@ include_once("../menu.php");
 <!-- END DON'T CHANGE THE ORDER -->
 
 <!-- BLOCK#2 START YOUR CODER HERE -->
-<div class="shadow p-3 mb-5  alert bg-dark rounded  text-white text-center" role="alert">
-
-        <div class="highlight-blue">
-            <div class="container">
-                <div class="intro">
-                    <h1 class="display-4 text-center">SLGTI Academic Year</h1>
-                    
-                   
-                </div>
-            </div>
-        </div>
+<div class="container my-4">
+  <div class="card shadow-sm">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+      <div>
+        <h3 class="mb-0">SLGTI Academic Year</h3>
+        <small class="text-light-50">Manage academic years and dates</small>
+      </div>
+      <?php if(($_SESSION['user_type'] =='ADM')) { ?>
+        <a href="AddAcademicYear.php" class="btn btn-success"><i class="fas fa-plus"></i> Add Academic Year</a>
+      <?php }?>
     </div>
-    <?php if(($_SESSION['user_type'] =='ADM')) { ?><a href="AddAcademicYear" button type="button" class="btn btn-success"><i class="fas fa-plus"></i>&nbsp;Add Academic Year </a>
-
-
-    <?php }?>
-<!-- <h1 class="col text-center">Department Details</h1> -->
-<br><br>
-<table class="table table-hover">
-  <thead class="thead-dark">
- 
-    <tr >
-      <th scope="col">Academic Year</th>
-      <th scope="col">First Semi Start Date</th>
-      <th scope="col">First Semi End Date</th>
-      <th scope="col">Second Semi Start Date</th>
-      <th scope="col">Second Semi End Date</th>
-      <th scope="col">Academic Year Status</th>
-      <?php if(($_SESSION['user_type'] =='ADM')) { ?><th scope="col">Option</th><?php }?>
-      </tr>
-      </thead>
-      <tbody>
-      <tr class="table-light">
-      </tr>
+    <div class="card-body p-0">
+      <?php if (!empty($_GET['status'])) { $status = $_GET['status']; ?>
+        <div class="alert <?php echo ($status === 'added' || $status === 'updated' || $status === 'deleted') ? 'alert-success' : 'alert-info'; ?> m-3 mb-0">
+          <?php
+            if ($status === 'added') echo 'Academic Year added successfully.';
+            elseif ($status === 'updated') echo 'Academic Year updated successfully.';
+            elseif ($status === 'deleted') echo 'Academic Year deleted successfully.';
+          ?>
+        </div>
+      <?php } ?>
       <?php
+        // CSRF token for delete
+        if (empty($_SESSION['csrf_token'])) {
+          $_SESSION['csrf_token'] = bin2hex(random_bytes(16));
+        }
 
-if(isset($_GET['delete'])){
-    $academic_year = $_GET['delete'];
-    $sql = "DELETE FROM `academic` WHERE `academic_year` = '$academic_year'";
-    
-    if (mysqli_query($con, $sql)){
-        echo '<a class = "text-danger"><div class="fa-1.5x"><i class="fas fa-trash fa-pulse "></i>&nbsp;&nbsp;Delete Success</div></a>';
-    }else{
-        echo "Error deleting record:" . mysqli_error($con);
-    }
-}
-
+        // Handle delete via GET with CSRF token
+        if(isset($_GET['delete']) && isset($_GET['csrf_token']) && hash_equals($_SESSION['csrf_token'], $_GET['csrf_token'])){
+          $academic_year = $_GET['delete'];
+          $sql = "DELETE FROM `academic` WHERE `academic_year` = ?";
+          if ($stmt = mysqli_prepare($con, $sql)) {
+            mysqli_stmt_bind_param($stmt, 's', $academic_year);
+            if (mysqli_stmt_execute($stmt)){
+              echo '<div class="alert alert-success m-3">Academic Year deleted successfully.</div>';
+            } else {
+              echo '<div class="alert alert-danger m-3">Error deleting record: '. htmlspecialchars(mysqli_error($con)) .'</div>';
+            }
+            mysqli_stmt_close($stmt);
+          }
+        }
+      ?>
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="thead-dark">
+            <tr>
+              <th scope="col">Academic Year</th>
+              <th scope="col">First Semester Start</th>
+              <th scope="col">First Semester End</th>
+              <th scope="col">Second Semester Start</th>
+              <th scope="col">Second Semester End</th>
+              <th scope="col">Status</th>
+              <?php if(($_SESSION['user_type'] =='ADM')) { ?><th scope="col" class="text-right">Actions</th><?php }?>
+            </tr>
+          </thead>
+          <tbody>
+<?php
+  $sql = "SELECT * FROM academic ORDER BY academic_year DESC";
+  $result = mysqli_query($con, $sql);
+  if ($result && mysqli_num_rows($result)>0){
+      while ($row = mysqli_fetch_assoc($result)){
+          $statusClass = strtolower($row['academic_year_status']) === 'active' ? 'badge-success' : 'badge-secondary';
+          echo '<tr>';
+          echo '<td>' . htmlspecialchars($row["academic_year"]) . '</td>';
+          echo '<td>' . htmlspecialchars($row["first_semi_start_date"]) . '</td>';
+          echo '<td>' . htmlspecialchars($row["first_semi_end_date"]) . '</td>';
+          echo '<td>' . htmlspecialchars($row["second_semi_start_date"]) . '</td>';
+          echo '<td>' . htmlspecialchars($row["second_semi_end_date"]) . '</td>';
+          echo '<td><span class="badge ' . $statusClass . '">' . htmlspecialchars($row["academic_year_status"]) . '</span></td>';
+          if(($_SESSION['user_type'] =='ADM')) {
+            echo '<td class="text-right">';
+            echo '<a href="AddAcademicYear.php?edit=' . rawurlencode($row["academic_year"]) . '" class="btn btn-sm btn-warning mr-1"><i class="far fa-edit"></i> Edit</a>';
+            echo '<a href="?delete=' . rawurlencode($row["academic_year"]) . '&csrf_token=' . urlencode($_SESSION['csrf_token']) . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure you want to delete this academic year?\');"><i class="fas fa-trash"></i> Delete</a>';
+            echo '</td>';
+          }
+          echo '</tr>';
+      }
+  } else {
+      echo '<tr><td colspan="7" class="text-center text-muted">No academic years found.</td></tr>';
+  }
 ?>
-      <?php
-
-// Updated to use the correct table name 'academic' instead of 'academic_year'
-$sql = "SELECT * FROM academic ORDER BY academic_year DESC";
-$result = mysqli_query($con, $sql);
-if (mysqli_num_rows($result)>0){
-    while ($row = mysqli_fetch_assoc($result)){
-        echo'
-        <tr>
-        <td>' . $row ["academic_year"].'</td>
-        <td>' . $row ["first_semi_start_date"].'</td>
-        <td>' . $row ["first_semi_end_date"].'</td>
-        <td>' . $row ["second_semi_start_date"].'</td>
-        <td>' . $row ["second_semi_end_date"].'</td>
-        <td><span class="badge badge-success">' . $row ["academic_year_status"].'</span></td>
-        <td>';?>
-        <?php if(($_SESSION['user_type'] =='ADM')) { ?><?php echo'
-        <a href="'.(defined('APP_BASE') ? APP_BASE : '').'/academic/AddAcademicYear.php?edit='.rawurlencode($row["academic_year"]).'" class="btn btn-sm btn-warning"><i class="far fa-edit"></i></a>
-    <button class="btn btn-sm btn-danger" data-href="?delete='.$row["academic_year"].'" data-toggle="modal" data-target="#confirm-delete"><i class="fas fa-trash"></i> </button>
-    ';?>
-         <?php }?>
-    
-
-    
-      
-         <?php echo'</tr>';
-    }
-}else{
-echo "0 results";
-}
-
-
-?>
-
-  
-</tbody>
-  </form>
-</table>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- END YOUR CODER HERE -->

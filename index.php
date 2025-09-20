@@ -233,6 +233,127 @@ if (isset($_GET['signout'])) {
         href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css">
     <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
     <title><?php echo $title; ?></title>
+    <style>
+      /* Desktop-only left side visual */
+      @media (min-width: 768px) {
+        :root{
+          --nvq-primary:#0d6efd;        /* brand blue */
+          --nvq-primary-soft:rgba(13,110,253,.15);
+          --nvq-deep:#0b2740;
+        }
+        .bg-image {
+          position: relative;
+          overflow: hidden;
+          /* Animated gradient background */
+          background: linear-gradient(135deg, #e9f2ff, #cfe0ff, #d7fff1, #fff3d6);
+          background-size: 300% 300%;
+          animation: bgGradient 18s ease infinite;
+        }
+        /* Optional looping background video */
+        .bg-image .bg-video{
+          position:absolute; inset:0; width:100%; height:100%; object-fit:cover; opacity:.35; filter: grayscale(100%) contrast(1.05);
+        }
+        /* Optional students hero image (black & white dress code). Place file at /img/hero_students_bw.jpg */
+        .bg-image .bg-photo {
+          position: absolute; inset: 0; background: url('<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/hero_students_bw.jpg') center/cover no-repeat;
+          filter: grayscale(100%) contrast(1.05);
+          opacity: .28; /* keep subtle so text & animations readable */
+          animation: photoDrift 30s ease-in-out infinite alternate;
+        }
+        @keyframes photoDrift { 0%{transform: scale(1) translateY(0);} 100%{transform: scale(1.05) translateY(-2%);} }
+        .bg-image:before {
+          content: "";
+          position: absolute; inset: 0;
+        
+          opacity: 0.10; /* watermark */
+        }
+        /* soft floating particles */
+        .bg-image:after {
+          content: ""; position: absolute; inset: 0; pointer-events: none;
+          background-image: radial-gradient(rgba(13,110,253,.08) 2px, transparent 2px), radial-gradient(rgba(25,135,84,.06) 2px, transparent 2px);
+          background-size: 36px 36px, 48px 48px;
+          background-position: 0 0, 18px 18px;
+          animation: floatDots 20s linear infinite;
+        }
+        @keyframes bgGradient {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        @keyframes floatDots {
+          0% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+          100% { transform: translateY(0); }
+        }
+
+        .nvq-path {
+          position: absolute; left: 10%; right: 10%; bottom: 10%; top: 25%;
+          display: flex; flex-direction: column; justify-content: space-between;
+          pointer-events: none;
+        }
+        /* Flowing vertical line */
+        .nvq-line {
+          position: absolute; left: calc(10% + 7px); top: 25%; bottom: 10%; width: 3px;
+          background: linear-gradient(180deg, rgba(13,110,253,0.9), rgba(13,110,253,0.3), rgba(13,110,253,0.9));
+          background-size: 100% 200%;
+          animation: flowLine 5s linear infinite;
+          filter: drop-shadow(0 0 6px rgba(13,110,253,.25));
+        }
+        @keyframes flowLine {
+          0% { background-position: 0 0; }
+          100% { background-position: 0 200%; }
+        }
+        /* Moving indicator */
+        .nvq-indicator {
+          position: absolute; left: calc(10% - 1px); top: 25%; width: 18px; height: 18px; border-radius: 50%;
+          border: 2px solid var(--nvq-primary); background: #fff;
+          box-shadow: 0 0 0 6px var(--nvq-primary-soft), 0 2px 6px rgba(0,0,0,.08);
+          animation: nvqRun 9s cubic-bezier(.65,.01,.24,1) infinite;
+        }
+        @keyframes nvqRun {
+          0%   { transform: translate(0, 0%); }
+          16.66%  { transform: translate(0, 16.66%); }
+          33.33%  { transform: translate(0, 33.33%); }
+          50%  { transform: translate(0, 50%); }
+          66.66%  { transform: translate(0, 66.66%); }
+          83.33%  { transform: translate(0, 83.33%); }
+          100% { transform: translate(0, 100%); }
+        }
+        /* Steps */
+        .nvq-step { display: flex; align-items: center; color: var(--nvq-deep); opacity: 0; transform: translateX(-10px); }
+        .nvq-step .dot {
+          width: 15px; height: 15px; border-radius: 50%; background: var(--nvq-primary); margin-right: 12px; position: relative;
+          box-shadow: 0 0 0 0 rgba(13,110,253,.35);
+          animation: pulseDot 2.4s ease-out infinite;
+        }
+        .nvq-step .dot:after {
+          content: ""; position: absolute; inset: -6px; border-radius: 50%;
+          box-shadow: 0 0 0 0 rgba(13,110,253,.25);
+          animation: ripple 2.4s ease-out infinite;
+        }
+        .nvq-step .label { font-weight: 700; letter-spacing: .2px; text-shadow: 0 1px 0 rgba(255,255,255,.4); }
+        /* Sequential highlight per step for a continuous feel */
+        .nvq-step .label, .nvq-step .dot { transition: transform .4s ease, color .4s ease, background .4s ease; }
+        .nvq-step:nth-child(1) .label { animation: labelGlow 9s ease-in-out infinite; }
+        .nvq-step:nth-child(2) .label { animation: labelGlow 9s ease-in-out 3s infinite; }
+        .nvq-step:nth-child(3) .label { animation: labelGlow 9s ease-in-out 6s infinite; }
+        .nvq-step:nth-child(1) .dot   { animation: pulseDot 2.4s ease-out 0s infinite, dotGlow 9s ease-in-out 0s infinite; }
+        .nvq-step:nth-child(2) .dot   { animation: pulseDot 2.4s ease-out .2s infinite, dotGlow 9s ease-in-out 3s infinite; }
+        .nvq-step:nth-child(3) .dot   { animation: pulseDot 2.4s ease-out .4s infinite, dotGlow 9s ease-in-out 6s infinite; }
+        @keyframes labelGlow { 0%,80%,100%{opacity:.75; transform:none;} 10%,30%{opacity:1; transform:translateX(2px);} }
+        @keyframes dotGlow { 0%,80%,100%{filter:none;} 10%,30%{filter: drop-shadow(0 0 8px rgba(13,110,253,.45));} }
+        @keyframes pulseDot { 0%{box-shadow:0 0 0 0 rgba(13,110,253,.35);} 70%{box-shadow:0 0 0 10px rgba(13,110,253,0);} 100%{box-shadow:0 0 0 0 rgba(13,110,253,0);} }
+        @keyframes ripple   { 0%{box-shadow:0 0 0 0 rgba(13,110,253,.25);} 70%{box-shadow:0 0 0 14px rgba(13,110,253,0);} 100%{box-shadow:0 0 0 0 rgba(13,110,253,0);} }
+        .nvq-step:nth-child(1){ animation: stepIn .8s ease .2s forwards; }
+        .nvq-step:nth-child(2){ animation: stepIn .8s ease .6s forwards; }
+        .nvq-step:nth-child(3){ animation: stepIn .8s ease 1.0s forwards; }
+        @keyframes stepIn { to { opacity: 1; transform: translateX(0); } }
+
+        /* SLGTI animated badge */
+        .slgti-badge { position: absolute; right: 7%; top: 8%; color: var(--nvq-deep); font-weight: 700; letter-spacing: .8px; opacity: .9; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+        .slgti-badge .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--nvq-primary); box-shadow:0 0 0 0 rgba(13,110,253,.4); animation: pulseDot 2.4s ease-out infinite; vertical-align: middle; margin-right: 6px; }
+      }
+    </style>
 </head>
 
 <body>
@@ -240,7 +361,29 @@ if (isset($_GET['signout'])) {
     <div class="container-fluid">
         <div class="row no-gutter">
             <!-- The image half -->
-            <div class="col-md-6 d-none d-md-flex bg-image"></div>
+            <div class="col-md-6 d-none d-md-flex bg-image">
+              <video class="bg-video" autoplay muted loop playsinline>
+                <source src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/Nvq_level_04.mp4" type="video/mp4">
+              </video>
+              <div class="bg-photo"></div>
+              <div class="nvq-line"></div>
+              <div class="nvq-indicator"></div>
+              
+              <div class="nvq-path">
+                <div class="nvq-step">
+                  <div class="dot"></div>
+                  <div class="label">NVQ Level 4 · Intermediate</div>
+                </div>
+                <div class="nvq-step">
+                  <div class="dot"></div>
+                  <div class="label">NVQ Level 5 · Diploma</div>
+                </div>
+                <div class="nvq-step">
+                  <div class="dot"></div>
+                  <div class="label">NVQ Level 6 · Higher Diploma</div>
+                </div>
+              </div>
+            </div>
 
 
             <!-- The content half -->
@@ -251,9 +394,12 @@ if (isset($_GET['signout'])) {
                     <div class="container">
                         <div class="row">
                             <div class="col-lg-10 col-xl-7 mx-auto">
-                                <h3 class="display-4 text-center">MIS@SLGTI</h3>
-                                <p class="text-muted text-center mb-4 blockquote-footer">Management Information System
-                                </p>
+                                <div class="text-center mb-3">
+                                  <img src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/SLGTI_logo.png" alt="SLGTI" style="max-height:72px;width:auto;" class="mb-2">
+                     
+                                  <p class="text-muted small mb-1">Sri Lanka-German Training Institute</p>
+                                  <p class="text-muted">Management Information System</p>
+                                </div>
                                 <form  method="post">
                                     <?php
                                     if (!empty($msg))
@@ -275,16 +421,14 @@ if (isset($_GET['signout'])) {
                                         class="btn btn-primary btn-block text-uppercase mb-2 rounded-pill shadow-sm">Sign
                                         in</button>
 
-                                    <div class="form-group mb-3 text-center">
-                                    <a href="passwordrecovery" class="font-italic text-muted pr-1">Forgot password?</a>
-                                    Don't have an account?
-                                    <a href="signup"class="font-italic text-muted text-right">Sign Up</a>
+                                    <div class="mt-4">
+                                      <a href="search_student.php" class="btn btn-outline-primary btn-block rounded-pill py-2">
+                                        <i class="fas fa-search"></i> Search Student (Public)
+                                      </a>
                                     </div>
+
                                     <div class="text-center d-flex justify-content-between mt-4">
-                                        <p>All Rights Reserved. Designed and Developed by Department of Information and
-                                            Communication Technology, <a href="http://slgti.com"
-                                                class="font-italic text-muted">
-                                                Sri Lanka-German Training Institute.</a></p>
+                                      <p class="small">All Rights Reserved. Designed and Developed by Department of Information and Communication Technology, <a href="http://slgti.com" class="font-italic text-muted">Sri Lanka-German Training Institute.</a></p>
                                     </div>
                                 </form>
                             </div>
