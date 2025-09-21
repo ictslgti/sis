@@ -89,7 +89,7 @@ if (file_exists($topNav)) {
 ?>
 <div class="container-fluid px-2 px-md-4 mt-2 dashboard-container">
   <div class="row">
-    <div class="col-12 col-lg-12 mb-3">
+    <div class="col-12 col-lg-8 mb-3">
       <div class="card shadow-sm card-elevated h-100 profile-card">
         <div class="card-body p-3">
           <div class="d-flex align-items-center header-stack flex-wrap">
@@ -119,6 +119,22 @@ if (file_exists($topNav)) {
           <a href="<?php echo $base; ?>/student/Student_profile.php?Sid=<?php echo urlencode($studentId); ?>" class="btn btn-sm btn-outline-primary">
             <i class="fas fa-id-card mr-1"></i> View Profile
           </a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-12 col-lg-4 mb-3">
+      <div class="card shadow-sm card-elevated mb-3">
+        <div class="card-header card-header-light d-flex justify-content-between align-items-center">
+          <strong><i class="fas fa-graduation-cap mr-1"></i> Enrollment</strong>
+          <button class="btn btn-sm btn-outline-secondary" data-toggle="collapse" data-target="#cardEnroll"><i class="fas fa-eye-slash"></i></button>
+        </div>
+        <div id="cardEnroll" class="collapse show">
+          <div class="card-body">
+            <div><strong>Department:</strong> <?php echo htmlspecialchars($student['department_name'] ?? '—'); ?></div>
+            <div><strong>Course:</strong> <?php echo htmlspecialchars($student['course_name'] ?? '—'); ?></div>
+            <div><strong>Status:</strong> <?php echo htmlspecialchars($student['student_status'] ?? '—'); ?></div>
+          </div>
         </div>
       </div>
     </div>
@@ -242,20 +258,7 @@ if (file_exists($topNav)) {
     </div>
     <!-- Right sidebar: stacked cards next to attendance -->
     <div class="col-12 col-lg-4 mb-3">
-      <div class="card shadow-sm card-elevated mb-3">
-        <div class="card-header card-header-light d-flex justify-content-between align-items-center">
-          <strong><i class="fas fa-graduation-cap mr-1"></i> Enrollment</strong>
-          <button class="btn btn-sm btn-outline-secondary" data-toggle="collapse" data-target="#cardEnroll"><i class="fas fa-eye-slash"></i></button>
-        </div>
-        <div id="cardEnroll" class="collapse show">
-          <div class="card-body">
-            <div><strong>Department:</strong> <?php echo htmlspecialchars($student['department_name'] ?? '—'); ?></div>
-            <div><strong>Course:</strong> <?php echo htmlspecialchars($student['course_name'] ?? '—'); ?></div>
-            <div><strong>Status:</strong> <?php echo htmlspecialchars($student['student_status'] ?? '—'); ?></div>
-          </div>
-        </div>
-      </div>
-
+    
       <div class="card shadow-sm card-elevated mb-3">
         <div class="card-header card-header-light d-flex justify-content-between align-items-center">
           <strong><i class="far fa-building mr-1"></i> Hostel</strong>
