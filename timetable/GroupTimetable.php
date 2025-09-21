@@ -17,7 +17,7 @@ $group_id = $_GET['group_id'] ?? 0;
 $academic_year = $_GET['academic_year'] ?? date('Y');
 
 // Check permissions (support 'ADM' role code used elsewhere)
-if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM', 'HOD', 'ADMIN'])) {
+if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM', 'HOD', 'ADMIN', 'IN3'])) {
     $_SESSION['error'] = 'You do not have permission to access this page.';
     header('Location: ' . (defined('APP_BASE') ? APP_BASE : '') . '/home/home.php');
     exit();
@@ -27,6 +27,9 @@ if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM', 
 // Get group details if group_id is provided
 $group_id = isset($_GET['group_id']) ? intval($_GET['group_id']) : 0;
 $academic_year = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
+
+// Persist the current group in session for controller fallbacks
+$_SESSION['current_group_id'] = $group_id;
 
 // If no group selected, redirect to group selection with a more specific message
 if ($group_id <= 0) {
@@ -143,18 +146,25 @@ include('../head.php');
             <div class="card mb-4">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">Timetable Entries</h5>
-                    <div>
-                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#addTimetableModal">
+                    <div class="d-flex align-items-center">
+                        <div class="custom-control custom-switch mr-3">
+                            <input type="checkbox" class="custom-control-input" id="toggleWeekends">
+                            <label class="custom-control-label" for="toggleWeekends">Show weekends</label>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-primary" data-toggle="modal" data-target="#timetableModal">
                             <i class="fas fa-plus mr-1"></i> Add Entry
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary" id="printTimetable">
                             <i class="fas fa-print mr-1"></i> Print
                         </button>
+                        <button type="button" class="btn btn-sm btn-outline-success ml-2" id="downloadPDF">
+                            <i class="fas fa-file-pdf mr-1"></i> Download PDF
+                        </button>
                     </div>
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-hover mb-0" id="timetableTable">
+                        <table class="table table-bordered table-hover mb-0 hide-weekends" id="timetableTable">
                             <thead class="thead-light">
                                 <tr>
                                     <th width="10%">Day/Session</th>
@@ -177,7 +187,8 @@ include('../head.php');
                                 ];
 
                                 foreach ($weekdays as $dayNum => $dayName):
-                                    echo "<tr>";
+                                    $trClass = ($dayNum >= 6) ? ' class="weekend"' : '';
+                                    echo "<tr$trClass>";
                                     echo "<th class='align-middle'>{$dayName}</th>";
                                     
                                     foreach (['P1', 'P2', 'P3', 'P4'] as $period) {
@@ -224,7 +235,28 @@ include('../head.php');
                                 <label for="module_id">Module <span class="text-danger">*</span></label>
                                 <select class="form-control selectpicker" id="module_id" name="module_id" required 
                                         data-live-search="true" title="Select module">
-                                    <!-- Loaded via AJAX -->
+                                    <?php
+                                    // Server-side fallback: load modules by group's course
+                                    $__mods = [];
+                                    if (!empty($group['course_id'])) {
+                                        $stmt = $con->prepare("SELECT module_id, module_code, module_name FROM module WHERE course_id = ? ORDER BY module_code, module_name");
+                                        if ($stmt) {
+                                            $stmt->bind_param('s', $group['course_id']);
+                                            $stmt->execute();
+                                            $res = $stmt->get_result();
+                                            while ($row = $res->fetch_assoc()) { $__mods[] = $row; }
+                                            $stmt->close();
+                                        }
+                                    }
+                                    if (!empty($__mods)) {
+                                        foreach ($__mods as $__m) {
+                                            $txt = ($__m['module_code'] ? ($__m['module_code'] . ' - ') : '') . $__m['module_name'];
+                                            echo '<option value="' . htmlspecialchars($__m['module_id']) . '">' . htmlspecialchars($txt) . '</option>';
+                                        }
+                                    } else {
+                                        echo '<option value="" disabled selected>No modules found for this course</option>';
+                                    }
+                                    ?>
                                 </select>
                             </div>
                         </div>
@@ -234,7 +266,33 @@ include('../head.php');
                                 <label for="staff_id">Staff <span class="text-danger">*</span></label>
                                 <select class="form-control selectpicker" id="staff_id" name="staff_id" required 
                                         data-live-search="true" title="Select staff">
-                                    <!-- Loaded via AJAX -->
+                                    <?php
+                                    // Server-side fallback: load staff by department
+                                    $__staff = [];
+                                    $__dept = $group['department_id'] ?? null;
+                                    if ($__dept) {
+                                        $sql = "SELECT s.staff_id, s.staff_name FROM staff s WHERE s.department_id = ? ORDER BY s.staff_name";
+                                        $stmt = $con->prepare($sql);
+                                        if ($stmt) {
+                                            $stmt->bind_param('s', $__dept);
+                                            $stmt->execute();
+                                            $res = $stmt->get_result();
+                                            while ($row = $res->fetch_assoc()) { $__staff[] = $row; }
+                                            $stmt->close();
+                                        }
+                                    } else {
+                                        $rs = mysqli_query($con, "SELECT staff_id, staff_name FROM staff ORDER BY staff_name LIMIT 50");
+                                        if ($rs) { while ($row = mysqli_fetch_assoc($rs)) { $__staff[] = $row; } }
+                                    }
+                                    if (!empty($__staff)) {
+                                        foreach ($__staff as $__s) {
+                                            $txt = $__s['staff_name'] . ' (' . $__s['staff_id'] . ')';
+                                            echo '<option value="' . htmlspecialchars($__s['staff_id']) . '">' . htmlspecialchars($txt) . '</option>';
+                                        }
+                                    } else {
+                                        echo '<option value="" disabled selected>No staff found</option>';
+                                    }
+                                    ?>
                                 </select>
                             </div>
                         </div>
@@ -272,16 +330,14 @@ include('../head.php');
                             <div class="form-group">
                                 <label for="classroom">Classroom <span class="text-danger">*</span></label>
                                 <select class="form-control" id="classroom" name="classroom" required>
-                                    <option value="LAP-01">LAP-01</option>
-                                    <option value="LAP-02">LAP-02</option>
-                                    <option value="LAP-03">LAP-03</option>
-                                    <option value="LAP-04">LAP-04</option>
-                                    <option value="LAP-05">LAP-05</option>
-                                    <option value="THEORY-01">THEORY-01</option>
-                                    <option value="THEORY-02">THEORY-02</option>
-                                    <option value="LAB-01">LAB-01</option>
-                                    <option value="LAB-02">LAB-02</option>
-                                    <option value="SEMINAR">SEMINAR HALL</option>
+                                    <option value="PracticalLAP-01">Practical LAP-01</option>
+                                    <option value="PracticalLAP-02">Practical LAP-02</option>
+                                    <option value="PracticalLAP-03">Practical LAP-03</option>
+                                    <option value="PracticalLAP-04">Practical LAP-04</option>
+                                    <option value="PracticalLAP-05">Practical LAP-05</option>
+                                    <option value="TheoreticalTHEORY-01">Theoretical THEORY-01</option>
+                                    <option value="TheoreticalTHEORY-02">Theoretical THEORY-02</option>
+                                    
                                 </select>
                             </div>
                         </div>
@@ -353,8 +409,13 @@ include('../head.php');
 <script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <style>
+.hide-weekends tr.weekend { display: none; }
+#timetableTable { table-layout: fixed; }
+#timetableTable th, #timetableTable td { vertical-align: top; }
 .timetable-slot {
     min-height: 100px;
     vertical-align: top;
@@ -460,12 +521,91 @@ include('../head.php');
 $(document).ready(function() {
     const groupId = <?= $group_id ?>;
     const academicYear = '<?= $academic_year ?>';
+    // Server-provided labels for clean PDF header
+    const groupName = <?= json_encode($group['group_name'] ?? ($group['name'] ?? 'Group')) ?>;
+    const courseName = <?= json_encode($group['course_name'] ?? '') ?>;
+    const deptName = <?= json_encode($group['department_name'] ?? '') ?>;
     let timetableData = {};
+
+    // Show flash from previous action (persisted across reload)
+    try {
+        const ttFlash = localStorage.getItem('tt_flash');
+        if (ttFlash) {
+            const f = JSON.parse(ttFlash);
+            if (f && f.message) { showAlert(f.message, f.type || 'info'); }
+            localStorage.removeItem('tt_flash');
+        }
+    } catch (_) {}
     
     // Initialize select pickers
     $('.selectpicker').selectpicker({
         style: 'btn-light',
         size: 8
+    });
+    
+    // Download as PDF (formatted export)
+    $('#downloadPDF').click(async function() {
+        // Build export container
+        const header = `
+            <div style="position:relative; text-align:center; margin-bottom:10px;">
+                <img src="../img/SLGTI_logo.png" alt="SLGTI" style="position:absolute; right:0; top:0; height:50px;"/>
+                <h3 style="margin:0;">Group Timetable</h3>
+                <div style="font-size:14px;">Group: ${groupName}</div>
+                <div style="font-size:13px;">Course: ${courseName}</div>
+                <div style="font-size:13px;">Department: ${deptName}</div>
+                <div style="font-size:13px;">Academic Year: ${academicYear}</div>
+            </div>
+        `;
+        
+        // Clone current table to avoid altering UI
+        const $cloneWrap = $('<div id="exportWrap" style="padding:16px; width:1120px; background:#fff;"></div>');
+        $cloneWrap.append($(header));
+        const $tableClone = $('#timetableTable').clone(true);
+        // Make sure weekends are visible in export only if toggle is on
+        if (!$('#toggleWeekends').is(':checked')) {
+            $tableClone.addClass('hide-weekends');
+        } else {
+            $tableClone.removeClass('hide-weekends');
+        }
+        $tableClone.css({ tableLayout: 'fixed' });
+        $cloneWrap.append($('<div class="table-responsive"></div>').append($tableClone));
+        
+        // Legend: list modules with names (and optionally staff)
+        const legendMap = new Map(); // code -> {name, staff}
+        $('.timetable-entry').each(function(){
+            const code = $(this).find('.module-code').text().trim();
+            const name = ($(this).data('module-name') || $(this).find('.module-name').text() || '').toString().trim();
+            const staff = $(this).find('.staff-name').text().trim();
+            if (code) { legendMap.set(code, { name, staff }); }
+        });
+        if (legendMap.size > 0) {
+            const $legend = $('<div style="margin-top:12px;"></div>');
+            $legend.append('<div style="font-weight:600; margin-bottom:6px;">Legend</div>');
+            const $ul = $('<ul style="columns:2; -webkit-columns:2; -moz-columns:2; padding-left:18px;"></ul>');
+            legendMap.forEach((info, code) => {
+                const nm = info.name ? ` — ${info.name}` : '';
+                $ul.append(`<li><strong>${code}</strong>${nm}</li>`);
+            });
+            $legend.append($ul);
+            $cloneWrap.append($legend);
+        }
+        
+        // Render to canvas
+        const temp = $('<div style="position:fixed; left:-9999px; top:-9999px; z-index:-1;"></div>').append($cloneWrap);
+        $('body').append(temp);
+        const canvas = await html2canvas($cloneWrap[0], { scale: 2, backgroundColor: '#ffffff' });
+        temp.remove();
+        
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        // Fit image into page
+        const imgWidth = pageWidth - 40; // margins
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        pdf.addImage(imgData, 'PNG', 20, 20, imgWidth, Math.min(imgHeight, pageHeight - 40));
+        pdf.save(`Timetable_${groupId}_${academicYear}.pdf`);
     });
     
     // Set default dates for the academic year
@@ -478,60 +618,94 @@ $(document).ready(function() {
     
     // Load modules and staff for the group's course
     function loadFormData() {
+        const cid = <?= json_encode($group['course_id']) ?>;
         // Load modules
-        $.get('../controller/ajax/get_course_modules.php', { 
-            course_id: <?= $group['course_id'] ?>
-        }, function(modules) {
-            const $moduleSelect = $('#module_id');
-            $moduleSelect.empty();
-            
-            if (modules.length > 0) {
-                $.each(modules, function(i, module) {
-                    $moduleSelect.append($('<option>', {
-                        value: module.module_id,
-                        text: module.module_code + ' - ' + module.module_name
+        $.get('../controller/ajax/get_course_modules.php', { course_id: cid, group_id: groupId }, null, 'json')
+            .done(function(modules) {
+                try {
+                    if (typeof modules === 'string') { modules = JSON.parse(modules); }
+                } catch (e) {
+                    console.error('Module JSON parse error', e, modules);
+                }
+                const $moduleSelect = $('#module_id');
+                const hadExisting = $moduleSelect.find('option').length > 0;
+                // Only clear if we have modules to insert; otherwise keep server-rendered fallback
+                if (Array.isArray(modules) && modules.length > 0) {
+                    $moduleSelect.empty();
+                    $.each(modules, function(i, module) {
+                        $moduleSelect.append($('<option>', {
+                            value: module.module_id,
+                            text: (module.module_code ? (module.module_code + ' - ') : '') + module.module_name
+                        }));
+                    });
+                } else if (!hadExisting) {
+                    $moduleSelect.empty().append($('<option>', {
+                        value: '',
+                        text: 'No modules found for this course',
+                        disabled: true,
+                        selected: true
                     }));
-                });
+                }
                 $moduleSelect.selectpicker('refresh');
-                
                 // After loading modules, load staff
                 loadStaff();
-            } else {
-                $moduleSelect.append($('<option>', {
-                    value: '',
-                    text: 'No modules found for this course',
-                    disabled: true,
-                    selected: true
-                }));
+            })
+            .fail(function(xhr, status, err) {
+                console.error('Failed to load modules', status, err, xhr && xhr.responseText);
+                let msg = 'Error loading modules';
+                try {
+                    const j = xhr && xhr.responseText ? JSON.parse(xhr.responseText) : null;
+                    if (j && (j.error || j.message)) msg = j.error || j.message;
+                } catch (_e) { /* ignore */ }
+                if (typeof showFormError === 'function') { showFormError(msg); }
+                const $moduleSelect = $('#module_id');
+                $moduleSelect.empty().append($('<option>', { value: '', text: 'Error loading modules', disabled: true, selected: true }));
                 $moduleSelect.selectpicker('refresh');
-            }
-        }, 'json');
+                // Still attempt to load staff
+                loadStaff();
+            });
     }
     
     // Load staff members
     function loadStaff() {
-        $.get('../controller/ajax/get_staff.php', function(staff) {
-            const $staffSelect = $('#staff_id');
-            $staffSelect.empty();
-            
-            if (staff.length > 0) {
-                $.each(staff, function(i, person) {
+        $.get('../controller/ajax/get_staff.php', null, null, 'json')
+            .done(function(staff) {
+                try {
+                    if (typeof staff === 'string') { staff = JSON.parse(staff); }
+                } catch (e) {
+                    console.error('Staff JSON parse error', e, staff);
+                }
+                const $staffSelect = $('#staff_id');
+                $staffSelect.empty();
+                if (Array.isArray(staff) && staff.length > 0) {
+                    $.each(staff, function(i, person) {
+                        $staffSelect.append($('<option>', {
+                            value: person.staff_id,
+                            text: person.staff_name + ' (' + person.staff_id + ')'
+                        }));
+                    });
+                } else {
                     $staffSelect.append($('<option>', {
-                        value: person.staff_id,
-                        text: person.staff_name + ' (' + person.staff_id + ')'
+                        value: '',
+                        text: 'No staff found',
+                        disabled: true,
+                        selected: true
                     }));
-                });
+                }
                 $staffSelect.selectpicker('refresh');
-            } else {
-                $staffSelect.append($('<option>', {
-                    value: '',
-                    text: 'No staff found',
-                    disabled: true,
-                    selected: true
-                }));
+            })
+            .fail(function(xhr, status, err) {
+                console.error('Failed to load staff', status, err, xhr && xhr.responseText);
+                let msg = 'Error loading staff';
+                try {
+                    const j = xhr && xhr.responseText ? JSON.parse(xhr.responseText) : null;
+                    if (j && (j.error || j.message)) msg = j.error || j.message;
+                } catch (_e) { /* ignore */ }
+                if (typeof showFormError === 'function') { showFormError(msg); }
+                const $staffSelect = $('#staff_id');
+                $staffSelect.empty().append($('<option>', { value: '', text: 'Error loading staff', disabled: true, selected: true }));
                 $staffSelect.selectpicker('refresh');
-            }
-        }, 'json');
+            });
     }
     
     // Load timetable data
@@ -578,10 +752,26 @@ $(document).ready(function() {
                         // Update the slot UI
                         updateTimetableSlot(day, period);
                     });
+
+                    // Auto-show weekends if there are entries on Sat/Sun
+                    const hasWeekend = (timetableData[6] && (timetableData[6].P1 || timetableData[6].P2 || timetableData[6].P3 || timetableData[6].P4))
+                                     || (timetableData[7] && (timetableData[7].P1 || timetableData[7].P2 || timetableData[7].P3 || timetableData[7].P4));
+                    if (hasWeekend) {
+                        $('#toggleWeekends').prop('checked', true);
+                        $('#timetableTable').removeClass('hide-weekends');
+                    } else {
+                        $('#toggleWeekends').prop('checked', false);
+                        $('#timetableTable').addClass('hide-weekends');
+                    }
                 }
             },
-            error: function() {
-                showAlert('Error loading timetable data', 'danger');
+            error: function(xhr) {
+                let msg = 'Error loading timetable data';
+                try {
+                    const j = xhr && xhr.responseText ? JSON.parse(xhr.responseText) : null;
+                    if (j && (j.error || j.message)) msg = j.error || j.message;
+                } catch (_e) { /* ignore */ }
+                showAlert(msg, 'danger');
             }
         });
     }
@@ -601,9 +791,21 @@ $(document).ready(function() {
             return;
         }
         
+        // Deduplicate entries by module, staff, classroom, date range (common duplicates from repeated saves)
+        const seen = new Set();
+        const uniqueEntries = [];
+        entries.forEach(function(e){
+            const key = [e.module_id, e.staff_id, e.classroom, e.start_date, e.end_date].join('|');
+            if (!seen.has(key)) { seen.add(key); uniqueEntries.push(e); }
+        });
+
+        // Only render one visible entry. If there are more, show a small '+N more' badge.
+        const first = uniqueEntries[0];
+        const extraCount = Math.max(0, uniqueEntries.length - 1);
+
         let html = '<div class="timetable-entries">';
         
-        entries.forEach(function(entry) {
+        const entry = first;
             const startDate = new Date(entry.start_date);
             const endDate = new Date(entry.end_date);
             const dateRange = `${formatDate(startDate)} to ${formatDate(endDate)}`;
@@ -619,7 +821,8 @@ $(document).ready(function() {
             html += `
                 <div class="timetable-entry" style="background-color: ${bgColor}" 
                      data-id="${entry.timetable_id}" 
-                     data-module="${entry.module_id}">
+                     data-module="${entry.module_id}"
+                     data-module-name="${(entry.module_name || '').replace(/"/g,'&quot;')}">
                     <div class="timetable-actions">
                         <button class="btn btn-xs btn-light btn-edit" title="Edit">
                             <i class="fas fa-edit"></i>
@@ -629,12 +832,13 @@ $(document).ready(function() {
                         </button>
                     </div>
                     <span class="module-code">${entry.module_code || 'N/A'}</span>
+                    <span class="module-name d-none">${entry.module_name || ''}</span>
                     <span class="staff-name">${entry.staff_name || 'Staff N/A'}</span>
                     <span class="classroom">${entry.classroom || 'N/A'}</span>
                     <div class="date-range small">${dateRange}</div>
+                    ${extraCount > 0 ? `<div class="small mt-1" style="opacity:0.9">+${extraCount} more</div>` : ''}
                 </div>
             `;
-        });
         
         html += '</div>';
         $slot.html(html);
@@ -749,18 +953,21 @@ $(document).ready(function() {
                 hard_delete: hardDelete
             },
             success: function(response) {
-                if (response.success) {
-                    showAlert('Entry deleted successfully', 'success');
-                    loadTimetable();
+                if (response && response.success) {
+                    try { localStorage.setItem('tt_flash', JSON.stringify({type:'success', message:'Timetable deleted successfully'})); } catch(_) {}
+                    $('#deleteModal').modal('hide');
+                    setTimeout(function(){ window.location.reload(); }, 400);
                 } else {
-                    showAlert(response.message || 'Error deleting entry', 'danger');
+                    const msg = (response && (response.message||response.error)) ? (response.message||response.error) : 'Error deleting entry';
+                    try { localStorage.setItem('tt_flash', JSON.stringify({type:'danger', message: msg})); } catch(_) {}
+                    $('#deleteModal').modal('hide');
+                    setTimeout(function(){ window.location.reload(); }, 600);
                 }
-                
-                $('#deleteModal').modal('hide');
             },
             error: function() {
-                showAlert('Error deleting entry', 'danger');
+                try { localStorage.setItem('tt_flash', JSON.stringify({type:'danger', message:'Error deleting entry'})); } catch(_) {}
                 $('#deleteModal').modal('hide');
+                setTimeout(function(){ window.location.reload(); }, 600);
             }
         });
     });
@@ -774,6 +981,9 @@ $(document).ready(function() {
             return false;
         }
         
+        const $saveBtn = $(this).find('button[type="submit"]');
+        const originalText = $saveBtn.text();
+        $saveBtn.prop('disabled', true).text('Saving...');
         const formData = $(this).serialize();
         
         $.ajax({
@@ -782,16 +992,52 @@ $(document).ready(function() {
             data: formData + '&action=save',
             dataType: 'json',
             success: function(response) {
-                if (response.success) {
+                try { if (typeof response === 'string') response = JSON.parse(response); } catch(_) {}
+                if (response && response.success) {
                     showAlert('Timetable saved successfully', 'success');
+                    $('#formError').addClass('d-none').empty();
                     $('#timetableModal').modal('hide');
-                    loadTimetable();
+                    // Full page reload so user doesn't have to refresh manually
+                    try { localStorage.setItem('tt_flash', JSON.stringify({type:'success', message:'Timetable saved successfully'})); } catch(_) {}
+                    setTimeout(function(){ window.location.reload(); }, 500);
                 } else {
-                    showFormError(response.message || 'Error saving timetable');
+                    var msg = response && response.message ? response.message : 'Error saving timetable';
+                    if (response && response.error_detail) { msg += ' (' + response.error_detail + ')'; }
+                    // Show page-level alert, close modal, then reload
+                    try { localStorage.setItem('tt_flash', JSON.stringify({type:'danger', message: msg})); } catch(_) {}
+                    $('#timetableModal').modal('hide');
+                    setTimeout(function(){ window.location.reload(); }, 700);
                 }
+                $saveBtn.prop('disabled', false).text(originalText);
             },
-            error: function() {
-                showFormError('Error saving timetable');
+            error: function(xhr) {
+                // Some servers return 200 with text/html; handle gracefully
+                if (xhr && xhr.status === 200 && xhr.responseText) {
+                    try {
+                        var j = JSON.parse(xhr.responseText);
+                        if (j && j.success) {
+                            showAlert('Timetable saved successfully', 'success');
+                            $('#formError').addClass('d-none').empty();
+                            $('#timetableModal').modal('hide');
+                            try { localStorage.setItem('tt_flash', JSON.stringify({type:'success', message:'Timetable saved successfully'})); } catch(_) {}
+                            setTimeout(function(){ window.location.reload(); }, 500);
+                            $saveBtn.prop('disabled', false).text(originalText);
+                            return;
+                        }
+                    } catch (_) { /* fall through */ }
+                }
+                var msg = 'Error saving timetable';
+                try {
+                    var j2 = xhr && xhr.responseText ? JSON.parse(xhr.responseText) : null;
+                    if (j2) {
+                        msg = j2.message || msg;
+                        if (j2.error_detail) { msg += ' (' + j2.error_detail + ')'; }
+                    }
+                } catch (e) { /* ignore */ }
+                try { localStorage.setItem('tt_flash', JSON.stringify({type:'danger', message: msg})); } catch(_) {}
+                $('#timetableModal').modal('hide');
+                setTimeout(function(){ window.location.reload(); }, 700);
+                $saveBtn.prop('disabled', false).text(originalText);
             }
         });
         
@@ -838,26 +1084,30 @@ $(document).ready(function() {
     
     // Show alert
     function showAlert(message, type) {
-        const alertHtml = `
-            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
-            </div>
-        `;
+        
         
         // Remove any existing alerts
         $('.alert-dismissible').alert('close');
         
         // Add new alert
         $('.container-fluid').prepend(alertHtml);
+        // Ensure alert is visible
+        try { window.scrollTo({ top: 0, behavior: 'smooth' }); } catch(_) { window.scrollTo(0,0); }
     }
     
     // Handle academic year change
     $('#academic_year').change(function() {
         const year = $(this).val();
         window.location.href = `?group_id=${groupId}&academic_year=${year}`;
+    });
+
+    // Toggle weekends visibility
+    $('#toggleWeekends').on('change', function() {
+        if (this.checked) {
+            $('#timetableTable').removeClass('hide-weekends');
+        } else {
+            $('#timetableTable').addClass('hide-weekends');
+        }
     });
     
     // Print timetable

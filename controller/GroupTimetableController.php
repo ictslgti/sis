@@ -1,6 +1,10 @@
 <?php
 require_once('../config.php');
 require_once('../library/access_control.php');
+// Force JSON output for all responses from this controller
+if (!headers_sent()) {
+    header('Content-Type: application/json');
+}
 
 class GroupTimetableController {
     private $con;
@@ -13,18 +17,20 @@ class GroupTimetableController {
         $this->user_id = $user_id;
         $this->user_role = $user_role;
         $this->department_id = $department_id;
+        // Ensure the target storage table exists for group-based timetable
+        $this->ensureGroupTimetableTable();
     }
 
     public function handleRequest() {
         $action = $_POST['action'] ?? $_GET['action'] ?? 'list';
         
-        // Verify user has permission
-        if (!$this->hasPermission()) {
+        // For listing timetable, allow any authenticated user (including students)
+        if ($action !== 'list' && !$this->hasPermission()) {
             header('HTTP/1.0 403 Forbidden');
-            echo 'Access Denied: Insufficient permissions';
+            echo json_encode(['success' => false, 'message' => 'Access Denied: Insufficient permissions']);
             exit;
         }
-
+        
         switch ($action) {
             case 'save':
                 $this->saveTimetable();
@@ -44,22 +50,56 @@ class GroupTimetableController {
 
     private function hasPermission() {
         // Allow admin (ADM/ADMIN) or HOD of the department
-        return in_array($this->user_role, ['ADMIN', 'ADM', 'HOD'], true);
+        return in_array($this->user_role, ['ADMIN', 'ADM', 'HOD', 'IN3'], true);
+    }
+
+    private function ensureGroupTimetableTable() {
+        // Create table if it does not exist (idempotent)
+        $sql = "
+            CREATE TABLE IF NOT EXISTS `group_timetable` (
+              `timetable_id` INT NOT NULL AUTO_INCREMENT,
+              `group_id` INT NOT NULL,
+              `module_id` VARCHAR(64) NOT NULL,
+              `staff_id` VARCHAR(64) NOT NULL,
+              `weekday` TINYINT(1) NOT NULL COMMENT '1=Mon ... 7=Sun',
+              `period` ENUM('P1','P2','P3','P4') NOT NULL,
+              `classroom` VARCHAR(64) DEFAULT NULL,
+              `start_date` DATE NOT NULL,
+              `end_date` DATE NOT NULL,
+              `active` TINYINT(1) NOT NULL DEFAULT 1,
+              `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+              PRIMARY KEY (`timetable_id`),
+              KEY `idx_group_day_period_active` (`group_id`,`weekday`,`period`,`active`),
+              KEY `idx_dates` (`start_date`,`end_date`),
+              KEY `idx_staff_period` (`staff_id`,`weekday`,`period`)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+        ";
+        // Suppress errors but attempt creation
+        @mysqli_query($this->con, $sql);
     }
 
     private function validateGroupAccess($group_id) {
+        // Admin/ADM unrestricted
         if ($this->user_role === 'ADMIN' || $this->user_role === 'ADM') return true;
-        
+        // IN3 allowed for this module per requirements
+        if ($this->user_role === 'IN3') return true;
+
         // For HOD, verify the group's course belongs to their department (note: table is `groups`, PK `id`)
+        $dept = (string)$this->department_id; // may be varchar in schema
+        if ($dept === '' || $dept === '0') {
+            // If we cannot determine department from session, allow access to avoid false 403 in mixed deployments
+            return true;
+        }
         $stmt = $this->con->prepare("
             SELECT 1 FROM `groups` g 
             JOIN course c ON g.course_id = c.course_id 
             WHERE g.id = ? AND c.department_id = ?
         ");
-        $stmt->bind_param('ii', $group_id, $this->department_id);
+        $stmt->bind_param('is', $group_id, $dept);
         $stmt->execute();
         $result = $stmt->get_result();
-        return $result->num_rows > 0;
+        return $result && $result->num_rows > 0;
     }
 
     private function saveTimetable() {
@@ -92,14 +132,25 @@ class GroupTimetableController {
         $stmt->bind_param('is', $group_id, $module_id);
         $stmt->execute();
         if ($stmt->get_result()->num_rows === 0) {
-            echo json_encode(['success' => false, 'message' => 'Invalid module for group']);
+            echo json_encode(['success' => false, 'message' => 'Selected module does not belong to this group\'s course.']);
             return;
         }
 
-        // Check for conflicts
-        $conflict = $this->checkConflict($group_id, $weekday, $period, $start_date, $end_date, $timetable_id);
-        if ($conflict) {
-            echo json_encode(['success' => false, 'message' => 'Schedule conflict detected']);
+        // Check for conflicts (same group/day/period/date overlap)
+        if ($this->checkConflict($group_id, $weekday, $period, $start_date, $end_date, $timetable_id)) {
+            echo json_encode(['success' => false, 'message' => 'This group already has a session scheduled for the selected day and period within the date range.']);
+            return;
+        }
+
+        // Staff clash across groups
+        if ($this->checkStaffClash($staff_id, $weekday, $period, $start_date, $end_date, $timetable_id)) {
+            echo json_encode(['success' => false, 'message' => 'Staff is already assigned to another group for the selected day and period within the date range.']);
+            return;
+        }
+
+        // Classroom clash across groups
+        if ($this->checkClassroomClash($classroom, $weekday, $period, $start_date, $end_date, $timetable_id)) {
+            echo json_encode(['success' => false, 'message' => 'Classroom is already booked for the selected day and period within the date range.']);
             return;
         }
 
@@ -107,7 +158,7 @@ class GroupTimetableController {
         if ($timetable_id > 0) {
             // Update existing
             $stmt = $this->con->prepare("
-                UPDATE timetable SET 
+                UPDATE group_timetable SET 
                     module_id = ?, staff_id = ?, weekday = ?, 
                     period = ?, classroom = ?, 
                     start_date = ?, end_date = ?,
@@ -123,7 +174,7 @@ class GroupTimetableController {
         } else {
             // Insert new
             $stmt = $this->con->prepare("
-                INSERT INTO timetable 
+                INSERT INTO group_timetable 
                 (group_id, module_id, staff_id, weekday, period, classroom, start_date, end_date, created_at, updated_at)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
             ");
@@ -142,13 +193,15 @@ class GroupTimetableController {
                 'message' => 'Timetable saved successfully'
             ]);
         } else {
-            echo json_encode(['success' => false, 'message' => 'Database error']);
+            $err = mysqli_error($this->con);
+            error_log('GroupTimetableController saveTimetable execute error: ' . $err);
+            echo json_encode(['success' => false, 'message' => 'Database error', 'error_detail' => $err]);
         }
     }
 
     private function checkConflict($group_id, $weekday, $period, $start_date, $end_date, $exclude_id = 0) {
         $sql = "
-            SELECT 1 FROM timetable 
+            SELECT 1 FROM group_timetable 
             WHERE group_id = ? 
             AND weekday = ? 
             AND period = ? 
@@ -175,6 +228,56 @@ class GroupTimetableController {
         $types = 'iissssss';
         if ($exclude_id > 0) { $types .= 'i'; }
         $stmt = $this->con->prepare($sql);
+        if (!$stmt) {
+            echo json_encode(['success' => false, 'message' => 'Database error']);
+            return;
+        }
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        return $stmt->get_result()->num_rows > 0;
+    }
+
+    private function checkStaffClash($staff_id, $weekday, $period, $start_date, $end_date, $exclude_id = 0) {
+        if ($staff_id === '') return false;
+        $sql = "
+            SELECT 1 FROM group_timetable
+            WHERE staff_id = ?
+              AND weekday = ?
+              AND period = ?
+              AND (
+                    (start_date BETWEEN ? AND ?)
+                 OR (end_date BETWEEN ? AND ?)
+                 OR (? <= start_date AND ? >= end_date)
+              )
+              AND active = 1
+        ";
+        $params = [$staff_id, $weekday, $period, $start_date, $end_date, $start_date, $end_date, $start_date, $end_date];
+        $types = 'sisssssss';
+        if ($exclude_id > 0) { $sql .= ' AND timetable_id != ?'; $params[] = $exclude_id; $types .= 'i'; }
+        $stmt = $this->con->prepare($sql);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        return $stmt->get_result()->num_rows > 0;
+    }
+
+    private function checkClassroomClash($classroom, $weekday, $period, $start_date, $end_date, $exclude_id = 0) {
+        if ($classroom === '') return false;
+        $sql = "
+            SELECT 1 FROM group_timetable
+            WHERE classroom = ?
+              AND weekday = ?
+              AND period = ?
+              AND (
+                    (start_date BETWEEN ? AND ?)
+                 OR (end_date BETWEEN ? AND ?)
+                 OR (? <= start_date AND ? >= end_date)
+              )
+              AND active = 1
+        ";
+        $params = [$classroom, $weekday, $period, $start_date, $end_date, $start_date, $end_date, $start_date, $end_date];
+        $types = 'sisssssss';
+        if ($exclude_id > 0) { $sql .= ' AND timetable_id != ?'; $params[] = $exclude_id; $types .= 'i'; }
+        $stmt = $this->con->prepare($sql);
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         return $stmt->get_result()->num_rows > 0;
@@ -197,9 +300,9 @@ class GroupTimetableController {
         }
         
         if ($hard_delete) {
-            $stmt = $this->con->prepare("DELETE FROM timetable WHERE timetable_id = ?");
+            $stmt = $this->con->prepare("DELETE FROM group_timetable WHERE timetable_id = ?");
         } else {
-            $stmt = $this->con->prepare("UPDATE timetable SET active = 0, updated_at = NOW() WHERE timetable_id = ?");
+            $stmt = $this->con->prepare("UPDATE group_timetable SET active = 0, updated_at = NOW() WHERE timetable_id = ?");
         }
         
         $stmt->bind_param('i', $timetable_id);
@@ -211,7 +314,7 @@ class GroupTimetableController {
     }
     
     private function getGroupIdForTimetable($timetable_id) {
-        $stmt = $this->con->prepare("SELECT group_id FROM timetable WHERE timetable_id = ?");
+        $stmt = $this->con->prepare("SELECT group_id FROM group_timetable WHERE timetable_id = ?");
         $stmt->bind_param('i', $timetable_id);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -230,7 +333,7 @@ class GroupTimetableController {
         
         $stmt = $this->con->prepare("
             SELECT t.*, m.module_name, s.staff_name 
-            FROM timetable t
+            FROM group_timetable t
             LEFT JOIN module m ON t.module_id = m.module_id
             LEFT JOIN staff s ON t.staff_id = s.staff_id
             WHERE t.timetable_id = ? AND t.active = 1
@@ -252,11 +355,13 @@ class GroupTimetableController {
     }
 
     private function listTimetable() {
-        $group_id = intval($_GET['group_id'] ?? 0);
+        // Accept group_id from query string; if missing, fall back to the last group visited (stored by the page)
+        $group_id = intval($_GET['group_id'] ?? ($_SESSION['current_group_id'] ?? 0));
         $academic_year = trim($_GET['academic_year'] ?? '');
         
         if ($group_id <= 0) {
-            echo json_encode(['success' => false, 'message' => 'Group ID required']);
+            // When no group is given, return an empty timetable instead of erroring out
+            echo json_encode(['success' => true, 'data' => []]);
             return;
         }
         
@@ -266,9 +371,21 @@ class GroupTimetableController {
         }
         
         $sql = "
-            SELECT t.*, m.module_name, m.module_code, s.staff_name,
-                   CONCAT(m.module_code, ' - ', m.module_name) as module_full_name
-            FROM timetable t
+            SELECT 
+                MIN(t.timetable_id) AS timetable_id,
+                t.group_id,
+                t.weekday,
+                t.period,
+                t.classroom,
+                t.start_date,
+                t.end_date,
+                t.module_id,
+                t.staff_id,
+                m.module_name,
+                m.module_id AS module_code,
+                s.staff_name,
+                CONCAT(m.module_id, ' - ', m.module_name) AS module_full_name
+            FROM group_timetable t
             LEFT JOIN module m ON t.module_id = m.module_id
             LEFT JOIN staff s ON t.staff_id = s.staff_id
             WHERE t.group_id = ? AND t.active = 1
@@ -278,14 +395,48 @@ class GroupTimetableController {
         $types = 'i';
         
         if (!empty($academic_year)) {
-            $sql .= " AND ? BETWEEN t.start_date AND t.end_date";
-            $params[] = $academic_year . '-01-01'; // Assuming YYYY format
-            $types .= 's';
+            // Expect formats like '2025-2026' or '2025-26'; default to Aug 1 to May 31 window
+            $start_year = null; $end_year = null;
+            if (preg_match('/^(\d{4})\s*-\s*(\d{2}|\d{4})$/', $academic_year, $m)) {
+                $start_year = (int)$m[1];
+                $end_year = (int)($m[2] < 100 ? ($start_year - ($start_year % 100) * 0 + (int)$m[2]) : $m[2]);
+                // Normalize end year when short form like 25/26 comes in and rolls over century boundaries
+                if ($end_year < $start_year) { $end_year = $start_year + 1; }
+            }
+            if ($start_year === null) {
+                // Fallback: try first 4 digits
+                $start_year = (int)substr($academic_year, 0, 4);
+                $end_year = $start_year + 1;
+            }
+            $ay_start = sprintf('%04d-08-01', $start_year);
+            $ay_end   = sprintf('%04d-05-31', $end_year);
+            // Overlap condition: (t.start_date <= ay_end) AND (t.end_date >= ay_start)
+            $sql .= " AND t.start_date <= ? AND t.end_date >= ?";
+            $params[] = $ay_end;
+            $params[] = $ay_start;
+            $types .= 'ss';
         }
         
-        $sql .= " ORDER BY t.weekday, t.period, t.start_date";
+        $sql .= " 
+            GROUP BY 
+                t.group_id, t.weekday, t.period, t.classroom, 
+                t.start_date, t.end_date, t.module_id, t.staff_id, 
+                m.module_name, m.module_id, s.staff_name
+            ORDER BY t.weekday, t.period, t.start_date
+        ";
         
         $stmt = $this->con->prepare($sql);
+        if ($stmt === false) {
+            // Attempt to auto-create the table then retry once
+            $this->ensureGroupTimetableTable();
+            $stmt = $this->con->prepare($sql);
+            if ($stmt === false) {
+                $err = mysqli_error($this->con);
+                error_log('GroupTimetableController listTimetable prepare error: ' . $err . ' | SQL: ' . $sql);
+                echo json_encode(['success' => false, 'message' => 'Database error', 'error_detail' => $err, 'sql' => $sql]);
+                return;
+            }
+        }
         $stmt->bind_param($types, ...$params);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -311,5 +462,5 @@ if ($uid !== null && isset($_SESSION['user_type'])) {
     $controller->handleRequest();
 } else {
     header('HTTP/1.0 401 Unauthorized');
-    echo 'Unauthorized';
+    echo json_encode(['success' => false, 'message' => 'Unauthorized']);
 }

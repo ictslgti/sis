@@ -307,6 +307,107 @@ if (file_exists($topNav)) {
       </div>
     </div>
   </div>
+
+  <!-- My Group Timetable (student view) -->
+  <?php
+    // Try to detect the student's active group
+    $student_group_id = 0;
+    // 1) group_students table (common schema)
+    if ($st = @mysqli_prepare($con, "SELECT group_id FROM group_students WHERE student_id = ? AND (status = 'active' OR status IS NULL OR status = '') ORDER BY id DESC LIMIT 1")) {
+      @mysqli_stmt_bind_param($st, 's', $studentId);
+      if (@mysqli_stmt_execute($st)) {
+        $rs = @mysqli_stmt_get_result($st);
+        if ($rs && ($row = @mysqli_fetch_assoc($rs))) { $student_group_id = (int)$row['group_id']; }
+      }
+      @mysqli_stmt_close($st);
+    }
+    // 2) Alternate table name group_student
+    if ($student_group_id === 0) {
+      if ($st = @mysqli_prepare($con, "SELECT group_id FROM group_student WHERE student_id = ? AND (status = 'active' OR status IS NULL OR status = '') ORDER BY id DESC LIMIT 1")) {
+        @mysqli_stmt_bind_param($st, 's', $studentId);
+        if (@mysqli_stmt_execute($st)) {
+          $rs = @mysqli_stmt_get_result($st);
+          if ($rs && ($row = @mysqli_fetch_assoc($rs))) { $student_group_id = (int)$row['group_id']; }
+        }
+        @mysqli_stmt_close($st);
+      }
+    }
+
+    // Academic year (align with timetable page logic)
+    $current_year = (int)date('Y');
+    $current_month = (int)date('n');
+    $base_year = ($current_month >= 8) ? $current_year : ($current_year - 1);
+    $stud_ac_year = $base_year . '-' . ($base_year + 1);
+
+    // Fetch group label for display
+    $stud_group_label = '';
+    if ($student_group_id > 0) {
+      if ($stg = @mysqli_prepare($con, "SELECT g.group_name, g.group_code FROM `groups` g WHERE g.id = ? LIMIT 1")) {
+        @mysqli_stmt_bind_param($stg, 'i', $student_group_id);
+        if (@mysqli_stmt_execute($stg)) {
+          $rg = @mysqli_stmt_get_result($stg);
+          if ($rg && ($gr = @mysqli_fetch_assoc($rg))) {
+            $nm = trim((string)($gr['group_name'] ?? ''));
+            $cd = trim((string)($gr['group_code'] ?? ''));
+            $stud_group_label = $nm !== '' ? $nm : ($cd !== '' ? $cd : ('Group #' . $student_group_id));
+          }
+        }
+        @mysqli_stmt_close($stg);
+      }
+      if ($stud_group_label === '') { $stud_group_label = 'Group #' . $student_group_id; }
+    }
+  ?>
+
+  <div class="row">
+    <div class="col-12 mb-3">
+      <div class="card shadow-sm card-elevated h-100">
+        <div class="card-header card-header-light d-flex align-items-center justify-content-between flex-wrap">
+          <div>
+            <i class="fas fa-calendar-alt mr-1"></i>
+            <strong>My Group Timetable</strong>
+            <?php if (!empty($stud_group_label)): ?>
+              <span class="badge badge-info ml-2" title="Assigned Group"><?php echo htmlspecialchars($stud_group_label); ?></span>
+            <?php endif; ?>
+          </div>
+          <div class="small text-muted">Academic Year: <?php echo htmlspecialchars($stud_ac_year); ?></div>
+        </div>
+        <div class="card-body p-2 p-md-3">
+          <?php if ($student_group_id === 0): ?>
+            <div class="text-muted">Your group is not assigned yet.</div>
+          <?php else: ?>
+            <div id="stdTTWrap">
+              <table id="stdTT" class="table table-bordered table-sm mb-0 timetable-student">
+                <thead class="thead-light">
+                  <tr>
+                    <th style="width:110px">Day</th>
+                    <th class="text-center">08:30<br class="d-none d-md-block">- 10:00</th>
+                    <th class="text-center">10:30<br class="d-none d-md-block">- 12:00</th>
+                    <th class="text-center">13:00<br class="d-none d-md-block">- 14:30</th>
+                    <th class="text-center">14:45<br class="d-none d-md-block">- 16:15</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <?php
+                    $weekdays = [1=>'Monday',2=>'Tuesday',3=>'Wednesday',4=>'Thursday',5=>'Friday'];
+                    foreach ($weekdays as $dno=>$dname): ?>
+                      <tr>
+                        <th class="align-middle"><?php echo $dname; ?></th>
+                        <?php foreach (['P1','P2','P3','P4'] as $p): ?>
+                          <td data-day="<?php echo $dno; ?>" data-period="<?php echo $p; ?>">
+                            <div class="std-ttslot text-muted text-center py-2">—</div>
+                          </td>
+                        <?php endforeach; ?>
+                      </tr>
+                  <?php endforeach; ?>
+                </tbody>
+              </table>
+            </div>
+            <div id="stdTTLegend" class="mt-2"></div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -481,6 +582,51 @@ if (file_exists($topNav)) {
       font-size: .92rem;
     }
   }
+
+  /* Student timetable compact styles */
+  #stdTTWrap { overflow-x: hidden; }
+  table.timetable-student th,
+  table.timetable-student td { vertical-align: top; padding: .4rem .45rem; }
+  /* Compact slots (no forced square) */
+  table.timetable-student .std-ttslot {
+    position: relative;
+    display: flex; align-items: stretch; justify-content: flex-start;
+    min-height: 56px;
+  }
+  table.timetable-student .std-entry {
+    border-radius: 4px; color: #fff; padding: 6px 8px; font-size: 0.82rem; line-height: 1.2;
+    display: block; width: 100%;
+  }
+  table.timetable-student .std-entry .code { font-weight: 700; display:block; }
+  table.timetable-student .std-entry .name { font-size: .76rem; opacity: .95; display:block; }
+  table.timetable-student .std-entry .staff { font-size: .7rem; opacity: .95; display:block; }
+  table.timetable-student .std-entry .room { position:absolute; bottom:4px; right:6px; font-size:.64rem; background: rgba(255,255,255,.25); padding:0 6px; border-radius:3px; }
+  /* Fix day column width on all sizes */
+  #stdTT { width: 100%; table-layout: fixed; }
+  /* Day column width */
+  #stdTT th.align-middle { width: 100px; }
+  @media (max-width: 575.98px) {
+    /* Fit to screen: no horizontal scrollbar */
+    #stdTT { width: 100%; table-layout: fixed; }
+    #stdTT thead th { font-size: .78rem; line-height: 1.1; white-space: normal; }
+    #stdTT th, #stdTT td { padding: .3rem .35rem; }
+    /* Proportional widths: Day ~26%, each session ~18.5% */
+    #stdTT thead th:first-child, #stdTT tbody th.align-middle { width: 26%; }
+  }
+  #stdTT .std-ttslot { display:flex; align-items:center; justify-content:flex-start; color:#adb5bd; }
+
+  /* Legend styling for clarity */
+  #stdTTLegend { border-top: 1px solid #e9ecef; padding-top: 8px; }
+  #stdTTLegend .legend-title { font-weight: 600; color:#6c757d; margin: 4px 0; }
+  #stdTTLegend ul { list-style: disc; padding-left: 18px; margin: 4px 0 8px 0; }
+  #stdTTLegend ul.modules, #stdTTLegend ul.lecturers { columns: 1; -webkit-columns: 1; -moz-columns: 1; }
+  @media (min-width: 768px) {
+    #stdTTLegend ul.modules, #stdTTLegend ul.lecturers { columns: 2; -webkit-columns: 2; -moz-columns: 2; }
+  }
+  #stdTTLegend .tt-item { break-inside: avoid; -webkit-column-break-inside: avoid; display: block; line-height: 1.25; }
+  #stdTTLegend .tt-code { font-weight:700; }
+  #stdTTLegend .tt-counts { white-space: nowrap; margin-left: 6px; }
+  #stdTTLegend .badge { font-size: .7rem; padding: .15rem .4rem; }
 </style>
 <script>
   (function() {
@@ -707,4 +853,130 @@ if (file_exists($topNav)) {
     refresh();
   })();
 </script>
+<?php if (!empty($student_group_id)): ?>
+<script>
+  (function(){
+    const base = <?php echo json_encode($base); ?>;
+    const groupId = <?php echo (int)$student_group_id; ?>;
+    const academicYear = <?php echo json_encode($stud_ac_year); ?>;
+
+    function hashCode(str){ let h=0; for(let i=0;i<str.length;i++){ h=((h<<5)-h)+str.charCodeAt(i); h|=0;} return h; }
+    const colors = ['#3498db','#2ecc71','#e74c3c','#f39c12','#9b59b6','#1abc9c','#d35400','#34495e','#7f8c8d','#27ae60'];
+
+    async function loadStudentTimetable(){
+      const url = base + '/controller/GroupTimetableController.php?action=list&group_id=' + groupId + '&academic_year=' + encodeURIComponent(academicYear);
+      try {
+        const res = await fetch(url, { credentials: 'same-origin' });
+        const text = await res.text();
+        let json;
+        try { json = JSON.parse(text); } catch(_) { json = { success:false, message:'Invalid server response' }; }
+        if (!json || json.success !== true) {
+          renderTT([], json && json.message ? json.message : 'Unable to load timetable');
+          return;
+        }
+        const data = Array.isArray(json.data) ? json.data : [];
+        renderTT(data);
+      } catch(e) {
+        renderTT([], 'Network error loading timetable');
+      }
+    }
+
+    function renderTT(entries, errorMsg){
+      // Clear
+      document.querySelectorAll('#stdTT td .std-ttslot').forEach(el=>{ el.innerHTML = '—'; el.classList.add('text-muted','text-center'); });
+      const wrap = document.getElementById('stdTTWrap');
+      const legendHost = document.getElementById('stdTTLegend');
+      const oldMsg = document.getElementById('stdTTMsg');
+      if (oldMsg) oldMsg.remove();
+      if (legendHost) legendHost.innerHTML = '';
+      if (!entries || entries.length === 0) {
+        const msg = document.createElement('div');
+        msg.id = 'stdTTMsg';
+        msg.className = 'text-muted small py-2';
+        msg.textContent = errorMsg || 'No timetable entries for this academic year.';
+        wrap.parentNode.insertBefore(msg, wrap.nextSibling);
+        return;
+      }
+      // Deduplicate
+      const seen = new Set();
+      const legendMap = new Map(); // code -> name
+      const staffSet = new Set();  // unique staff names
+      const staffCounts = new Map(); // staff name -> total slots
+      const slotCounts = new Map(); // code -> total slots
+      const typeCounts = new Map(); // code -> {p: n, t: n}
+      const moduleStaff = new Map(); // code -> Set of staff names
+      const moduleColor = new Map(); // code -> bg color used in cells
+      entries.forEach(e=>{
+        const key = [e.weekday,e.period,e.module_id,e.staff_id,e.classroom,e.start_date,e.end_date].join('|');
+        if (seen.has(key)) return; seen.add(key);
+        const td = document.querySelector(`#stdTT td[data-day="${e.weekday}"][data-period="${e.period}"] .std-ttslot`);
+        if (!td) return;
+        const code = e.module_code || '';
+        const name = e.module_name || '';
+        const room = e.classroom || '';
+        const staffName = e.staff_name || '';
+        const bg = colors[Math.abs(hashCode(String(e.module_id))) % colors.length];
+        td.classList.remove('text-muted','text-center');
+        // Determine classroom type symbol: P = Practical, T = Theory
+        let typeSym = '';
+        if (/^\s*practical/i.test(room)) typeSym = 'P';
+        else if (/^\s*theoretical|^\s*theory/i.test(room)) typeSym = 'T';
+        td.innerHTML = '<div class="std-entry" style="background:'+bg+'">'
+          + '<span class="code">'+escapeHtml(code)+'</span>'
+          + (typeSym? '<span class="room badge badge-light" style="color:#212529;background:rgba(255,255,255,.85)">'+typeSym+'</span>':'')
+          + '</div>';
+        if (code && name && !legendMap.has(code)) legendMap.set(code, name);
+        if (staffName) {
+          staffSet.add(staffName);
+          staffCounts.set(staffName, (staffCounts.get(staffName) || 0) + 1);
+        }
+        if (code) {
+          slotCounts.set(code, (slotCounts.get(code) || 0) + 1);
+          const tc = typeCounts.get(code) || {p:0, t:0};
+          if (typeSym === 'P') tc.p++; else if (typeSym === 'T') tc.t++;
+          typeCounts.set(code, tc);
+          if (!moduleStaff.has(code)) moduleStaff.set(code, new Set());
+          if (staffName) moduleStaff.get(code).add(staffName);
+          if (!moduleColor.has(code)) moduleColor.set(code, bg);
+        }
+      });
+
+      // Build legend: Module codes -> names and classroom type symbols
+      if (legendHost) {
+        let html = '';
+        if (legendMap.size) {
+          html += '<div class="legend-title small">Modules</div><ul class="modules small">';
+          Array.from(legendMap.entries()).sort((a,b)=> a[0].localeCompare(b[0])).forEach(([cd, nm])=>{ 
+            const total = slotCounts.get(cd) || 0;
+            const tc = typeCounts.get(cd) || {p:0,t:0};
+            const sw = moduleColor.get(cd) || '#6c757d';
+            const staffList = moduleStaff.has(cd) ? Array.from(moduleStaff.get(cd)).sort((a,b)=>a.localeCompare(b)).join(', ') : '';
+            html += '<li class="tt-item">'
+              + '<span class="tt-swatch" style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+sw+';margin-right:6px;vertical-align:middle"></span>'
+              + '<span class="tt-code">'+escapeHtml(cd)+'</span> — '
+              + '<span class="tt-name">'+escapeHtml(nm)+'</span>'
+              + '<span class="tt-counts">'
+              + (total? ' <span class="badge badge-secondary" title="Total slots">● '+ total +'</span>' : '')
+              + ((tc.p||tc.t)? ' <span class="badge badge-light" title="Practical">P '+ (tc.p||0) +'</span>' : '')
+              + ((tc.p||tc.t)? ' <span class="badge badge-light" title="Theory">T '+ (tc.t||0) +'</span>' : '')
+              + '</span>'
+              + (staffList ? '<div class="small text-muted" style="margin-left:16px">Taught by: '+escapeHtml(staffList)+'</div>' : '')
+              + '</li>'; 
+          });
+          html += '</ul>';
+        }
+        
+        html += '<div class="small text-muted mt-1"><span class="badge badge-light mr-1">P</span>Practical &nbsp;&nbsp; <span class="badge badge-light mr-1">T</span>Theory</div>';
+        legendHost.innerHTML = html;
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c]); });
+    }
+
+    loadStudentTimetable();
+  })();
+</script>
+<?php endif; ?>
 <?php include_once __DIR__ . '/../footer.php'; ?>
