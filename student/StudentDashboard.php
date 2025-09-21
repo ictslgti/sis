@@ -43,6 +43,44 @@ if ($student) {
     }
   }
 }
+
+// Resolve student's assigned group and a printable label (available for header and timetable)
+$stud_group_label_header = '';
+$student_group_id_header = 0;
+// Try group_students
+if ($stX = @mysqli_prepare($con, "SELECT group_id FROM group_students WHERE student_id = ? AND (status = 'active' OR status IS NULL OR status = '') ORDER BY id DESC LIMIT 1")) {
+  @mysqli_stmt_bind_param($stX, 's', $studentId);
+  if (@mysqli_stmt_execute($stX)) {
+    $rsX = @mysqli_stmt_get_result($stX);
+    if ($rsX && ($rowX = @mysqli_fetch_assoc($rsX))) { $student_group_id_header = (int)$rowX['group_id']; }
+  }
+  @mysqli_stmt_close($stX);
+}
+// Fallback group_student
+if ($student_group_id_header === 0) {
+  if ($stY = @mysqli_prepare($con, "SELECT group_id FROM group_student WHERE student_id = ? AND (status = 'active' OR status IS NULL OR status = '') ORDER BY id DESC LIMIT 1")) {
+    @mysqli_stmt_bind_param($stY, 's', $studentId);
+    if (@mysqli_stmt_execute($stY)) {
+      $rsY = @mysqli_stmt_get_result($stY);
+      if ($rsY && ($rowY = @mysqli_fetch_assoc($rsY))) { $student_group_id_header = (int)$rowY['group_id']; }
+    }
+    @mysqli_stmt_close($stY);
+  }
+}
+if ($student_group_id_header > 0) {
+  if ($stZ = @mysqli_prepare($con, "SELECT g.group_name, g.group_code FROM `groups` g WHERE g.id = ? LIMIT 1")) {
+    @mysqli_stmt_bind_param($stZ, 'i', $student_group_id_header);
+    if (@mysqli_stmt_execute($stZ)) {
+      $rsZ = @mysqli_stmt_get_result($stZ);
+      if ($rsZ && ($gz = @mysqli_fetch_assoc($rsZ))) {
+        $nm = trim((string)($gz['group_name'] ?? ''));
+        $cd = trim((string)($gz['group_code'] ?? ''));
+        $stud_group_label_header = $nm !== '' ? $nm : ($cd !== '' ? $cd : ('Group #' . $student_group_id_header));
+      }
+    }
+    @mysqli_stmt_close($stZ);
+  }
+}
 // Fetch hostel allocation and roommates (define vars before view)
 $hostelAlloc = null;
 $roommates = [];
