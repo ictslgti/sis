@@ -105,7 +105,7 @@ include('../head.php');
                     <i class="fas fa-calendar-alt mr-2"></i>Group Timetable
                 </h1>
                 <div>
-                    <a href="../group/Groups.php?redirect=group_timetable" class="btn btn-outline-secondary">
+                    <a href="<?= (defined('APP_BASE') ? APP_BASE : '') ?>/group/Groups.php?redirect=group_timetable" class="btn btn-outline-secondary">
                         <i class="fas fa-arrow-left mr-1"></i> Back to Groups
                     </a>
                 </div>
@@ -400,8 +400,6 @@ include('../head.php');
     </div>
 </div>
 
-<?php include('../footer.php'); ?>
-
 <!-- Include required CSS/JS -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
@@ -516,6 +514,8 @@ include('../head.php');
 </style>
 
 <script>
+// App base path for absolute URLs (prevents <base> tag issues under nginx)
+const APP_BASE = <?= json_encode(defined('APP_BASE') ? rtrim(APP_BASE, '/') : '') ?>;
 // Ensure jQuery is available even if loaded later; then execute our init code
 (function initWhenjQueryReady(init){
   if (window.jQuery) return init(window.jQuery);
@@ -561,7 +561,7 @@ $(document).ready(function() {
         // Build export container
         const header = `
             <div style="position:relative; text-align:center; margin-bottom:10px;">
-                <img src="../img/SLGTI_logo.png" alt="SLGTI" style="position:absolute; right:0; top:0; height:50px;"/>
+                <img src="${APP_BASE}/img/SLGTI_logo.png" alt="SLGTI" style="position:absolute; right:0; top:0; height:50px;"/>
                 <h3 style="margin:0;">Group Timetable</h3>
                 <div style="font-size:14px;">Group: ${groupName}</div>
                 <div style="font-size:13px;">Course: ${courseName}</div>
@@ -633,7 +633,7 @@ $(document).ready(function() {
     function loadFormData() {
         const cid = <?= json_encode($group['course_id']) ?>;
         // Load modules
-        $.get('../controller/ajax/get_course_modules.php', { course_id: cid, group_id: groupId }, null, 'json')
+        $.get(APP_BASE + '/controller/ajax/get_course_modules.php', { course_id: cid, group_id: groupId }, null, 'json')
             .done(function(modules) {
                 try {
                     if (typeof modules === 'string') { modules = JSON.parse(modules); }
@@ -681,7 +681,7 @@ $(document).ready(function() {
     
     // Load staff members
     function loadStaff() {
-        $.get('../controller/ajax/get_staff.php', null, null, 'json')
+        $.get(APP_BASE + '/controller/ajax/get_staff.php', null, null, 'json')
             .done(function(staff) {
                 try {
                     if (typeof staff === 'string') { staff = JSON.parse(staff); }
@@ -724,7 +724,7 @@ $(document).ready(function() {
     // Load timetable data
     function loadTimetable() {
         $.ajax({
-            url: '../controller/GroupTimetableController.php',
+            url: APP_BASE + '/controller/GroupTimetableController.php',
             type: 'GET',
             dataType: 'json',
             data: {
