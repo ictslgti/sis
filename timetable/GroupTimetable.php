@@ -726,14 +726,34 @@ $(document).ready(function() {
         $.ajax({
             url: APP_BASE + '/controller/GroupTimetableController.php',
             type: 'GET',
-            dataType: 'json',
+            // Do not force dataType; parse manually to be resilient to PHP notices/BOM under nginx
             data: {
                 action: 'list',
                 group_id: groupId,
                 academic_year: academicYear
             },
-            success: function(response) {
-                if (response.success && response.data) {
+            success: function(respText) {
+                let response = respText;
+                try {
+                    if (typeof response === 'string') {
+                        // Trim whitespace and attempt JSON parse
+                        let txt = response.trim();
+                        // If there is extra text before/after JSON, try to find the first { and last }
+                        if (!/^\{[\s\S]*\}$/.test(txt)) {
+                            const first = txt.indexOf('{');
+                            const last = txt.lastIndexOf('}');
+                            if (first !== -1 && last !== -1 && last > first) {
+                                txt = txt.substring(first, last + 1);
+                            }
+                        }
+                        response = JSON.parse(txt);
+                    }
+                } catch (e) {
+                    console.error('Timetable list parse error:', e, respText);
+                    showAlert('Failed to load timetable (invalid server response).', 'danger');
+                    return;
+                }
+                if (response && response.success && response.data) {
                     timetableData = {};
                     
                     // Clear all slots
@@ -781,9 +801,15 @@ $(document).ready(function() {
             error: function(xhr) {
                 let msg = 'Error loading timetable data';
                 try {
-                    const j = xhr && xhr.responseText ? JSON.parse(xhr.responseText) : null;
-                    if (j && (j.error || j.message)) msg = j.error || j.message;
+                    const txt = (xhr && xhr.responseText) ? xhr.responseText.trim() : '';
+                    const first = txt.indexOf('{');
+                    const last = txt.lastIndexOf('}');
+                    if (first !== -1 && last !== -1 && last > first) {
+                        const j = JSON.parse(txt.substring(first, last + 1));
+                        if (j && (j.error || j.message)) msg = j.error || j.message;
+                    }
                 } catch (_e) { /* ignore */ }
+                console.error('Timetable list request failed:', xhr && xhr.status, xhr && xhr.responseText);
                 showAlert(msg, 'danger');
             }
         });
