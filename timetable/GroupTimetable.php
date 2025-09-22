@@ -403,10 +403,8 @@ include('../head.php');
 <?php include('../footer.php'); ?>
 
 <!-- Include required CSS/JS -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/css/bootstrap-select.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.14/dist/js/bootstrap-select.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -518,6 +516,21 @@ include('../head.php');
 </style>
 
 <script>
+// Ensure jQuery is available even if loaded later; then execute our init code
+(function initWhenjQueryReady(init){
+  if (window.jQuery) return init(window.jQuery);
+  // Try to load jQuery from CDN as fallback
+  var s = document.createElement('script');
+  s.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
+  s.async = true;
+  s.onload = function(){ init(window.jQuery); };
+  s.onerror = function(){
+    var tries = 0; var t = setInterval(function(){
+      if (window.jQuery || ++tries > 40) { clearInterval(t); if (window.jQuery) init(window.jQuery); }
+    }, 250);
+  };
+  document.head.appendChild(s);
+})(function($){
 $(document).ready(function() {
     const groupId = <?= $group_id ?>;
     const academicYear = '<?= $academic_year ?>';
@@ -1084,11 +1097,19 @@ $(document).ready(function() {
     
     // Show alert
     function showAlert(message, type) {
-        
-        
+        // Build a Bootstrap 4 alert and prepend to the container
+        var alertHtml = [
+            '<div class="alert alert-' + (type || 'info') + ' alert-dismissible fade show" role="alert">',
+            '  ' + (message || ''),
+            '  <button type="button" class="close" data-dismiss="alert" aria-label="Close">',
+            '    <span aria-hidden="true">&times;</span>',
+            '  </button>',
+            '</div>'
+        ].join('');
+
         // Remove any existing alerts
         $('.alert-dismissible').alert('close');
-        
+
         // Add new alert
         $('.container-fluid').prepend(alertHtml);
         // Ensure alert is visible
@@ -1163,7 +1184,7 @@ $(document).ready(function() {
     loadTimetable();
     
     // Show modal when clicking "Add Entry" button
-    $('[data-target="#addTimetableModal"]').click(function() {
+    $('[data-target="#timetableModal"]').click(function() {
         resetTimetableForm();
         $('#timetableModalLabel').text('Add Timetable Entry');
     });
@@ -1172,5 +1193,6 @@ $(document).ready(function() {
     $('#timetableModal').on('hidden.bs.modal', function() {
         resetTimetableForm();
     });
+});
 });
 </script>
