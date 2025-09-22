@@ -240,9 +240,10 @@ include('../menu.php');
                                     // Server-side fallback: load modules by group's course
                                     $__mods = [];
                                     if (!empty($group['course_id'])) {
-                                        $stmt = $con->prepare("SELECT module_id, module_code, module_name FROM module WHERE course_id = ? ORDER BY module_code, module_name");
+                                        // Do not assume module_code exists on all deployments
+                                        $stmt = $con->prepare("SELECT module_id, module_name FROM module WHERE course_id = ? ORDER BY module_id, module_name");
                                         if ($stmt) {
-                                            $stmt->bind_param('i', $group['course_id']);
+                                            $stmt->bind_param('s', $group['course_id']);
                                             $stmt->execute();
                                             $res = $stmt->get_result();
                                             while ($row = $res->fetch_assoc()) { $__mods[] = $row; }
@@ -251,7 +252,8 @@ include('../menu.php');
                                     }
                                     if (!empty($__mods)) {
                                         foreach ($__mods as $__m) {
-                                            $txt = ($__m['module_code'] ? ($__m['module_code'] . ' - ') : '') . $__m['module_name'];
+                                            $code = isset($__m['module_code']) && $__m['module_code'] !== '' ? $__m['module_code'] : $__m['module_id'];
+                                            $txt = ($code ? ($code . ' - ') : '') . $__m['module_name'];
                                             echo '<option value="' . htmlspecialchars($__m['module_id']) . '">' . htmlspecialchars($txt) . '</option>';
                                         }
                                     } else {
@@ -275,7 +277,7 @@ include('../menu.php');
                                         $sql = "SELECT s.staff_id, s.staff_name FROM staff s WHERE s.department_id = ? ORDER BY s.staff_name";
                                         $stmt = $con->prepare($sql);
                                         if ($stmt) {
-                                            $stmt->bind_param('i', $__dept);
+                                            $stmt->bind_param('s', $__dept);
                                             $stmt->execute();
                                             $res = $stmt->get_result();
                                             while ($row = $res->fetch_assoc()) { $__staff[] = $row; }
@@ -485,6 +487,11 @@ include('../menu.php');
     line-height: 1.2;
 }
 
+/* Hide original native selects after enhancement and enforce width */
+.selectpicker.bs-select-hidden { display: none !important; }
+.select.selectpicker { display: none !important; }
+.bootstrap-select { width: 100% !important; }
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .table-responsive {
@@ -578,10 +585,28 @@ $(document).ready(async function() {
         }
     } catch (_) {}
     
-    // Initialize select pickers (guard if plugin missing)
+    // Helper to ensure only one visual dropdown shown
+    function enforceSingleSelectUI($el) {
+        try {
+            // Remove any duplicate wrappers if they exist
+            var $wraps = $el.siblings('.bootstrap-select');
+            if ($wraps.length > 1) { $wraps.slice(1).remove(); }
+            // Hide native select if wrapper exists
+            if ($wraps.length >= 1) { $el.addClass('bs-select-hidden').css('display','none'); }
+        } catch(_) {}
+    }
+
+    // Initialize select pickers (guard if plugin missing) and avoid duplicate init
     try {
         if ($.fn.selectpicker) {
-            $('.selectpicker').selectpicker({ style: 'btn-light', size: 8 });
+            $('.selectpicker').each(function(){
+                var $s = $(this);
+                try {
+                    if ($s.data('selectpicker')) { $s.selectpicker('refresh'); }
+                    else { $s.selectpicker({ style: 'btn-light', size: 8 }); }
+                    enforceSingleSelectUI($s);
+                } catch(_) {}
+            });
         }
     } catch(_){ }
     
@@ -689,6 +714,7 @@ $(document).ready(async function() {
                     }));
                 }
                 $moduleSelect.selectpicker('refresh');
+                enforceSingleSelectUI($moduleSelect);
                 // After loading modules, load staff
                 loadStaff();
             })
@@ -703,6 +729,7 @@ $(document).ready(async function() {
                 const $moduleSelect = $('#module_id');
                 $moduleSelect.empty().append($('<option>', { value: '', text: 'Error loading modules', disabled: true, selected: true }));
                 $moduleSelect.selectpicker('refresh');
+                enforceSingleSelectUI($moduleSelect);
                 // Still attempt to load staff
                 loadStaff();
             });
@@ -735,6 +762,7 @@ $(document).ready(async function() {
                     }));
                 }
                 $staffSelect.selectpicker('refresh');
+                enforceSingleSelectUI($staffSelect);
             })
             .fail(function(xhr, status, err) {
                 console.error('Failed to load staff', status, err, xhr && xhr.responseText);
@@ -747,6 +775,7 @@ $(document).ready(async function() {
                 const $staffSelect = $('#staff_id');
                 $staffSelect.empty().append($('<option>', { value: '', text: 'Error loading staff', disabled: true, selected: true }));
                 $staffSelect.selectpicker('refresh');
+                enforceSingleSelectUI($staffSelect);
             });
     }
     

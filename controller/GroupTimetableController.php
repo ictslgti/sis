@@ -225,7 +225,8 @@ class GroupTimetableController {
             $params[] = $exclude_id;
         }
         
-        $types = 'iissssss';
+        // 9 params before optional exclude: ii + 7 strings
+        $types = 'iisssssss';
         if ($exclude_id > 0) { $types .= 'i'; }
         $stmt = $this->con->prepare($sql);
         if (!$stmt) {
