@@ -6,7 +6,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // Include configuration and access control
 require_once('../config.php');
-require_once('../library/access_control.php');
+
 
 // Set page variables
 $page_title = "Group Timetable Management";
