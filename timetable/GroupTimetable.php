@@ -95,6 +95,7 @@ if (empty($academic_year)) {
 }
 
 include('../head.php');
+include('../menu.php');
 ?>
 
 <div class="container-fluid">
@@ -241,7 +242,7 @@ include('../head.php');
                                     if (!empty($group['course_id'])) {
                                         $stmt = $con->prepare("SELECT module_id, module_code, module_name FROM module WHERE course_id = ? ORDER BY module_code, module_name");
                                         if ($stmt) {
-                                            $stmt->bind_param('s', $group['course_id']);
+                                            $stmt->bind_param('i', $group['course_id']);
                                             $stmt->execute();
                                             $res = $stmt->get_result();
                                             while ($row = $res->fetch_assoc()) { $__mods[] = $row; }
@@ -274,7 +275,7 @@ include('../head.php');
                                         $sql = "SELECT s.staff_id, s.staff_name FROM staff s WHERE s.department_id = ? ORDER BY s.staff_name";
                                         $stmt = $con->prepare($sql);
                                         if ($stmt) {
-                                            $stmt->bind_param('s', $__dept);
+                                            $stmt->bind_param('i', $__dept);
                                             $stmt->execute();
                                             $res = $stmt->get_result();
                                             while ($row = $res->fetch_assoc()) { $__staff[] = $row; }
@@ -406,7 +407,7 @@ include('../head.php');
 <script src="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/print-js/1.6.0/print.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">  </script>
 
 <style>
 .hide-weekends tr.weekend { display: none; }
@@ -518,20 +519,47 @@ include('../head.php');
 const APP_BASE = <?= json_encode(defined('APP_BASE') ? rtrim(APP_BASE, '/') : '') ?>;
 // Ensure jQuery is available even if loaded later; then execute our init code
 (function initWhenjQueryReady(init){
-  if (window.jQuery) return init(window.jQuery);
-  // Try to load jQuery from CDN as fallback
-  var s = document.createElement('script');
-  s.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
-  s.async = true;
-  s.onload = function(){ init(window.jQuery); };
-  s.onerror = function(){
-    var tries = 0; var t = setInterval(function(){
-      if (window.jQuery || ++tries > 40) { clearInterval(t); if (window.jQuery) init(window.jQuery); }
-    }, 250);
-  };
-  document.head.appendChild(s);
+if (window.jQuery) return init(window.jQuery);
+// Try to load jQuery from CDN as fallback
+var s = document.createElement('script');
+s.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
+s.async = true;
+s.onload = function(){ init(window.jQuery); };
+s.onerror = function(){
+var tries = 0; var t = setInterval(function(){
+if (window.jQuery || ++tries > 40) { clearInterval(t); if (window.jQuery) init(window.jQuery); }
+}, 250);
+};
+document.head.appendChild(s);
 })(function($){
-$(document).ready(function() {
+// Ensure Bootstrap (modal) and bootstrap-select are loaded before initializing
+function loadScriptOnce(url, testFn) {
+return new Promise(function(resolve) {
+try {
+if (testFn && testFn()) return resolve();
+} catch(_) {}
+var s = document.createElement('script');
+s.src = url; s.async = true;
+s.onload = function(){ try { if (!testFn || testFn()) resolve(); else resolve(); } catch(_) { resolve(); } };
+s.onerror = function(){ resolve(); };
+document.head.appendChild(s);
+});
+}
+
+// Ensure Bootstrap modal and bootstrap-select are available
+function ensureUiDeps() {
+    // Bootstrap 4 modal lives on $.fn.modal; bootstrap-select on $.fn.selectpicker
+    const bootUrl = APP_BASE + '/js/bootstrap.bundle.min.js';
+    const selUrl  = APP_BASE + '/js/bootstrap-select.min.js';
+    return loadScriptOnce(bootUrl, function(){ return !!($.fn && $.fn.modal); })
+      .then(function(){ return loadScriptOnce(selUrl, function(){ return !!($.fn && $.fn.selectpicker); }); });
+}
+
+// Main init after DOM ready
+$(document).ready(async function() {
+    // Ensure dependencies first
+    try { await ensureUiDeps(); } catch(_){ }
+
     const groupId = <?= $group_id ?>;
     const academicYear = '<?= $academic_year ?>';
     // Server-provided labels for clean PDF header
@@ -550,11 +578,12 @@ $(document).ready(function() {
         }
     } catch (_) {}
     
-    // Initialize select pickers
-    $('.selectpicker').selectpicker({
-        style: 'btn-light',
-        size: 8
-    });
+    // Initialize select pickers (guard if plugin missing)
+    try {
+        if ($.fn.selectpicker) {
+            $('.selectpicker').selectpicker({ style: 'btn-light', size: 8 });
+        }
+    } catch(_){ }
     
     // Download as PDF (formatted export)
     $('#downloadPDF').click(async function() {
@@ -929,7 +958,7 @@ $(document).ready(function() {
         
         // Load entry data
         $.ajax({
-            url: '../controller/GroupTimetableController.php',
+            url: APP_BASE + '/controller/GroupTimetableController.php',
             type: 'GET',
             dataType: 'json',
             data: {
@@ -983,7 +1012,7 @@ $(document).ready(function() {
         const hardDelete = $('#hardDelete').is(':checked');
         
         $.ajax({
-            url: '../controller/GroupTimetableController.php',
+            url: APP_BASE + '/controller/GroupTimetableController.php',
             type: 'POST',
             dataType: 'json',
             data: {
@@ -1026,7 +1055,7 @@ $(document).ready(function() {
         const formData = $(this).serialize();
         
         $.ajax({
-            url: '../controller/GroupTimetableController.php',
+            url: APP_BASE + '/controller/GroupTimetableController.php',
             type: 'POST',
             data: formData + '&action=save',
             dataType: 'json',
@@ -1222,3 +1251,7 @@ $(document).ready(function() {
 });
 });
 </script>
+<?php
+// Load common footer to close layout and ensure shared scripts are present
+include('../footer.php');
+?>
