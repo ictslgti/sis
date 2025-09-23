@@ -21,6 +21,74 @@ class GroupTimetableController {
         $this->ensureGroupTimetableTable();
     }
 
+    // Insert many slots in one request; uses same validations and clash checks
+    private function saveTimetableBulk() {
+        $group_id   = intval($_POST['group_id'] ?? 0);
+        $module_id  = trim($_POST['module_id'] ?? '');
+        $staff_id   = trim($_POST['staff_id'] ?? '');
+        $classroom  = trim($_POST['classroom'] ?? '');
+        $start_date = trim($_POST['start_date'] ?? '');
+        $end_date   = trim($_POST['end_date'] ?? '');
+        $slots      = $_POST['slots'] ?? [];
+
+        if (!$this->hasPermission()) {
+            echo json_encode(['success' => false, 'message' => 'Access Denied']);
+            return;
+        }
+
+        if (!$this->validateGroupAccess($group_id) || $group_id <= 0 || $module_id === '' || $staff_id === '' ||
+            empty($classroom) || empty($start_date) || empty($end_date) || !is_array($slots) || count($slots) === 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid input']);
+            return;
+        }
+
+        // Verify module belongs to this group's course
+        $stmt = $this->con->prepare("SELECT 1 FROM `groups` g JOIN module m ON g.course_id = m.course_id WHERE g.id = ? AND m.module_id = ?");
+        if ($stmt) {
+            $stmt->bind_param('is', $group_id, $module_id);
+            $stmt->execute();
+            if ($stmt->get_result()->num_rows === 0) {
+                echo json_encode(['success' => false, 'message' => 'Selected module does not belong to this group\'s course.']);
+                return;
+            }
+            $stmt->close();
+        }
+
+        $this->con->begin_transaction();
+        try {
+            $ins = $this->con->prepare("INSERT INTO group_timetable (group_id, module_id, staff_id, weekday, period, classroom, start_date, end_date, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+            if (!$ins) { throw new \Exception('Prepare failed'); }
+            foreach ($slots as $slot) {
+                $weekday = intval(is_array($slot) ? ($slot['weekday'] ?? 0) : (isset($slot->weekday) ? $slot->weekday : 0));
+                $period  = trim(is_array($slot) ? ($slot['period'] ?? '') : (isset($slot->period) ? $slot->period : ''));
+                if ($weekday < 1 || $weekday > 7 || !in_array($period, ['P1','P2','P3','P4'], true)) {
+                    throw new \Exception('Invalid slot specification');
+                }
+
+                // Clash checks
+                if ($this->checkConflict($group_id, $weekday, $period, $start_date, $end_date, 0)) {
+                    throw new \Exception("Group conflict on weekday $weekday, $period");
+                }
+                if ($this->checkStaffClash($staff_id, $weekday, $period, $start_date, $end_date, 0)) {
+                    throw new \Exception("Staff conflict on weekday $weekday, $period");
+                }
+                if ($this->checkClassroomClash($classroom, $weekday, $period, $start_date, $end_date, 0)) {
+                    throw new \Exception("Classroom conflict on weekday $weekday, $period");
+                }
+
+                $ins->bind_param('ississss', $group_id, $module_id, $staff_id, $weekday, $period, $classroom, $start_date, $end_date);
+                if (!$ins->execute()) {
+                    throw new \Exception('Insert failed');
+                }
+            }
+            $this->con->commit();
+            echo json_encode(['success' => true, 'message' => 'Slots inserted']);
+        } catch (\Throwable $e) {
+            $this->con->rollback();
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
     public function handleRequest() {
         $action = $_POST['action'] ?? $_GET['action'] ?? 'list';
         
@@ -34,6 +102,9 @@ class GroupTimetableController {
         switch ($action) {
             case 'save':
                 $this->saveTimetable();
+                break;
+            case 'save_bulk':
+                $this->saveTimetableBulk();
                 break;
             case 'delete':
                 $this->deleteTimetable();
