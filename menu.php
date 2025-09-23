@@ -720,9 +720,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
               </a>
               <div class="sidebar-submenu">
                 <ul>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AssessmentResults.php">Assessment Results</a>
-                  </li>
+                 
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessment.php">Add Assessment</a>
                   </li>
