@@ -45,6 +45,16 @@ if(!$grp){
   exit; 
 }
 
+// Build a robust printable label for the group
+$grp_label = '';
+if ($grp) {
+  $nameCol = '';
+  if (array_key_exists('group_name',$grp)) { $nameCol = trim((string)$grp['group_name']); }
+  elseif (array_key_exists('name',$grp)) { $nameCol = trim((string)$grp['name']); }
+  $codeCol = array_key_exists('group_code',$grp) ? trim((string)$grp['group_code']) : '';
+  $grp_label = $nameCol !== '' ? $nameCol : ($codeCol !== '' ? $codeCol : ('Group #'.(int)$group_id));
+}
+
 // Enforce department ownership for HOD/IN roles: group must belong to user's department
 if (in_array($role, ['HOD','IN1','IN2','IN3'], true)) {
   $deptId = '';
@@ -61,9 +71,13 @@ if (in_array($role, ['HOD','IN1','IN2','IN3'], true)) {
   }
 }
 
-// Current students
+// Current students (include legacy/null/empty statuses)
 $cur = [];
-$q = mysqli_prepare($con,'SELECT gs.id, gs.student_id, s.student_fullname FROM group_students gs INNER JOIN student s ON s.student_id=gs.student_id WHERE gs.group_id=? AND gs.status="active" ORDER BY s.student_fullname');
+$q = mysqli_prepare($con,'SELECT gs.id, gs.student_id, s.student_fullname 
+                          FROM group_students gs 
+                          INNER JOIN student s ON s.student_id=gs.student_id 
+                          WHERE gs.group_id=? AND (gs.status="active" OR gs.status IS NULL OR gs.status="") 
+                          ORDER BY s.student_fullname, s.student_id');
 if ($q){ mysqli_stmt_bind_param($q,'i',$group_id); mysqli_stmt_execute($q); $res=mysqli_stmt_get_result($q); while($res && ($r=mysqli_fetch_assoc($res))){ $cur[]=$r; } mysqli_stmt_close($q);} 
 
 // Candidates: by course + academic year from student_enroll not yet in group
@@ -89,7 +103,7 @@ if (empty($candidates)) {
 }
 ?>
 <div class="container mt-4">
-  <h3>Manage Students — <?php echo h($grp['name']); ?> (<?php echo h($grp['course_id']); ?>, <?php echo h($grp['academic_year']); ?>)</h3>
+  <h3>Manage Students — <?php echo h($grp_label); ?> (<?php echo h($grp['course_id']); ?>, <?php echo h($grp['academic_year']); ?>)</h3>
   <?php if (isset($_GET['ok'])): ?>
     <div class="alert alert-success">Saved successfully.</div>
   <?php endif; ?>
@@ -108,7 +122,7 @@ if (empty($candidates)) {
         <div class="form-row">
           <div class="form-group col-md-8">
             <label for="student_ids">Select Students</label>
-            <select name="student_ids[]" id="student_ids" class="form-control select2" multiple>
+            <select name="student_ids[]" id="student_ids" class="form-control select2" multiple size="15">
               <?php foreach ($candidates as $s): ?>
                 <option value="<?php echo h($s['student_id']); ?>">
                   <?php echo h($s['student_id'] . ' - ' . $s['student_fullname']); ?>

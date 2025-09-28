@@ -26,6 +26,11 @@ $module = [
 ];
 $editing = false;
 
+// If arriving from Module list with a course_id filter, prefill it when creating
+if (isset($_GET['course_id']) && $_GET['course_id'] !== '') {
+  $module['course_id'] = (string)$_GET['course_id'];
+}
+
 // Load for edit
 if (isset($_GET['edits'], $_GET['editc']) && $_GET['edits'] !== '' && $_GET['editc'] !== '') {
   $editing = true;

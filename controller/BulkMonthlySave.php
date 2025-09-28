@@ -19,6 +19,7 @@ if ($deptCode === '') { hredir(http_build_query(['err'=>'nodept'])); }
 
 $month = isset($_POST['month']) && preg_match('/^\d{4}-\d{2}$/', $_POST['month']) ? $_POST['month'] : date('Y-m');
 $courseId = isset($_POST['course_id']) ? trim($_POST['course_id']) : '';
+$groupId = isset($_POST['group_id']) ? trim($_POST['group_id']) : '';
 $includeWeekends = !empty($_POST['include_weekends']) ? 1 : 0;
 $respectHolidays = !empty($_POST['respect_holidays']) ? 1 : 0;
 $respectVacations = !empty($_POST['respect_vacations']) ? 1 : 0;
@@ -113,14 +114,30 @@ for ($d=1; $d<=$daysInMonth; $d++) {
 
 if (empty($dates)) { hredir(http_build_query(['month'=>$month,'course_id'=>$courseId,'err'=>'nodates'])); }
 
-// Load students in scope (Active/Following)
-$where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
-if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
-$sqlSt = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id";
+// Load students in scope (Active/Following) by group or by course/department
 $students = [];
-$res = mysqli_query($con, $sqlSt);
-if ($res) { while ($r=mysqli_fetch_assoc($res)) { $students[] = $r['student_id']; } }
-if (empty($students)) { hredir(http_build_query(['month'=>$month,'course_id'=>$courseId,'err'=>'nostudents'])); }
+if ($groupId !== '') {
+  $sqlSt = "SELECT s.student_id
+            FROM group_students gs
+            JOIN student s ON s.student_id = gs.student_id
+            WHERE gs.group_id = ? AND (gs.status='active' OR gs.status IS NULL OR gs.status='')
+            ORDER BY s.student_id";
+  if ($st = mysqli_prepare($con, $sqlSt)) {
+    $gid = (int)$groupId;
+    mysqli_stmt_bind_param($st, 'i', $gid);
+    mysqli_stmt_execute($st);
+    $res = mysqli_stmt_get_result($st);
+    while ($res && ($r = mysqli_fetch_assoc($res))) { $students[] = $r['student_id']; }
+    mysqli_stmt_close($st);
+  }
+} else {
+  $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
+  if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+  $sqlSt = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id";
+  $res = mysqli_query($con, $sqlSt);
+  if ($res) { while ($r=mysqli_fetch_assoc($res)) { $students[] = $r['student_id']; } }
+}
+if (empty($students)) { hredir(http_build_query(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'nostudents'])); }
 
 // Staff name for attribution
 $staff_name = '';
@@ -170,6 +187,7 @@ if ($ok) {
   $qs = http_build_query([
     'month'=>$month,
     'course_id'=>$courseId,
+    'group_id'=>$groupId,
     'ok'=>1,
     'ins'=>$inserted,
     'upd'=>$updated,
@@ -178,6 +196,6 @@ if ($ok) {
   hredir($qs);
 } else {
   mysqli_rollback($con);
-  $qs = http_build_query(['month'=>$month,'course_id'=>$courseId,'err'=>'dberror']);
+  $qs = http_build_query(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'dberror']);
   hredir($qs);
 }

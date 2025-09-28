@@ -29,6 +29,7 @@ if ($deptCode !== '') {
 
 $month = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month']) ? $_GET['month'] : date('Y-m');
 $courseId = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
+$groupId = isset($_GET['group_id']) ? trim($_GET['group_id']) : '';
 $includeWeekends = isset($_GET['include_weekends']) ? (int)$_GET['include_weekends'] : 0;
 $respectHolidays = isset($_GET['respect_holidays']) ? (int)$_GET['respect_holidays'] : 1;
 $respectVacations = isset($_GET['respect_vacations']) ? (int)$_GET['respect_vacations'] : 1;
@@ -55,6 +56,37 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
               <?php foreach ($courses as $c): ?>
                 <option value="<?php echo h($c['course_id']); ?>" <?php echo ($courseId===$c['course_id'])?'selected':''; ?>><?php echo h($c['course_id'].' - '.$c['course_name']); ?></option>
               <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label for="group_id">Group (optional)</label>
+            <select class="form-control" id="group_id" name="group_id">
+              <option value="">All groups<?php echo $courseId? ' in course' : '' ; ?></option>
+              <?php
+                // Load groups for department (and course if selected)
+                $groups = [];
+                if ($deptCode !== '') {
+                  $sqlG = "SELECT g.id, COALESCE(NULLIF(TRIM(g.group_name),''), g.group_code, CONCAT('Group #', g.id)) AS label
+                           FROM `groups` g
+                           JOIN course c ON c.course_id = g.course_id
+                           WHERE c.department_id=?";
+                  $params = [$deptCode];
+                  if ($courseId !== '') { $sqlG .= " AND g.course_id=?"; $params[] = $courseId; }
+                  $sqlG .= " ORDER BY label";
+                  if ($stG = mysqli_prepare($con, $sqlG)) {
+                    $types = str_repeat('s', count($params));
+                    mysqli_stmt_bind_param($stG, $types, ...$params);
+                    mysqli_stmt_execute($stG);
+                    $rsG = mysqli_stmt_get_result($stG);
+                    while ($rsG && ($rg = mysqli_fetch_assoc($rsG))) { $groups[] = $rg; }
+                    mysqli_stmt_close($stG);
+                  }
+                }
+                foreach ($groups as $g) {
+                  $sel = ($groupId !== '' && (string)$groupId === (string)$g['id']) ? 'selected' : '';
+                  echo '<option value="'.h($g['id']).'" '.$sel.'>'.h($g['label']).' (ID '.h($g['id']).')</option>';
+                }
+              ?>
             </select>
           </div>
           <div class="form-group col-md-2">
@@ -111,6 +143,15 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
               <option value="">All courses in department</option>
               <?php foreach ($courses as $c): ?>
                 <option value="<?php echo h($c['course_id']); ?>" <?php echo ($courseId===$c['course_id'])?'selected':''; ?>><?php echo h($c['course_id'].' - '.$c['course_name']); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="form-group col-md-3">
+            <label for="g_group">Group (optional)</label>
+            <select class="form-control" id="g_group" name="group_id">
+              <option value="">All groups<?php echo $courseId? ' in course' : '' ; ?></option>
+              <?php foreach (($groups ?? []) as $g): ?>
+                <option value="<?php echo h($g['id']); ?>" <?php echo ($groupId!=='' && (string)$groupId===(string)$g['id'])?'selected':''; ?>><?php echo h($g['label']); ?> (ID <?php echo h($g['id']); ?>)</option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -210,14 +251,31 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             $visibleDates[] = $dstr;
           }
 
-          // Load students in scope
+          // Load students in scope (course or group)
           $students = [];
-          $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
-          if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
-          $where .= " AND se.student_enroll_status IN ('Following','Active')";
-          $sql = "SELECT s.student_id, s.student_fullname FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id ASC";
-          $res = mysqli_query($con, $sql);
-          if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
+          if ($groupId !== '') {
+            // By group membership
+            $sql = "SELECT s.student_id, s.student_fullname
+                    FROM group_students gs
+                    JOIN student s ON s.student_id = gs.student_id
+                    WHERE gs.group_id = ? AND (gs.status='active' OR gs.status IS NULL OR gs.status='')
+                    ORDER BY s.student_id";
+            if ($st = mysqli_prepare($con, $sql)) {
+              mysqli_stmt_bind_param($st, 'i', $groupId);
+              mysqli_stmt_execute($st);
+              $res = mysqli_stmt_get_result($st);
+              while ($res && ($r = mysqli_fetch_assoc($res))) { $students[] = $r; }
+              mysqli_stmt_close($st);
+            }
+          } else {
+            // Original: by department (and optional course)
+            $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
+            if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+            $where .= " AND se.student_enroll_status IN ('Following','Active')";
+            $sql = "SELECT s.student_id, s.student_fullname FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id ASC";
+            $res = mysqli_query($con, $sql);
+            if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
+          }
 
           // Preload existing attendance for quick pre-checks (module DAILY-S1)
           $presentMap = [];
@@ -234,6 +292,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
         <form method="post" action="<?php echo $base; ?>/controller/BulkMonthlySaveDetailed.php">
           <input type="hidden" name="month" value="<?php echo h($month); ?>">
           <input type="hidden" name="course_id" value="<?php echo h($courseId); ?>">
+          <input type="hidden" name="group_id" value="<?php echo h($groupId); ?>">
           <input type="hidden" name="include_weekends" value="<?php echo (int)$includeWeekends; ?>">
           <input type="hidden" name="respect_holidays" value="<?php echo (int)$respectHolidays; ?>">
           <input type="hidden" name="respect_vacations" value="<?php echo (int)$respectVacations; ?>">
@@ -280,3 +339,37 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
   </div>
 </div>
 <?php require_once __DIR__ . '/../footer.php'; ?>
+<script>
+  (function(){
+    var base = <?php echo json_encode($base); ?>;
+    var courseSelects = [document.getElementById('course_id'), document.getElementById('g_course')].filter(Boolean);
+    var groupSelects  = [document.getElementById('group_id'), document.getElementById('g_group')].filter(Boolean);
+    function loadGroupsFor(selectEl, targetEl){
+      if (!selectEl || !targetEl) return;
+      var cid = selectEl.value || '';
+      var xhr = new XMLHttpRequest();
+      xhr.open('POST', base + '/controller/ajax/get_course_groups.php');
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+      xhr.onload = function(){
+        if (xhr.status === 200) {
+          targetEl.innerHTML = xhr.responseText;
+        } else {
+          // Fallback: keep a minimal option to avoid empty select
+          targetEl.innerHTML = '<option value="">All groups'+(cid?' in course':'')+'</option>';
+        }
+      };
+      xhr.send('course_id=' + encodeURIComponent(cid));
+    }
+    // Link pairs: main form and grid form
+    if (courseSelects[0] && groupSelects[0]){
+      courseSelects[0].addEventListener('change', function(){ loadGroupsFor(courseSelects[0], groupSelects[0]); });
+      // Initial populate
+      loadGroupsFor(courseSelects[0], groupSelects[0]);
+    }
+    if (courseSelects[1] && groupSelects[1]){
+      courseSelects[1].addEventListener('change', function(){ loadGroupsFor(courseSelects[1], groupSelects[1]); });
+      // Initial populate
+      loadGroupsFor(courseSelects[1], groupSelects[1]);
+    }
+  })();
+  </script>
