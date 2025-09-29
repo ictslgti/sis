@@ -7,10 +7,15 @@
   </div>
 
   <ul class="nav nav-tabs mb-3">
-    <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN3'], true)) { ?>
+    <?php $ut = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : ''; ?>
+    <?php if (in_array($ut, ['HOD','IN3'], true)) { ?>
       <li class="nav-item">
         <a class="nav-link <?php echo (strpos($cur, '/attendance/DailyAttendance.php') !== false) ? 'active' : ''; ?>" href="<?php echo APP_BASE; ?>/attendance/DailyAttendance.php">Daily Attendance</a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link <?php echo (strpos($cur, '/attendance/MonthlyAttendanceReport.php') !== false) ? 'active' : ''; ?>" href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
+      </li>
+    <?php } elseif (in_array($ut, ['SAO','ADM','FIN','ACC'], true)) { ?>
       <li class="nav-item">
         <a class="nav-link <?php echo (strpos($cur, '/attendance/MonthlyAttendanceReport.php') !== false) ? 'active' : ''; ?>" href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
       </li>

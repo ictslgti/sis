@@ -3,8 +3,8 @@
 <?php 
 $title="Monthly Attendance Report | SLGTI";    
 include_once ("../config.php");
-// Allow HODs, IN3, SAO, and ADM to use this page
-require_roles(['HOD','IN3','SAO','ADM']);
+// Allow HODs, IN3, SAO, ADM, Finance (FIN), and Accounts (ACC) to use this page
+require_roles(['HOD','IN3','SAO','ADM','FIN','ACC']);
 ?>
 <!-- end dont change the order-->
 <?php
@@ -14,7 +14,8 @@ $isExport = isset($_GET['export']) && in_array($_GET['export'], ['csv','1','xls'
 if (!$isExport) {
   include_once ("../head.php");
   include_once ("../menu.php");
-  
+  // Roles allowed to add/remove NWD overrides (FIN/ACC are read-only)
+  $canNWD = (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN3','SAO','ADM'], true));
   $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type']==='ADM');
   // Scoped styles for better alignment
   echo '<style>
@@ -42,7 +43,7 @@ if (!$isExport) {
 
 // Resolve department
 $deptCode = '';
-$canPickDept = in_array($_SESSION['user_type'], ['SAO','ADM'], true);
+$canPickDept = in_array($_SESSION['user_type'], ['SAO','ADM','FIN','ACC'], true);
 if ($canPickDept) {
   $deptCode = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 } else {
@@ -502,7 +503,7 @@ if ($isExport) {
         <?php if ($focusExplain !== ''): ?>
           <div class="text-info small mb-2"><i class="fas fa-info-circle"></i> <?php echo htmlspecialchars($focusExplain); ?></div>
         <?php endif; ?>
-        <?php if ($focusDate !== ''): ?>
+        <?php if ($canNWD && $focusDate !== ''): ?>
           <?php if (isset($nwdOverrideSet[$focusDate])): ?>
             <form method="post" action="<?php echo APP_BASE; ?>/controller/RemoveNWDOverride.php" class="mb-2">
               <input type="hidden" name="date" value="<?php echo htmlspecialchars($focusDate); ?>">
@@ -526,6 +527,7 @@ if ($isExport) {
           <?php endif; ?>
         <?php endif; ?>
 
+        <?php if ($canNWD): ?>
         <div class="mb-3 p-2 border rounded bg-light">
           <div class="d-flex flex-wrap align-items-center">
             <label class="mr-2 font-weight-bold mb-0">NWD Overrides:</label>
@@ -546,6 +548,7 @@ if ($isExport) {
             </form>
           </div>
         </div>
+        <?php endif; ?>
         <div class="table-responsive">
           <?php if ($view === 'detailed'): ?>
             <?php

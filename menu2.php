@@ -130,7 +130,7 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
   </style>
 <?php } ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top px-2 px-md-3 px-lg-4">
-  <a class="navbar-brand" href="<?php echo $base; ?><?php echo (in_array($u_t, ['HOD','IN1','IN2','IN3'], true)) ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">MIS@SLGTI</a>
+  <a class="navbar-brand" href="<?php echo $base; ?><?php echo (in_array($u_t, ['HOD', 'IN1', 'IN2', 'IN3'], true)) ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">MIS@SLGTI</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#saoNavbar" aria-controls="saoNavbar" aria-expanded="false" aria-label="Toggle navigation">
     <span class="navbar-toggler-icon"></span>
   </button>
@@ -138,7 +138,7 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
   <div class="collapse navbar-collapse justify-content-end" id="saoNavbar">
     <ul class="navbar-nav">
       <li class="nav-item">
-        <a class="nav-link" href="<?php echo $base; ?><?php echo (in_array($u_t, ['HOD','IN1','IN2','IN3'], true)) ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">
+        <a class="nav-link" href="<?php echo $base; ?><?php echo (in_array($u_t, ['HOD', 'IN1', 'IN2', 'IN3'], true)) ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">
           <i class="fa fa-home"></i> Dashboard
         </a>
       </li>
@@ -158,8 +158,8 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
         </li>
       <?php endif; ?>
 
-      <!-- Finance dropdown: FIN and ACC roles -->
-      <?php if (in_array($u_t, ['FIN','ACC'], true)): ?>
+      <!-- Finance dropdowns -->
+      <?php if (in_array($u_t, ['FIN', 'ACC'], true)): ?>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="finMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-coins"></i> Finance
@@ -168,11 +168,26 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/StudentBankDetails.php"><i class="fas fa-university mr-1"></i> Student Bank Details</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/HostelFeeReports.php"><i class="fa fa-print mr-1"></i> Hostel Fee Reports</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/RegistrationPaymentReport.php"><i class="fa fa-file-invoice-dollar mr-1"></i> Registration Payment Report</a>
-            <a class="dropdown-item" href="<?php echo $base; ?>/finance/RegistrationPaymentApproval.php"><i class="fa fa-check-circle mr-1"></i> Registration Payment Approval</a>
-            <a class="dropdown-item" href="<?php echo $base; ?>/finance/NormalizeRegistrationReason.php"><i class="fa fa-tools mr-1"></i> Normalize Registration Reason</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/CollectPayment.php"><i class="fas fa-cash-register mr-1"></i> Collect Payment</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/finance/PaymentsSummary.php"><i class="fas fa-table mr-1"></i> Payments Summary</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/ManagePaymentTypes.php"><i class="fas fa-tags mr-1"></i> Manage Payment Types</a>
           </div>
+        </li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="finMenuAtt" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-coins"></i> Attendance
+          </a>
+          <div class="dropdown-menu" aria-labelledby="finMenuAtt">
+            <a class="dropdown-item" href="<?php echo $base; ?>/attendance/MonthlyAttendanceReport.php"><i class="fas fa-calendar-check mr-1"></i> Monthly Attendance Report</a>
+          </div>
+        </li>
+      <?php elseif ($u_t === 'MA4'): ?>
+        <li class="nav-item">
+          <a class="nav-link" href="<?php echo $base; ?>/finance/CollectPayment.php">
+            <i class="fas fa-cash-register"></i> Collect Payment
+          </a>
         </li>
       <?php endif; ?>
 
@@ -187,24 +202,26 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
 
       <?php endif; ?>
 
-      <!-- Students dropdown: SAO full menu, HOD limited to Manage Students -->
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="saoStudents" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          <i class="fas fa-user-graduate"></i> Students
-        </a>
-        <div class="dropdown-menu" aria-labelledby="saoStudents">
-          <a class="dropdown-item" href="<?php echo $base; ?>/student/ManageStudents.php">Manage Students</a>
-          <?php if ($u_t === 'SAO'): ?>
-            <a class="dropdown-item" href="<?php echo $base; ?>/student/ImportStudentEnroll.php">Add a Student</a>
-            <a class="dropdown-item" href="<?php echo $base; ?>/student/AllowanceEligibility.php">Allowance Eligibility</a>
-            <div class="dropdown-divider"></div>
-            <a class="dropdown-item" href="<?php echo $base; ?>/student/ExportStudents.php">Export Students (CSV)</a>
-          <?php endif; ?>
-        </div>
-      </li>
+      <?php if ($u_t !== 'MA4'): ?>
+        <!-- Students dropdown: SAO full menu, HOD limited to Manage Students -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="saoStudents" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-user-graduate"></i> Students
+          </a>
+          <div class="dropdown-menu" aria-labelledby="saoStudents">
+            <a class="dropdown-item" href="<?php echo $base; ?>/student/ManageStudents.php">Manage Students</a>
+            <?php if ($u_t === 'SAO'): ?>
+              <a class="dropdown-item" href="<?php echo $base; ?>/student/ImportStudentEnroll.php">Add a Student</a>
+              <a class="dropdown-item" href="<?php echo $base; ?>/student/AllowanceEligibility.php">Allowance Eligibility</a>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="<?php echo $base; ?>/student/ExportStudents.php">Export Students (CSV)</a>
+            <?php endif; ?>
+          </div>
+        </li>
+      <?php endif; ?>
 
       <!-- Attendance: HOD gets Daily + Monthly (scoped to own department) -->
-      <?php if (in_array($u_t, ['HOD','IN1','IN2','IN3'], true)): ?>
+      <?php if (in_array($u_t, ['HOD', 'IN1', 'IN2', 'IN3'], true)): ?>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="hodAttendance" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-calendar-check"></i> Attendance

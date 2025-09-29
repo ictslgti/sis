@@ -51,6 +51,15 @@ if ($u_t === 'STU') {
 
 // IN roles (IN1, IN2, IN3) will use the unified top navbar in menu2.php
 
+// MA4: use minimal top navbar (menu3.php) with no sidebar
+if ($u_t === 'MA4') {
+  $menu3 = __DIR__ . '/menu3.php';
+  if (file_exists($menu3)) {
+    include $menu3;
+  }
+  return; // stop sidebar rendering for MA4
+}
+
 // For SAO, HOD, DIR, ACC, FIN and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
 if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], true)) {
   $menu2 = __DIR__ . '/menu2.php';

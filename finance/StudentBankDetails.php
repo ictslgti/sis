@@ -4,7 +4,7 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_login();
-require_roles('FIN');
+require_roles(['FIN','ACC','ADM']);
 if (!headers_sent()) { ob_start(); }
 
 // Load departments for dropdown
