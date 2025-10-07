@@ -19,6 +19,8 @@ $is_hod   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'HOD';
 $is_in3   = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'IN3';
 // Mutations allowed for Admin and SAO; DIR and HOD are strictly view-only
 $can_mutate = ($is_admin || $is_sao);
+// Finance/Accounts role flag (view bank details)
+$is_finacc = isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['FIN','ACC'], true);
 
 // Helpers
 function h($s)
@@ -232,6 +234,10 @@ $baseSql = "SELECT DISTINCT
               `s`.`student_status`,
               `s`.`student_gender`,
               `s`.`student_conduct_accepted_at`,
+              `s`.`bank_name`,
+              `s`.`bank_account_no`,
+              `s`.`bank_branch`,
+              `s`.`bank_frontsheet_path`,
               `e`.`student_enroll_status`,
               `e`.`course_id`,
               `c`.`course_name`,
@@ -315,7 +321,7 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
   echo "\xEF\xBB\xBF";
   $out = fopen('php://output', 'w');
   // Header row
-  fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Phone', 'NIC', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At']);
+  fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Phone', 'NIC', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At', 'Bank', 'Account No', 'Branch', 'Bank Front Page']);
   if ($qr = mysqli_query($con, $sqlExport)) {
     while ($r = mysqli_fetch_assoc($qr)) {
       fputcsv($out, [
@@ -328,7 +334,11 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
         $r['student_gender'] ?? '',
         $r['course_name'] ?? '',
         $r['department_name'] ?? '',
-        $r['student_conduct_accepted_at'] ?? ''
+        $r['student_conduct_accepted_at'] ?? '',
+        $r['bank_name'] ?? '',
+        $r['bank_account_no'] ?? '',
+        $r['bank_branch'] ?? '',
+        $r['bank_frontsheet_path'] ?? ''
       ]);
     }
     mysqli_free_result($qr);
@@ -673,6 +683,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                           $viewUrl = $base . '/student/Student_profile.php?Sid=' . urlencode($row['student_id']);
                           $editUrl = $base . '/student/StudentEditAdmin.php?Sid=' . urlencode($row['student_id']);
                           $unifiedUrl = $base . '/student/StudentUnifiedEdit.php?Sid=' . urlencode($row['student_id']);
+                          $bankUrl = $base . '/finance/StudentBankDetails.php?sb_student_id=' . urlencode($row['student_id']);
                           ?>
                           <div class="btn-group btn-group-sm flex-wrap" role="group">
                             <?php if ($can_mutate): ?>
@@ -682,6 +693,9 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                               <a class="btn btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
                             <?php endif; ?>
                             <a class="btn btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
+                            <?php if ($is_finacc): ?>
+                              <a class="btn btn-outline-primary" title="Bank Details" href="<?php echo $bankUrl; ?>"><i class="fa fa-university"></i></a>
+                            <?php endif; ?>
                             <?php if ($can_mutate): ?>
                               <?php if (($row['student_status'] ?? '') === 'Inactive'): ?>
                                 <button type="submit" name="activate_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-outline-success" onclick="return confirm('Activate <?php echo h($row['student_id']); ?>?');"><i class="fa fa-user-check"></i></button>
@@ -720,6 +734,9 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                                   <a class="btn btn-success" title="Edit" href="<?php echo $editUrl; ?>"><i class="far fa-edit"></i></a>
                                 <?php endif; ?>
                                 <a class="btn btn-info" title="View" href="<?php echo $viewUrl; ?>"><i class="fas fa-angle-double-right"></i></a>
+                                <?php if ($is_finacc): ?>
+                                  <a class="btn btn-outline-primary" title="Bank Details" href="<?php echo $bankUrl; ?>"><i class="fa fa-university"></i></a>
+                                <?php endif; ?>
                                 <?php if ($can_mutate): ?>
                                   <?php if (empty($row['student_conduct_accepted_at'])): ?>
                                     <button type="submit" name="mark_accept_sid" value="<?php echo h($row['student_id']); ?>" class="btn btn-primary" onclick="return confirm('Mark conduct as accepted for <?php echo h($row['student_id']); ?>?');">Accept</button>

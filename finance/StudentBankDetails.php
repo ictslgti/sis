@@ -95,33 +95,117 @@ require_once __DIR__ . '/../menu.php';
               if ($st = mysqli_prepare($con, $sql)) {
                 if ($types !== '') { mysqli_stmt_bind_param($st, $types, ...$params); }
                 if (mysqli_stmt_execute($st)) {
-                  $res = mysqli_stmt_get_result($st);
-                  if ($res && mysqli_num_rows($res) > 0) {
-                    while ($r = mysqli_fetch_assoc($res)) {
-                      echo '<tr>';
-                      echo '<td>'.htmlspecialchars($r['student_id']).'</td>';
-                      echo '<td>'.htmlspecialchars($r['student_fullname']).'</td>';
-                      echo '<td>'.htmlspecialchars(($r['department_name'] ?: '')).'</td>';
-                      echo '<td>'.htmlspecialchars($r['bank_account_no'] ?: '—').'</td>';
-                      echo '<td>'.htmlspecialchars($r['bank_branch'] ?: '—').'</td>';
-                    $front = isset($r['bank_frontsheet_path']) ? $r['bank_frontsheet_path'] : '';
-                    $dept  = isset($r['department_name']) ? $r['department_name'] : '';
-                    echo '<td class="text-center">'
-                       . '<button type="button" class="btn btn-sm btn-outline-primary bank-view-btn" '
-                       . 'data-toggle="modal" data-target="#viewBankModal" '
-                       . 'data-student="'.htmlspecialchars($r['student_id'], ENT_QUOTES).'" '
-                       . 'data-name="'.htmlspecialchars($r['student_fullname'], ENT_QUOTES).'" '
-                       . 'data-dept="'.htmlspecialchars(($r['department_name'] ?: ''), ENT_QUOTES).'" '
-                       . 'data-acc="'.htmlspecialchars($r['bank_account_no'] ?: '—', ENT_QUOTES).'" '
-                       . 'data-branch="'.htmlspecialchars($r['bank_branch'] ?: '—', ENT_QUOTES).'" '
-                       . 'data-front="'.htmlspecialchars($front, ENT_QUOTES).'">'
-                       . '<i class="fa fa-eye"></i>'
-                       . '</button>'
-                       . '</td>';
-                    echo '</tr>';
+                  if (function_exists('mysqli_stmt_get_result')) {
+                    $res = mysqli_stmt_get_result($st);
+                    if ($res !== false && $res && mysqli_num_rows($res) > 0) {
+                      while ($r = mysqli_fetch_assoc($res)) {
+                        echo '<tr>';
+                        echo '<td>'.htmlspecialchars($r['student_id'] ?? '').'</td>';
+                        echo '<td>'.htmlspecialchars($r['student_fullname'] ?? '').'</td>';
+                        echo '<td>'.htmlspecialchars(($r['department_name'] ?? '')).'</td>';
+                        echo '<td>'.htmlspecialchars($r['bank_account_no'] ?? '—').'</td>';
+                        echo '<td>'.htmlspecialchars($r['bank_branch'] ?? '—').'</td>';
+                        $front = $r['bank_frontsheet_path'] ?? '';
+                        echo '<td class="text-center">'
+                           . '<button type="button" class="btn btn-sm btn-outline-primary bank-view-btn" '
+                           . 'data-toggle="modal" data-target="#viewBankModal" '
+                           . 'data-student="'.htmlspecialchars($r['student_id'] ?? '', ENT_QUOTES).'" '
+                           . 'data-name="'.htmlspecialchars($r['student_fullname'] ?? '', ENT_QUOTES).'" '
+                           . 'data-dept="'.htmlspecialchars(($r['department_name'] ?? ''), ENT_QUOTES).'" '
+                           . 'data-acc="'.htmlspecialchars($r['bank_account_no'] ?? '—', ENT_QUOTES).'" '
+                           . 'data-branch="'.htmlspecialchars($r['bank_branch'] ?? '—', ENT_QUOTES).'" '
+                           . 'data-front="'.htmlspecialchars($front, ENT_QUOTES).'">'
+                           . '<i class="fa fa-eye"></i>'
+                           . '</button>'
+                           . '</td>';
+                        echo '</tr>';
+                      }
+                    } else {
+                      // Either no rows or get_result not supported -> use fallback below
+                      // We intentionally do not print "No students found" here to allow fallback
+                      mysqli_stmt_free_result($st); // ensure clean state before fallback
+                      // Fallback without mysqlnd
+                      mysqli_stmt_store_result($st);
+                      mysqli_stmt_bind_result(
+                        $st,
+                        $f_student_id,
+                        $f_student_fullname,
+                        $f_bank_name,
+                        $f_bank_account_no,
+                        $f_bank_branch,
+                        $f_bank_frontsheet_path,
+                        $f_department_name,
+                        $f_department_id
+                      );
+                      $rows = 0;
+                      while (mysqli_stmt_fetch($st)) {
+                        $rows++;
+                        echo '<tr>';
+                        echo '<td>'.htmlspecialchars($f_student_id ?? '').'</td>';
+                        echo '<td>'.htmlspecialchars($f_student_fullname ?? '').'</td>';
+                        echo '<td>'.htmlspecialchars(($f_department_name ?? '')).'</td>';
+                        echo '<td>'.htmlspecialchars($f_bank_account_no ?? '—').'</td>';
+                        echo '<td>'.htmlspecialchars($f_bank_branch ?? '—').'</td>';
+                        $front = $f_bank_frontsheet_path ?? '';
+                        echo '<td class="text-center">'
+                           . '<button type="button" class="btn btn-sm btn-outline-primary bank-view-btn" '
+                           . 'data-toggle="modal" data-target="#viewBankModal" '
+                           . 'data-student="'.htmlspecialchars($f_student_id ?? '', ENT_QUOTES).'" '
+                           . 'data-name="'.htmlspecialchars($f_student_fullname ?? '', ENT_QUOTES).'" '
+                           . 'data-dept="'.htmlspecialchars(($f_department_name ?? ''), ENT_QUOTES).'" '
+                           . 'data-acc="'.htmlspecialchars($f_bank_account_no ?? '—', ENT_QUOTES).'" '
+                           . 'data-branch="'.htmlspecialchars($f_bank_branch ?? '—', ENT_QUOTES).'" '
+                           . 'data-front="'.htmlspecialchars($front, ENT_QUOTES).'">'
+                           . '<i class="fa fa-eye"></i>'
+                           . '</button>'
+                           . '</td>';
+                        echo '</tr>';
+                      }
+                      if ($rows === 0) {
+                        echo '<tr><td colspan="6" class="text-center">No students found.</td></tr>';
+                      }
                     }
                   } else {
-                    echo '<tr><td colspan="6" class="text-center">No students found.</td></tr>';
+                    // Fallback without mysqlnd
+                    mysqli_stmt_store_result($st);
+                    mysqli_stmt_bind_result(
+                      $st,
+                      $f_student_id,
+                      $f_student_fullname,
+                      $f_bank_name,
+                      $f_bank_account_no,
+                      $f_bank_branch,
+                      $f_bank_frontsheet_path,
+                      $f_department_name,
+                      $f_department_id
+                    );
+                    $rows = 0;
+                    while (mysqli_stmt_fetch($st)) {
+                      $rows++;
+                      echo '<tr>';
+                      echo '<td>'.htmlspecialchars($f_student_id ?? '').'</td>';
+                      echo '<td>'.htmlspecialchars($f_student_fullname ?? '').'</td>';
+                      echo '<td>'.htmlspecialchars(($f_department_name ?? '')).'</td>';
+                      echo '<td>'.htmlspecialchars($f_bank_account_no ?? '—').'</td>';
+                      echo '<td>'.htmlspecialchars($f_bank_branch ?? '—').'</td>';
+                      $front = $f_bank_frontsheet_path ?? '';
+                      echo '<td class="text-center">'
+                         . '<button type="button" class="btn btn-sm btn-outline-primary bank-view-btn" '
+                         . 'data-toggle="modal" data-target="#viewBankModal" '
+                         . 'data-student="'.htmlspecialchars($f_student_id ?? '', ENT_QUOTES).'" '
+                         . 'data-name="'.htmlspecialchars($f_student_fullname ?? '', ENT_QUOTES).'" '
+                         . 'data-dept="'.htmlspecialchars(($f_department_name ?? ''), ENT_QUOTES).'" '
+                         . 'data-acc="'.htmlspecialchars($f_bank_account_no ?? '—', ENT_QUOTES).'" '
+                         . 'data-branch="'.htmlspecialchars($f_bank_branch ?? '—', ENT_QUOTES).'" '
+                         . 'data-front="'.htmlspecialchars($front, ENT_QUOTES).'">'
+                         . '<i class="fa fa-eye"></i>'
+                         . '</button>'
+                         . '</td>';
+                      echo '</tr>';
+                    }
+                    if ($rows === 0) {
+                      echo '<tr><td colspan="6" class="text-center">No students found.</td></tr>';
+                    }
                   }
                 }
                 mysqli_stmt_close($st);
