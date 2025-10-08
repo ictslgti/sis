@@ -81,7 +81,7 @@ if (!empty($_SESSION['user_name'])) {
 $module_name = 'DAILY-S1';
 
 mysqli_begin_transaction($con);
-$ok = true; $ins=0; $upd=0;
+$ok = true; $ins=0; $upd=0; $skip=0;
 $st = mysqli_prepare($con,
   "INSERT INTO attendance (attendance_status, staff_name, student_id, date, module_name)
    VALUES (?,?,?,?,?)
@@ -96,7 +96,9 @@ foreach ($students as $sid) {
     mysqli_stmt_bind_param($st, 'issss', $presentVal, $staff_name, $sid, $d, $module_name);
     if (!mysqli_stmt_execute($st)) { $ok=false; break; }
     $aff = mysqli_stmt_affected_rows($st);
-    if ($aff === 1) $ins++; else if ($aff === 2) $upd++;
+    if ($aff === 1) { $ins++; }
+    else if ($aff === 2) { $upd++; }
+    else { $skip++; }
   }
   if (!$ok) break;
 }
@@ -104,7 +106,19 @@ if ($st) { mysqli_stmt_close($st); }
 
 if ($ok) {
   mysqli_commit($con);
-  back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'ok'=>1,'ins'=>$ins,'upd'=>$upd,'load'=>1,'include_weekends'=>$includeWeekends,'respect_holidays'=>$respectHolidays,'respect_vacations'=>$respectVacations]);
+  back([
+    'month'=>$month,
+    'course_id'=>$courseId,
+    'group_id'=>$groupId,
+    'ok'=>1,
+    'ins'=>$ins,
+    'upd'=>$upd,
+    'skip'=>$skip,
+    'load'=>1,
+    'include_weekends'=>$includeWeekends,
+    'respect_holidays'=>$respectHolidays,
+    'respect_vacations'=>$respectVacations
+  ]);
 } else {
   mysqli_rollback($con);
   back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'dberror','load'=>1]);

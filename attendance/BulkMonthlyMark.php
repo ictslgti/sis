@@ -43,6 +43,25 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
       <div><strong>Bulk Monthly Attendance</strong> <small class="text-muted">(HOD / IN3)</small></div>
     </div>
     <div class="card-body">
+      <?php
+        // Feedback alerts
+        $ok = isset($_GET['ok']) ? (int)$_GET['ok'] : 0;
+        $err = isset($_GET['err']) ? trim((string)($_GET['err'])) : '';
+        if ($ok === 1) {
+          $ins = isset($_GET['ins']) ? (int)$_GET['ins'] : 0;
+          $upd = isset($_GET['upd']) ? (int)$_GET['upd'] : 0;
+          $skip = isset($_GET['skip']) ? (int)$_GET['skip'] : 0;
+          echo '<div class="alert alert-success">Saved successfully. Inserts: '.(int)$ins.', Updates: '.(int)$upd.(isset($_GET['skip']) ? ', Skipped: '.(int)$skip : '').'</div>';
+        } elseif ($err !== '') {
+          $msg = 'Action failed.';
+          if ($err === 'nodept') { $msg = 'No department resolved for your account.'; }
+          elseif ($err === 'nodates') { $msg = 'No eligible dates in the selected month (filters may exclude all days).'; }
+          elseif ($err === 'nostudents') { $msg = 'No eligible students in the selected scope.'; }
+          elseif ($err === 'stmt') { $msg = 'Database statement could not be prepared.'; }
+          elseif ($err === 'dberror') { $msg = 'Database error occurred while saving.'; }
+          echo '<div class="alert alert-danger">'.htmlspecialchars($msg).'</div>';
+        }
+      ?>
       <form method="POST" action="<?php echo $base; ?>/controller/BulkMonthlySave.php" class="mb-3">
         <div class="form-row">
           <div class="form-group col-md-3">

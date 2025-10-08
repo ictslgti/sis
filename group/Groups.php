@@ -89,20 +89,28 @@ if ($canManage) {
                 <div class="btn-group">
                   <?php $studentsUrl = $base . '/group/GroupStudents.php?group_id=' . $g['id'] . (!empty($redirect) ? '&redirect=' . urlencode($redirect) : ''); ?>
                   <a class="btn btn-sm btn-outline-primary" href="<?php echo $studentsUrl; ?>">
-                    <i class="fas fa-users"></i> Students
+                    <i class="fas fa-users"></i> 
                   </a>
                   <?php if ($canManage): ?>
-                  <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/group/EditGroup.php?id=<?php echo $g['id']; ?>">
-                    <i class="fas fa-edit"></i> Edit
+                  <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/group/AddGroup.php?id=<?php echo $g['id']; ?>">
+                    <i class="fas fa-edit"></i> 
                   </a>
+                  
+                  <form method="POST" action="<?php echo $base; ?>/controller/GroupDelete.php" class="d-inline ml-1" onsubmit="return confirm('FORCE DELETE will also remove all student assignments from this group. Are you sure?');">
+                    <input type="hidden" name="id" value="<?php echo (int)$g['id']; ?>">
+                    <input type="hidden" name="force" value="1">
+                    <button type="submit" class="btn btn-sm btn-danger" title="Force delete: also removes student assignments">
+                    <i class="fas fa-trash"></i>
+                    </button>
+                  </form>
                   <?php endif; ?>
                   <?php if (!empty($redirect) && $redirect === 'group_timetable'): ?>
                   <a class="btn btn-sm btn-success" href="<?php echo $base; ?>/timetable/GroupTimetable.php?group_id=<?php echo $g['id']; ?>">
-                    <i class="fas fa-calendar-alt"></i> View Timetable
+                    <i class="fas fa-calendar-alt"></i> 
                   </a>
                   <?php endif; ?>
                 </div>
-                <a class="btn btn-sm btn-info" href="<?php echo $base; ?>/group/GroupSessions.php?group_id=<?php echo (int)$g['id']; ?>">Sessions</a>
+                
               </td>
             </tr>
           <?php endforeach; ?>

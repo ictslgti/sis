@@ -166,11 +166,9 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
           </a>
           <div class="dropdown-menu" aria-labelledby="finMenu">
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/StudentBankDetails.php"><i class="fas fa-university mr-1"></i> Student Bank Details</a>
-            <a class="dropdown-item" href="<?php echo $base; ?>/finance/HostelFeeReports.php"><i class="fa fa-print mr-1"></i> Hostel Fee Reports</a>
-            <a class="dropdown-item" href="<?php echo $base; ?>/finance/RegistrationPaymentReport.php"><i class="fa fa-file-invoice-dollar mr-1"></i> Registration Payment Report</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/CollectPayment.php"><i class="fas fa-cash-register mr-1"></i> Collect Payment</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/PaymentsSummary.php"><i class="fas fa-table mr-1"></i> Payments Summary</a>
-            <div class="dropdown-divider"></div>
+            
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/ManagePaymentTypes.php"><i class="fas fa-tags mr-1"></i> Manage Payment Types</a>
           </div>
         </li>
