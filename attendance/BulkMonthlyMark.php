@@ -303,7 +303,9 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             $idList = implode(',', $ids);
             $dateList = implode(',', array_map(function($d){ return "'".addslashes($d)."'"; }, $visibleDates));
             $mn = 'DAILY-S1';
-            $q = mysqli_query($con, "SELECT student_id, date, MAX(attendance_status) AS st FROM attendance WHERE module_name='".mysqli_real_escape_string($con,$mn)."' AND date IN ($dateList) AND student_id IN ($idList) GROUP BY student_id, date");
+            // Use MIN instead of MAX to cope with legacy duplicates (0 and 1 both present);
+            // this ensures explicit absences (0) are reflected after Save Grid even if old 'present' rows exist.
+            $q = mysqli_query($con, "SELECT student_id, date, MIN(attendance_status) AS st FROM attendance WHERE module_name='".mysqli_real_escape_string($con,$mn)."' AND date IN ($dateList) AND student_id IN ($idList) GROUP BY student_id, date");
             if ($q) { while($row=mysqli_fetch_assoc($q)){ if ((int)$row['st']===1) { $presentMap[$row['student_id']][$row['date']] = true; } } }
           }
       ?>

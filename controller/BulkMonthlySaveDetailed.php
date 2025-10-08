@@ -82,6 +82,11 @@ $module_name = 'DAILY-S1';
 
 mysqli_begin_transaction($con);
 $ok = true; $ins=0; $upd=0; $skip=0;
+$stDel = mysqli_prepare($con,
+  "DELETE FROM attendance WHERE student_id=? AND date=? AND module_name=?"
+);
+if (!$stDel) { mysqli_rollback($con); back(['month'=>$month,'course_id'=>$courseId,'err'=>'stmt']); }
+
 $st = mysqli_prepare($con,
   "INSERT INTO attendance (attendance_status, staff_name, student_id, date, module_name)
    VALUES (?,?,?,?,?)
@@ -93,6 +98,9 @@ foreach ($students as $sid) {
   foreach ($dates as $d) {
     $key = (string)$sid.'|'.$d;
     $presentVal = isset($presentSet[$key]) ? 1 : 0;
+    // Hard-delete any existing rows for this key to avoid legacy duplicates overriding the UI
+    mysqli_stmt_bind_param($stDel, 'sss', $sid, $d, $module_name);
+    if (!mysqli_stmt_execute($stDel)) { $ok=false; break; }
     mysqli_stmt_bind_param($st, 'issss', $presentVal, $staff_name, $sid, $d, $module_name);
     if (!mysqli_stmt_execute($st)) { $ok=false; break; }
     $aff = mysqli_stmt_affected_rows($st);
