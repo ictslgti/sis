@@ -2,6 +2,9 @@
 require_once __DIR__ . '/../config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $base = defined('APP_BASE') ? APP_BASE : '';
+// Allow longer execution for large months/groups and prevent premature abort
+@set_time_limit(300);
+@ignore_user_abort(true);
 
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 if (!in_array($role, ['HOD','IN3'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
@@ -78,6 +81,9 @@ if (!empty($_SESSION['user_name'])) {
 
 // Ensure unique key for idempotent upserts (best-effort; may fail if duplicates already exist)
 @mysqli_query($con, "ALTER TABLE `attendance` ADD UNIQUE KEY `uniq_student_date_module` (`student_id`,`date`,`module_name`)");
+// Helpful supporting indexes (best-effort)
+@mysqli_query($con, "CREATE INDEX IF NOT EXISTS `idx_att_mod_date` ON `attendance` (`module_name`,`date`)");
+@mysqli_query($con, "CREATE INDEX IF NOT EXISTS `idx_att_mod_sid`  ON `attendance` (`module_name`,`student_id`)");
 $module_name = 'DAILY-S1';
 
 // Build flat rows [ [sid, date, val], ... ]
@@ -92,22 +98,25 @@ foreach ($students as $sid) {
 mysqli_begin_transaction($con);
 $ok = true; $ins=0; $upd=0; $skip=0;
 
-// Process in chunks to avoid huge SQL statements
-$CHUNK = 500; // rows per batch
-$total = count($rows);
-for ($i = 0; $i < $total; $i += $CHUNK) {
+// Process in chunks to avoid huge SQL statements (adaptive)
+$CHUNK = 500; // default rows per batch
+$totalRows = count($rows);
+if ($totalRows > 10000) { $CHUNK = 300; }
+elseif ($totalRows < 4000) { $CHUNK = 800; }
+for ($i = 0; $i < $totalRows; $i += $CHUNK) {
   $batch = array_slice($rows, $i, $CHUNK);
 
   // 1) Delete existing rows for these keys (handles legacy duplicates)
-  $conds = [];
+  $tuples = [];
   foreach ($batch as $r) {
     $sid = mysqli_real_escape_string($con, $r[0]);
     $dt  = mysqli_real_escape_string($con, $r[1]);
-    $conds[] = "(student_id='{$sid}' AND date='{$dt}')";
+    $tuples[] = "('{$sid}','{$dt}')";
   }
-  if (!empty($conds)) {
+  if (!empty($tuples)) {
     $mn = mysqli_real_escape_string($con, $module_name);
-    $sqlDel = "DELETE FROM attendance WHERE module_name='{$mn}' AND (".implode(' OR ', $conds).")";
+    // Use composite IN to speed up match
+    $sqlDel = "DELETE FROM attendance WHERE module_name='{$mn}' AND (student_id, date) IN (".implode(',', $tuples).")";
     if (!mysqli_query($con, $sqlDel)) { $ok=false; break; }
   }
 
