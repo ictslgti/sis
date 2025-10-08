@@ -76,41 +76,66 @@ if (!empty($_SESSION['user_name'])) {
   if ($qr && ($rr=mysqli_fetch_assoc($qr))) { $staff_name = $rr['staff_name']; }
 }
 
-// Ensure unique key for idempotent upserts
+// Ensure unique key for idempotent upserts (best-effort; may fail if duplicates already exist)
 @mysqli_query($con, "ALTER TABLE `attendance` ADD UNIQUE KEY `uniq_student_date_module` (`student_id`,`date`,`module_name`)");
 $module_name = 'DAILY-S1';
 
-mysqli_begin_transaction($con);
-$ok = true; $ins=0; $upd=0; $skip=0;
-$stDel = mysqli_prepare($con,
-  "DELETE FROM attendance WHERE student_id=? AND date=? AND module_name=?"
-);
-if (!$stDel) { mysqli_rollback($con); back(['month'=>$month,'course_id'=>$courseId,'err'=>'stmt']); }
-
-$st = mysqli_prepare($con,
-  "INSERT INTO attendance (attendance_status, staff_name, student_id, date, module_name)
-   VALUES (?,?,?,?,?)
-   ON DUPLICATE KEY UPDATE attendance_status=VALUES(attendance_status), staff_name=VALUES(staff_name)"
-);
-if (!$st) { mysqli_rollback($con); back(['month'=>$month,'course_id'=>$courseId,'err'=>'stmt']); }
-
+// Build flat rows [ [sid, date, val], ... ]
+$rows = [];
 foreach ($students as $sid) {
   foreach ($dates as $d) {
     $key = (string)$sid.'|'.$d;
-    $presentVal = isset($presentSet[$key]) ? 1 : 0;
-    // Hard-delete any existing rows for this key to avoid legacy duplicates overriding the UI
-    mysqli_stmt_bind_param($stDel, 'sss', $sid, $d, $module_name);
-    if (!mysqli_stmt_execute($stDel)) { $ok=false; break; }
-    mysqli_stmt_bind_param($st, 'issss', $presentVal, $staff_name, $sid, $d, $module_name);
-    if (!mysqli_stmt_execute($st)) { $ok=false; break; }
-    $aff = mysqli_stmt_affected_rows($st);
-    if ($aff === 1) { $ins++; }
-    else if ($aff === 2) { $upd++; }
-    else { $skip++; }
+    $rows[] = [$sid, $d, isset($presentSet[$key]) ? 1 : 0];
   }
-  if (!$ok) break;
 }
-if ($st) { mysqli_stmt_close($st); }
+
+mysqli_begin_transaction($con);
+$ok = true; $ins=0; $upd=0; $skip=0;
+
+// Process in chunks to avoid huge SQL statements
+$CHUNK = 500; // rows per batch
+$total = count($rows);
+for ($i = 0; $i < $total; $i += $CHUNK) {
+  $batch = array_slice($rows, $i, $CHUNK);
+
+  // 1) Delete existing rows for these keys (handles legacy duplicates)
+  $conds = [];
+  foreach ($batch as $r) {
+    $sid = mysqli_real_escape_string($con, $r[0]);
+    $dt  = mysqli_real_escape_string($con, $r[1]);
+    $conds[] = "(student_id='{$sid}' AND date='{$dt}')";
+  }
+  if (!empty($conds)) {
+    $mn = mysqli_real_escape_string($con, $module_name);
+    $sqlDel = "DELETE FROM attendance WHERE module_name='{$mn}' AND (".implode(' OR ', $conds).")";
+    if (!mysqli_query($con, $sqlDel)) { $ok=false; break; }
+  }
+
+  // 2) Insert all rows with ON DUPLICATE KEY UPDATE
+  $values = [];
+  foreach ($batch as $r) {
+    $val = (int)$r[2];
+    $sid = mysqli_real_escape_string($con, $r[0]);
+    $dt  = mysqli_real_escape_string($con, $r[1]);
+    $stf = mysqli_real_escape_string($con, $staff_name);
+    $mn  = mysqli_real_escape_string($con, $module_name);
+    $values[] = "({$val},'{$stf}','{$sid}','{$dt}','{$mn}')";
+  }
+  if (!empty($values)) {
+    $sqlIns = "INSERT INTO attendance (attendance_status, staff_name, student_id, date, module_name) VALUES ".implode(',', $values)
+            . " ON DUPLICATE KEY UPDATE attendance_status=VALUES(attendance_status), staff_name=VALUES(staff_name)";
+    if (!mysqli_query($con, $sqlIns)) { $ok=false; break; }
+
+    // Estimate counts for feedback using affected_rows heuristic
+    $aff = mysqli_affected_rows($con); // sums across inserted/updated rows
+    // We cannot perfectly split insert vs update without probing; keep totals approximate:
+    // Treat all as updates if unique key existed previously; otherwise new inserts.
+    // To provide stable UX, just track total changed rows and skip remains zero in batch context.
+    // However, we can increment ins/upd roughly by assuming every row changed (no skip in grid mode).
+    // We'll just accumulate into $upd since the grid overwrites state.
+    if ($aff > 0) { $upd += $aff; }
+  }
+}
 
 if ($ok) {
   mysqli_commit($con);
