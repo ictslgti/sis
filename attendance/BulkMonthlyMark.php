@@ -319,5 +319,28 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
         inputs.forEach(function(cb){ cb.checked = selectAll.checked; });
       });
     }
+
+    // On submit, serialize checked boxes into a compact JSON payload to bypass max_input_vars limits
+    var gridForm = document.querySelector('form[action$="/controller/BulkMonthlySaveDetailed.php"]');
+    if (gridForm){
+      gridForm.addEventListener('submit', function(){
+        try {
+          var checked = gridForm.querySelectorAll('tbody input[type="checkbox"]:checked');
+          var pairs = [];
+          checked.forEach(function(cb){
+            var m = cb.name && cb.name.match(/^present\[(.+?)\]/);
+            if (m) { pairs.push([m[1], cb.value]); }
+          });
+          var hidden = document.createElement('input');
+          hidden.type = 'hidden';
+          hidden.name = 'present_pairs';
+          hidden.value = JSON.stringify(pairs);
+          gridForm.appendChild(hidden);
+          // Disable individual checkboxes so they are not submitted as thousands of inputs
+          var allCbs = gridForm.querySelectorAll('tbody input[type="checkbox"]');
+          allCbs.forEach(function(cb){ cb.disabled = true; });
+        } catch (e) { /* no-op; server will still handle legacy inputs if present */ }
+      });
+    }
   })();
   </script>

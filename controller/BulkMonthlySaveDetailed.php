@@ -61,13 +61,29 @@ if ($groupId !== '') {
 if (empty($students)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'nostudents']); }
 
 // Input present map: present[sid][] = list of dates with present
-$present = isset($_POST['present']) && is_array($_POST['present']) ? $_POST['present'] : [];
 $presentSet = [];
-foreach ($present as $sid => $dlist) {
-  if (!is_array($dlist)) continue;
-  foreach ($dlist as $d) {
-    $k = (string)$sid.'|'.$d;
-    $presentSet[$k] = true;
+// Preferred: compact JSON list of pairs to bypass max_input_vars limits
+$presentPairsJson = isset($_POST['present_pairs']) ? (string)$_POST['present_pairs'] : '';
+if ($presentPairsJson !== '') {
+  $pairs = json_decode($presentPairsJson, true);
+  if (is_array($pairs)) {
+    foreach ($pairs as $pair) {
+      if (!is_array($pair) || count($pair) < 2) continue;
+      $sid = (string)$pair[0];
+      $d   = (string)$pair[1];
+      if ($sid === '' || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) continue;
+      $presentSet[$sid.'|'.$d] = true;
+    }
+  }
+} else {
+  // Fallback: legacy inputs present[sid][] = dates
+  $present = isset($_POST['present']) && is_array($_POST['present']) ? $_POST['present'] : [];
+  foreach ($present as $sid => $dlist) {
+    if (!is_array($dlist)) continue;
+    foreach ($dlist as $d) {
+      $k = (string)$sid.'|'.$d;
+      $presentSet[$k] = true;
+    }
   }
 }
 
