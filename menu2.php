@@ -232,20 +232,7 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
           </div>
         </li>
 
-        <!-- Timetable: HOD/IN roles -->
-        <li class="nav-item dropdown">
-          <a class="nav-link dropdown-toggle" href="#" id="hodTimetable" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fas fa-calendar-alt"></i> Timetable
-          </a>
-          <div class="dropdown-menu" aria-labelledby="hodTimetable">
-            <a class="dropdown-item" href="<?php echo $base; ?>/group/Groups.php?redirect=group_timetable">
-              <i class="fas fa-tasks mr-1"></i> Manage Group Timetable
-            </a>
-            <a class="dropdown-item" href="<?php echo $base; ?>/timetable/Timetable.php">
-              <i class="far fa-calendar mr-1"></i> View Timetable
-            </a>
-          </div>
-        </li>
+        
 
         <!-- Groups: HOD can manage department groups -->
         <li class="nav-item dropdown">
