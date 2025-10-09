@@ -62,93 +62,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           echo '<div class="alert alert-danger">'.htmlspecialchars($msg).'</div>';
         }
       ?>
-      <form method="POST" action="<?php echo $base; ?>/controller/BulkMonthlySave.php" class="mb-3">
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label for="month">Month</label>
-            <input type="month" class="form-control" id="month" name="month" value="<?php echo h($month); ?>" required>
-          </div>
-          <div class="form-group col-md-4">
-            <label for="course_id">Course (optional)</label>
-            <select class="form-control" id="course_id" name="course_id">
-              <option value="">All courses in department</option>
-              <?php foreach ($courses as $c): ?>
-                <option value="<?php echo h($c['course_id']); ?>" <?php echo ($courseId===$c['course_id'])?'selected':''; ?>><?php echo h($c['course_id'].' - '.$c['course_name']); ?></option>
-              <?php endforeach; ?>
-            </select>
-          </div>
-          <div class="form-group col-md-3">
-            <label for="group_id">Group (optional)</label>
-            <select class="form-control" id="group_id" name="group_id">
-              <option value="">All groups<?php echo $courseId? ' in course' : '' ; ?></option>
-              <?php
-                // Load groups for department (and course if selected)
-                $groups = [];
-                if ($deptCode !== '') {
-                  $sqlG = "SELECT g.id, COALESCE(NULLIF(TRIM(g.group_name),''), g.group_code, CONCAT('Group #', g.id)) AS label
-                           FROM `groups` g
-                           JOIN course c ON c.course_id = g.course_id
-                           WHERE c.department_id=?";
-                  $params = [$deptCode];
-                  if ($courseId !== '') { $sqlG .= " AND g.course_id=?"; $params[] = $courseId; }
-                  $sqlG .= " ORDER BY label";
-                  if ($stG = mysqli_prepare($con, $sqlG)) {
-                    $types = str_repeat('s', count($params));
-                    mysqli_stmt_bind_param($stG, $types, ...$params);
-                    mysqli_stmt_execute($stG);
-                    $rsG = mysqli_stmt_get_result($stG);
-                    while ($rsG && ($rg = mysqli_fetch_assoc($rsG))) { $groups[] = $rg; }
-                    mysqli_stmt_close($stG);
-                  }
-                }
-                foreach ($groups as $g) {
-                  $sel = ($groupId !== '' && (string)$groupId === (string)$g['id']) ? 'selected' : '';
-                  echo '<option value="'.h($g['id']).'" '.$sel.'>'.h($g['label']).' (ID '.h($g['id']).')</option>';
-                }
-              ?>
-            </select>
-          </div>
-          <div class="form-group col-md-2">
-            <label for="mark_as">Mark as</label>
-            <select class="form-control" id="mark_as" name="mark_as">
-              <option value="Present" <?php echo $markAs==='Present'?'selected':''; ?>>Present</option>
-              <option value="Absent" <?php echo $markAs==='Absent'?'selected':''; ?>>Absent</option>
-            </select>
-          </div>
-          <div class="form-group col-md-3">
-            <label for="override_existing">Existing Marks</label>
-            <select class="form-control" id="override_existing" name="override_existing">
-              <option value="0" <?php echo $overrideExisting? '' : 'selected'; ?>>Keep existing (no overwrite)</option>
-              <option value="1" <?php echo $overrideExisting? 'selected' : ''; ?>>Override existing</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group col-md-2">
-            <div class="custom-control custom-checkbox mt-4">
-              <input type="checkbox" class="custom-control-input" id="include_weekends" name="include_weekends" value="1" <?php echo $includeWeekends? 'checked' : ''; ?>>
-              <label class="custom-control-label" for="include_weekends">Include weekends</label>
-            </div>
-          </div>
-          <div class="form-group col-md-3">
-            <div class="custom-control custom-checkbox mt-4">
-              <input type="checkbox" class="custom-control-input" id="respect_holidays" name="respect_holidays" value="1" <?php echo $respectHolidays? 'checked' : ''; ?>>
-              <label class="custom-control-label" for="respect_holidays">Skip public holidays</label>
-            </div>
-          </div>
-          <div class="form-group col-md-3">
-            <div class="custom-control custom-checkbox mt-4">
-              <input type="checkbox" class="custom-control-input" id="respect_vacations" name="respect_vacations" value="1" <?php echo $respectVacations? 'checked' : ''; ?>>
-              <label class="custom-control-label" for="respect_vacations">Skip institute vacations</label>
-            </div>
-          </div>
-        </div>
-        <div class="alert alert-warning small">
-          This will mark attendance for all eligible students in the selected scope for every selected day in the chosen month using module name <code>DAILY-S1</code>. Future dates are ignored.
-        </div>
-        <button type="submit" class="btn btn-primary">Proceed to Mark Month</button>
-      </form>
-      <hr>
+      
       <form method="get" action="" class="mb-3">
         <input type="hidden" name="load" value="1">
         <div class="form-row">
@@ -320,6 +234,12 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           <?php foreach ($visibleDates as $d): ?>
             <input type="hidden" name="dates[]" value="<?php echo h($d); ?>">
           <?php endforeach; ?>
+          <div class="d-flex align-items-center mb-2">
+            <div class="custom-control custom-checkbox">
+              <input type="checkbox" class="custom-control-input" id="select_all_grid">
+              <label class="custom-control-label" for="select_all_grid">Select all</label>
+            </div>
+          </div>
           <div class="table-responsive">
             <table class="table table-sm table-bordered">
               <thead class="thead-light">
@@ -363,8 +283,9 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
 <script>
   (function(){
     var base = <?php echo json_encode($base); ?>;
-    var courseSelects = [document.getElementById('course_id'), document.getElementById('g_course')].filter(Boolean);
-    var groupSelects  = [document.getElementById('group_id'), document.getElementById('g_group')].filter(Boolean);
+    // Only the grid loader form remains
+    var courseSelects = [document.getElementById('g_course')].filter(Boolean);
+    var groupSelects  = [document.getElementById('g_group')].filter(Boolean);
     function loadGroupsFor(selectEl, targetEl){
       if (!selectEl || !targetEl) return;
       var cid = selectEl.value || '';
@@ -381,16 +302,22 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
       };
       xhr.send('course_id=' + encodeURIComponent(cid));
     }
-    // Link pairs: main form and grid form
+    // Link grid form selects
     if (courseSelects[0] && groupSelects[0]){
       courseSelects[0].addEventListener('change', function(){ loadGroupsFor(courseSelects[0], groupSelects[0]); });
       // Initial populate
       loadGroupsFor(courseSelects[0], groupSelects[0]);
     }
-    if (courseSelects[1] && groupSelects[1]){
-      courseSelects[1].addEventListener('change', function(){ loadGroupsFor(courseSelects[1], groupSelects[1]); });
-      // Initial populate
-      loadGroupsFor(courseSelects[1], groupSelects[1]);
+
+    // Select-all behavior for grid
+    var selectAll = document.getElementById('select_all_grid');
+    if (selectAll){
+      selectAll.addEventListener('change', function(){
+        var table = document.querySelector('form[action$="/controller/BulkMonthlySaveDetailed.php"] table');
+        if (!table) return;
+        var inputs = table.querySelectorAll('tbody input[type="checkbox"]');
+        inputs.forEach(function(cb){ cb.checked = selectAll.checked; });
+      });
     }
   })();
   </script>
