@@ -26,14 +26,13 @@ $groupId = isset($_POST['group_id']) ? trim($_POST['group_id']) : '';
 $includeWeekends = !empty($_POST['include_weekends']) ? 1 : 0;
 $respectHolidays = !empty($_POST['respect_holidays']) ? 1 : 0;
 $respectVacations = !empty($_POST['respect_vacations']) ? 1 : 0;
-
 $dates = isset($_POST['dates']) && is_array($_POST['dates']) ? array_values(array_unique($_POST['dates'])) : [];
 if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'nodates']); }
 
 // Only consider past or today
 $today = date('Y-m-d');
-$dates = array_values(array_filter($dates, function($d) use ($today){ return preg_match('/^\d{4}-\d{2}-\d{2}$/',$d) && $d <= $today; }));
-if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'err'=>'nodates']); }
+  $dates = array_values(array_filter($dates, function($d) use ($today){ return preg_match('/^\d{4}-\d{2}-\d{2}$/',$d) && $d <= $today; }));
+  if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'err'=>'nodates']); }
 
 // Students scope (Active/Following) — by group if provided, else by course/department
 $students = [];
@@ -96,17 +95,30 @@ if (!empty($_SESSION['user_name'])) {
 }
 
 // Ensure unique key for idempotent upserts (best-effort; may fail if duplicates already exist)
-@mysqli_query($con, "ALTER TABLE `attendance` ADD UNIQUE KEY `uniq_student_date_module` (`student_id`,`date`,`module_name`)");
-// Helpful supporting indexes (best-effort)
-@mysqli_query($con, "CREATE INDEX IF NOT EXISTS `idx_att_mod_date` ON `attendance` (`module_name`,`date`)");
-@mysqli_query($con, "CREATE INDEX IF NOT EXISTS `idx_att_mod_sid`  ON `attendance` (`module_name`,`student_id`)");
-$module_name = 'DAILY-S1';
+  @mysqli_query($con, "ALTER TABLE `attendance` ADD UNIQUE KEY `uniq_student_date_module` (`student_id`,`date`,`module_name`)");
+  // helpful supporting indexes (best-effort)
+  @mysqli_query($con, "CREATE INDEX IF NOT EXISTS `idx_att_mod_date` ON `attendance` (`module_name`,`date`)");
+  @mysqli_query($con, "CREATE INDEX IF NOT EXISTS `idx_att_mod_sid`  ON `attendance` (`module_name`,`student_id`)");
+  $module_name = 'DAILY-S1';
+
+  // Determine locked pairs (attendance_status < 0), which must not be modified
+  $lockedSet = [];
+  if (!empty($students) && !empty($dates)) {
+    $sidCsv = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'], $sid)."'"; }, $students));
+    $dateCsv = implode(',', array_map(function($d){ return "'".mysqli_real_escape_string($GLOBALS['con'], $d)."'"; }, $dates));
+    $mnEsc = mysqli_real_escape_string($con, $module_name);
+    $qL = mysqli_query($con, "SELECT student_id, `date` FROM attendance WHERE module_name='{$mnEsc}' AND attendance_status < 0 AND student_id IN ({$sidCsv}) AND `date` IN ({$dateCsv})");
+    if ($qL) {
+      while ($r = mysqli_fetch_assoc($qL)) { $lockedSet[$r['student_id'].'|'.$r['date']] = true; }
+    }
+  }
 
 // Build flat rows [ [sid, date, val], ... ]
 $rows = [];
 foreach ($students as $sid) {
   foreach ($dates as $d) {
     $key = (string)$sid.'|'.$d;
+    if (isset($lockedSet[$key])) { continue; } // preserve locked (-1) rows
     $rows[] = [$sid, $d, isset($presentSet[$key]) ? 1 : 0];
   }
 }
@@ -127,7 +139,7 @@ for ($i = 0; $i < $totalRows; $i += $CHUNK) {
   foreach ($batch as $r) {
     $sid = mysqli_real_escape_string($con, $r[0]);
     $dt  = mysqli_real_escape_string($con, $r[1]);
-    $tuples[] = "('{$sid}','{$dt}')";
+    $tuples[] = "('{$sid}','{$dt}')"; // safe: $batch excludes locked pairs
   }
   if (!empty($tuples)) {
     $mn = mysqli_real_escape_string($con, $module_name);

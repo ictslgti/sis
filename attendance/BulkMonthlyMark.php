@@ -37,6 +37,57 @@ $overrideExisting = isset($_GET['override_existing']) ? (int)$_GET['override_exi
 $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Absent'], true) ? $_GET['mark_as'] : 'Present';
 
 ?>
+<style>
+  /* Grid scroll with sticky header and first two columns */
+  .grid-scroll {
+    position: relative;
+    max-height: none; /* no vertical scroll inside grid */
+    overflow-x: auto; /* horizontal scroll only */
+    overflow-y: hidden;
+  }
+  .grid-scroll table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: max-content; /* allow wide grid */
+  }
+  .grid-scroll thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: #f8f9fa;
+  }
+  /* Sticky left columns */
+  .grid-scroll th.sticky-col,
+  .grid-scroll td.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: #fff;
+  }
+  .grid-scroll th.sticky-col-2,
+  .grid-scroll td.sticky-col-2 {
+    position: sticky;
+    left: 160px; /* must equal width of first sticky column */
+    z-index: 2;
+    background: #fff;
+  }
+  /* Keep sticky headers above sticky body cells */
+  .grid-scroll thead th.sticky-col,
+  .grid-scroll thead th.sticky-col-2 { z-index: 5; }
+
+  /* Column widths for fixed offsets */
+  .grid-scroll .col-id { min-width: 160px; max-width: 180px; }
+  .grid-scroll .col-name { min-width: 220px; max-width: 280px; }
+  .grid-scroll th.date-col, .grid-scroll td.date-col { min-width: 40px; max-width: 56px; text-align: center; }
+
+  /* Improve checkbox alignment */
+  .grid-scroll td.date-col input[type="checkbox"] { transform: translateY(1px); }
+
+  /* Locked (-1) cells: muted and non-interactive cue */
+  .grid-scroll td.date-col.locked { background: #f5f6f7; opacity: 0.7; }
+  .grid-scroll td.date-col.locked input[type="checkbox"] { cursor: not-allowed; }
+</style>
 <div class="container mt-3">
   <div class="card shadow-sm">
     <div class="card-header d-flex justify-content-between align-items-center">
@@ -210,26 +261,11 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
           }
 
-          // Ensure dates with existing attendance_status = -1 are visible even if filtered out by holidays/vacations/weekends
-          if (!empty($students)) {
-            $sidList = array_map(function($r){ return "'".mysqli_real_escape_string($GLOBALS['con'], $r['student_id'])."'"; }, $students);
-            $sidCsv = implode(',', $sidList);
-            $fd = mysqli_real_escape_string($con, $firstDay);
-            $ld = mysqli_real_escape_string($con, $lastDay);
-            $mn = mysqli_real_escape_string($con, 'DAILY-S1');
-            $qDates = mysqli_query($con, "SELECT DISTINCT `date` AS d FROM attendance WHERE module_name='{$mn}' AND attendance_status=-1 AND `date` BETWEEN '{$fd}' AND '{$ld}' AND `date` <= '".mysqli_real_escape_string($con, $today)."' AND student_id IN ({$sidCsv})");
-            if ($qDates) {
-              while ($r = mysqli_fetch_assoc($qDates)) {
-                if (!empty($r['d'])) { $visibleDates[] = $r['d']; }
-              }
-              // Deduplicate and sort
-              $visibleDates = array_values(array_unique($visibleDates));
-              sort($visibleDates);
-            }
-          }
+          // Do NOT auto-include dates that are fully/partially locked (-1). They should be excluded from bulk operations.
 
           // Preload existing attendance for quick pre-checks (module DAILY-S1)
           $presentMap = [];
+          $lockedMap = []; // attendance_status < 0 (e.g., -1) => disable editing
           if (!empty($students) && !empty($visibleDates)) {
             $ids = array_map(function($r){ return "'".mysqli_real_escape_string($GLOBALS['con'],$r['student_id'])."'"; }, $students);
             $idList = implode(',', $ids);
@@ -238,10 +274,26 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             // Use MIN instead of MAX to cope with legacy duplicates (0 and 1 both present);
             // this ensures explicit absences (0) are reflected after Save Grid even if old 'present' rows exist.
             $q = mysqli_query($con, "SELECT student_id, date, MIN(attendance_status) AS st FROM attendance WHERE module_name='".mysqli_real_escape_string($con,$mn)."' AND date IN ($dateList) AND student_id IN ($idList) GROUP BY student_id, date");
-            if ($q) { while($row=mysqli_fetch_assoc($q)){ if ((int)$row['st']===1) { $presentMap[$row['student_id']][$row['date']] = true; } } }
+            if ($q) {
+              while($row=mysqli_fetch_assoc($q)){
+                $stmin = (int)$row['st'];
+                if ($stmin === 1) { $presentMap[$row['student_id']][$row['date']] = true; }
+                if ($stmin < 0)  { $lockedMap[$row['student_id']][$row['date']]  = true; }
+              }
+            }
           }
       ?>
         <div class="alert alert-info">Showing grid for <strong><?php echo h($month); ?></strong> <?php echo $courseId? ('| Course: '.h($courseId)) : ''; ?> — Dates: <?php echo count($visibleDates); ?>, Students: <?php echo count($students); ?></div>
+        <!-- Quick action: mark a day as Holiday/Vacation (-1 for all visible students) -->
+        <form method="post" action="<?php echo $base; ?>/controller/MarkHolidayDate.php" class="form-inline mb-2">
+          <label class="mr-2">Mark date as Holiday/Vacation:</label>
+          <input type="date" class="form-control mr-2" name="lock_date" min="<?php echo h($firstDay); ?>" max="<?php echo h($lastDay); ?>" required>
+          <input type="hidden" name="month" value="<?php echo h($month); ?>">
+          <input type="hidden" name="course_id" value="<?php echo h($courseId); ?>">
+          <input type="hidden" name="group_id" value="<?php echo h($groupId); ?>">
+          <button type="submit" class="btn btn-outline-danger">Lock Date (-1)</button>
+        </form>
+
         <form method="post" action="<?php echo $base; ?>/controller/BulkMonthlySaveDetailed.php">
           <input type="hidden" name="month" value="<?php echo h($month); ?>">
           <input type="hidden" name="course_id" value="<?php echo h($courseId); ?>">
@@ -258,14 +310,14 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
               <label class="custom-control-label" for="select_all_grid">Select all</label>
             </div>
           </div>
-          <div class="table-responsive">
+          <div class="table-responsive grid-scroll">
             <table class="table table-sm table-bordered">
               <thead class="thead-light">
                 <tr>
-                  <th>Student ID</th>
-                  <th>Student Name</th>
+                  <th class="sticky-col col-id">Student ID</th>
+                  <th class="sticky-col-2 col-name">Student Name</th>
                   <?php foreach ($visibleDates as $d): $di=(int)substr($d,8,2); ?>
-                    <th class="text-center" title="<?php echo h($d); ?>"><?php echo $di; ?></th>
+                    <th class="text-center date-col" title="<?php echo h($d); ?>"><?php echo $di; ?></th>
                   <?php endforeach; ?>
                 </tr>
               </thead>
@@ -273,11 +325,11 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
                 <?php if (!empty($students)): ?>
                   <?php foreach ($students as $st): $sid=$st['student_id']; ?>
                     <tr>
-                      <td><?php echo h($sid); ?></td>
-                      <td><?php echo h($st['student_fullname']); ?></td>
-                      <?php foreach ($visibleDates as $d): $checked = !empty($presentMap[$sid][$d]); ?>
-                        <td class="text-center">
-                          <input type="checkbox" name="present[<?php echo h($sid); ?>][]" value="<?php echo h($d); ?>" <?php echo $checked?'checked':''; ?>>
+                      <td class="sticky-col col-id"><?php echo h($sid); ?></td>
+                      <td class="sticky-col-2 col-name"><?php echo h($st['student_fullname']); ?></td>
+                      <?php foreach ($visibleDates as $d): $checked = !empty($presentMap[$sid][$d]); $locked = !empty($lockedMap[$sid][$d]); ?>
+                        <td class="text-center date-col<?php echo $locked ? ' locked' : '' ; ?>" title="<?php echo $locked ? 'Locked (status -1)' : h($d); ?>">
+                          <input type="checkbox" name="present[<?php echo h($sid); ?>][]" value="<?php echo h($d); ?>" <?php echo $checked?'checked':''; ?> <?php echo $locked?'disabled':''; ?>>
                         </td>
                       <?php endforeach; ?>
                     </tr>
@@ -334,7 +386,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
         var table = document.querySelector('form[action$="/controller/BulkMonthlySaveDetailed.php"] table');
         if (!table) return;
         var inputs = table.querySelectorAll('tbody input[type="checkbox"]');
-        inputs.forEach(function(cb){ cb.checked = selectAll.checked; });
+        inputs.forEach(function(cb){ if (!cb.disabled) { cb.checked = selectAll.checked; } });
       });
     }
 
@@ -346,6 +398,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           var checked = gridForm.querySelectorAll('tbody input[type="checkbox"]:checked');
           var pairs = [];
           checked.forEach(function(cb){
+            if (cb.disabled) { return; }
             var m = cb.name && cb.name.match(/^present\[(.+?)\]/);
             if (m) { pairs.push([m[1], cb.value]); }
           });
