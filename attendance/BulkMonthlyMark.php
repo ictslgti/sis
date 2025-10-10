@@ -210,6 +210,24 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }
           }
 
+          // Ensure dates with existing attendance_status = -1 are visible even if filtered out by holidays/vacations/weekends
+          if (!empty($students)) {
+            $sidList = array_map(function($r){ return "'".mysqli_real_escape_string($GLOBALS['con'], $r['student_id'])."'"; }, $students);
+            $sidCsv = implode(',', $sidList);
+            $fd = mysqli_real_escape_string($con, $firstDay);
+            $ld = mysqli_real_escape_string($con, $lastDay);
+            $mn = mysqli_real_escape_string($con, 'DAILY-S1');
+            $qDates = mysqli_query($con, "SELECT DISTINCT `date` AS d FROM attendance WHERE module_name='{$mn}' AND attendance_status=-1 AND `date` BETWEEN '{$fd}' AND '{$ld}' AND `date` <= '".mysqli_real_escape_string($con, $today)."' AND student_id IN ({$sidCsv})");
+            if ($qDates) {
+              while ($r = mysqli_fetch_assoc($qDates)) {
+                if (!empty($r['d'])) { $visibleDates[] = $r['d']; }
+              }
+              // Deduplicate and sort
+              $visibleDates = array_values(array_unique($visibleDates));
+              sort($visibleDates);
+            }
+          }
+
           // Preload existing attendance for quick pre-checks (module DAILY-S1)
           $presentMap = [];
           if (!empty($students) && !empty($visibleDates)) {
