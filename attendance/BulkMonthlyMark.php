@@ -41,9 +41,8 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
   /* Grid scroll with sticky header and first two columns */
   .grid-scroll {
     position: relative;
-    max-height: none; /* no vertical scroll inside grid */
-    overflow-x: auto; /* horizontal scroll only */
-    overflow-y: hidden;
+    max-height: 70vh; /* restore vertical scroll inside grid */
+    overflow: auto; /* both axes with bottom scrollbar */
   }
   .grid-scroll table {
     table-layout: fixed;
