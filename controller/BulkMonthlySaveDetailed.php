@@ -5,6 +5,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 // Allow longer execution for large months/groups and prevent premature abort
 @set_time_limit(300);
 @ignore_user_abort(true);
+@mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
 
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
 if (!in_array($role, ['HOD','IN3'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
@@ -28,6 +29,30 @@ $respectHolidays = !empty($_POST['respect_holidays']) ? 1 : 0;
 $respectVacations = !empty($_POST['respect_vacations']) ? 1 : 0;
 $dates = isset($_POST['dates']) && is_array($_POST['dates']) ? array_values(array_unique($_POST['dates'])) : [];
 if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'nodates']); }
+
+// Approval lock check for the month scope
+$firstDay = $month.'-01';
+$lastDay  = date('Y-m-t', strtotime($firstDay));
+// Load scope students to check lock
+$__students = [];
+if ($groupId !== '') {
+  if ($st = mysqli_prepare($con, "SELECT s.student_id FROM group_students gs JOIN student s ON s.student_id=gs.student_id WHERE gs.group_id=? AND (gs.status='active' OR gs.status IS NULL OR gs.status='')")) {
+    $gid = (int)$groupId; mysqli_stmt_bind_param($st,'i',$gid); mysqli_stmt_execute($st); $rs=mysqli_stmt_get_result($st); while($rs && ($r=mysqli_fetch_assoc($rs))){ $__students[]=$r['student_id']; } mysqli_stmt_close($st);
+  }
+} else {
+  $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
+  if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+  $sqlSt = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where";
+  $res = mysqli_query($con, $sqlSt);
+  if ($res) { while ($r=mysqli_fetch_assoc($res)) { $__students[] = $r['student_id']; } }
+}
+if (!empty($__students)) {
+  $idList = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $__students));
+  $qLock = "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1";
+  $rsLock = @mysqli_query($con, $qLock);
+  if ($rsLock && mysqli_fetch_row($rsLock)) { if ($rsLock) mysqli_free_result($rsLock); back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'locked']); }
+  if ($rsLock) mysqli_free_result($rsLock);
+}
 
 // Only consider past or today
 $today = date('Y-m-d');

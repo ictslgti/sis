@@ -3,24 +3,70 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../auth.php';
 require_login();
-require_roles(['HOD','ADM']);
+require_roles(['HOD','ADM','IN3']);
 
 $base = defined('APP_BASE') ? APP_BASE : '';
 $deptId = isset($_SESSION['department_code']) ? trim((string)$_SESSION['department_code']) : '';
 if ($deptId === '') { $deptId = '__NONE__'; }
 
-// Bulk actions
+// Role and approver context
+$role   = isset($_SESSION['user_type']) ? strtoupper(trim((string)$_SESSION['user_type'])) : '';
+$userId = isset($_SESSION['user_name']) ? trim((string)$_SESSION['user_name']) : '';
+
+function _resolveApproverName(mysqli $con, string $userId, string $fallbackRole): string {
+  $esc = mysqli_real_escape_string($con, $userId);
+  if ($esc !== '') {
+    $rs = mysqli_query($con, "SELECT staff_name FROM staff WHERE staff_id='".$esc."' LIMIT 1");
+    if ($rs && mysqli_num_rows($rs) === 1) {
+      $row = mysqli_fetch_assoc($rs);
+      mysqli_free_result($rs);
+      if (!empty($row['staff_name'])) return $row['staff_name'];
+    }
+  }
+  return ($userId !== '') ? $userId : $fallbackRole;
+}
+$approverName = _resolveApproverName($con, $userId, $role);
+
+// Determine which department to view
+if ($role === 'ADM') {
+  $viewDept = isset($_GET['dept']) ? trim((string)$_GET['dept']) : $deptId;
+} else {
+  // HOD and IN3 must stick to their own department
+  $viewDept = $deptId;
+}
+
+// Permission to approve in current view
+function _canApprove(mysqli $con, string $role, string $userId, string $dept): bool {
+  if ($role === 'HOD' || $role === 'ADM') return true;
+  if ($role === 'IN3') {
+    $s = mysqli_real_escape_string($con, $userId);
+    $d = mysqli_real_escape_string($con, $dept);
+    $rs = mysqli_query($con, "SELECT 1 FROM onpeak_approver WHERE staff_id='$s' AND department_id='$d' LIMIT 1");
+    $ok = ($rs && mysqli_num_rows($rs) === 1);
+    if ($rs) mysqli_free_result($rs);
+    return $ok;
+  }
+  return false;
+}
+$mayApprove = _canApprove($con, $role, $userId, $viewDept);
+
+// Use viewDept as working deptId for queries below
+$deptId = $viewDept;
+
+// Bulk actions with authorization and approver name
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['bulk_action'], $_POST['ids']) && is_array($_POST['ids'])) {
   $act = strtolower(trim((string)$_POST['bulk_action']));
   $ids = array_map('intval', $_POST['ids']);
   $ids = array_values(array_filter($ids, function($v){ return $v > 0; }));
-  if (!empty($ids)) {
+  if (!empty($ids) && $mayApprove) {
     $idList = implode(',', $ids);
+    $deptEsc = mysqli_real_escape_string($con, $deptId);
     if ($act === 'approve') {
-      $sql = "UPDATE onpeak_request SET onpeak_request_status='Approved by HOD' WHERE department_id='".mysqli_real_escape_string($con,$deptId)."' AND id IN ($idList) AND TRIM(LOWER(onpeak_request_status)) LIKE 'pending%'";
+      $status = mysqli_real_escape_string($con, 'Approved by ' . $approverName);
+      $sql = "UPDATE onpeak_request SET onpeak_request_status='$status' WHERE department_id='$deptEsc' AND id IN ($idList) AND TRIM(LOWER(onpeak_request_status)) LIKE 'pending%'";
       @mysqli_query($con, $sql);
     } elseif ($act === 'reject') {
-      $sql = "UPDATE onpeak_request SET onpeak_request_status='Not Approved' WHERE department_id='".mysqli_real_escape_string($con,$deptId)."' AND id IN ($idList) AND TRIM(LOWER(onpeak_request_status)) LIKE 'pending%'";
+      $sql = "UPDATE onpeak_request SET onpeak_request_status='Not Approved' WHERE department_id='$deptEsc' AND id IN ($idList) AND TRIM(LOWER(onpeak_request_status)) LIKE 'pending%'";
       @mysqli_query($con, $sql);
     }
   }
@@ -56,6 +102,25 @@ include_once __DIR__ . '/../menu2.php';
     <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/hod/Dashboard.php">Back to Dashboard</a>
   </div>
 
+  <?php if ($role === 'ADM'): ?>
+  <form class="form-inline mb-2" method="get" action="">
+    <label class="mr-2 small">Department</label>
+    <select name="dept" class="form-control form-control-sm mr-2" onchange="this.form.submit()">
+      <?php
+      $rsD = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_id");
+      if ($rsD) {
+        while ($d = mysqli_fetch_assoc($rsD)) {
+          $sel = ($d['department_id'] === $deptId) ? 'selected' : '';
+          echo '<option value="'.htmlspecialchars($d['department_id']).'" '.$sel.'>'.htmlspecialchars($d['department_id'].' - '.$d['department_name']).'</option>';
+        }
+        mysqli_free_result($rsD);
+      }
+      ?>
+    </select>
+    <noscript><button class="btn btn-sm btn-secondary" type="submit">Go</button></noscript>
+  </form>
+  <?php endif; ?>
+
   <form class="card card-body shadow-sm mb-3" method="get" action="">
     <div class="form-row">
       <div class="col-12 col-md-2 mb-2">
@@ -88,8 +153,12 @@ include_once __DIR__ . '/../menu2.php';
   <form method="post" class="card shadow-sm">
     <div class="card-header d-flex align-items-center justify-content-between py-2">
       <div>
-        <button class="btn btn-sm btn-success" name="bulk_action" value="approve" onclick="return confirm('Approve selected pending requests?');">Approve Selected</button>
-        <button class="btn btn-sm btn-danger"  name="bulk_action" value="reject"  onclick="return confirm('Reject selected pending requests?');">Reject Selected</button>
+        <?php if ($mayApprove): ?>
+          <button class="btn btn-sm btn-success" name="bulk_action" value="approve" onclick="return confirm('Approve selected pending requests?');">Approve Selected</button>
+          <button class="btn btn-sm btn-danger"  name="bulk_action" value="reject"  onclick="return confirm('Reject selected pending requests?');">Reject Selected</button>
+        <?php else: ?>
+          <span class="text-muted small">You are not authorized to approve in this department.</span>
+        <?php endif; ?>
       </div>
       <small class="text-muted">Only Pending will change</small>
     </div>

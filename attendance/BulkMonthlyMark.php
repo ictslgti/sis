@@ -109,16 +109,48 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           elseif ($err === 'nostudents') { $msg = 'No eligible students in the selected scope.'; }
           elseif ($err === 'stmt') { $msg = 'Database statement could not be prepared.'; }
           elseif ($err === 'dberror') { $msg = 'Database error occurred while saving.'; }
+          elseif ($err === 'locked') { $msg = 'Selected month is HOD-approved and locked. Grid save is disabled for this scope.'; }
           echo '<div class="alert alert-danger">'.htmlspecialchars($msg).'</div>';
         }
       ?>
       
+      <?php
+        // Pre-compute if selected month is approved for current scope to control month picker
+        $isApprovedMonth = false;
+        if ($deptCode !== '' && preg_match('/^\d{4}-\d{2}$/', $month)) {
+          $firstDayX = $month.'-01';
+          $lastDayX  = date('Y-m-t', strtotime($firstDayX));
+          // Load scope students quickly (group or dept/course)
+          $scopeStudents = [];
+          if ($groupId !== '') {
+            if ($st = mysqli_prepare($con, 'SELECT s.student_id FROM group_students gs JOIN student s ON s.student_id=gs.student_id WHERE gs.group_id=? AND (gs.status=\'active\' OR gs.status IS NULL OR gs.status=\'\')')) {
+              $gid = (int)$groupId; mysqli_stmt_bind_param($st,'i',$gid); mysqli_stmt_execute($st); $rs=mysqli_stmt_get_result($st); while($rs && ($r=mysqli_fetch_assoc($rs))){ $scopeStudents[]=$r['student_id']; } mysqli_stmt_close($st);
+            }
+          } else {
+            $w = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
+            if ($courseId !== '') { $w .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+            $qr = mysqli_query($con, "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $w");
+            if ($qr) { while($row=mysqli_fetch_assoc($qr)){ $scopeStudents[]=$row['student_id']; } }
+          }
+          if (!empty($scopeStudents)) {
+            // best-effort ensure column exists
+            @mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
+            $idCsv = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $scopeStudents));
+            $qA = mysqli_query($con, "SELECT 1 FROM attendance WHERE student_id IN ($idCsv) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDayX)."' AND '".mysqli_real_escape_string($con,$lastDayX)."' AND approved_status='HOD is Approved' LIMIT 1");
+            if ($qA && mysqli_fetch_row($qA)) { $isApprovedMonth = true; }
+            if ($qA) mysqli_free_result($qA);
+          }
+        }
+      ?>
       <form method="get" action="" class="mb-3">
         <input type="hidden" name="load" value="1">
         <div class="form-row">
           <div class="form-group col-md-3">
             <label for="g_month">Month</label>
-            <input type="month" class="form-control" id="g_month" name="month" value="<?php echo h($month); ?>" required>
+            <input type="month" class="form-control" id="g_month" name="month" value="<?php echo h($month); ?>" required <?php echo ($isApprovedMonth && in_array($role, ['HOD','IN3'], true)) ? 'disabled title="This month is HOD-approved and locked"' : ''; ?>>
+            <?php if ($isApprovedMonth && in_array($role, ['HOD','IN3'], true)): ?>
+              <input type="hidden" name="month" value="<?php echo h($month); ?>">
+            <?php endif; ?>
           </div>
           <div class="form-group col-md-4">
             <label for="g_course">Course (optional)</label>
@@ -281,8 +313,23 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
               }
             }
           }
+
+          // Determine if month is HOD-approved (locks grid save)
+          $isApproved = false;
+          if (!empty($students)) {
+            // ensure column exists (best-effort)
+            @mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
+            $ids = array_map(function($r){ return "'".mysqli_real_escape_string($GLOBALS['con'],$r['student_id'])."'"; }, $students);
+            $idList = implode(',', $ids);
+            $qAp = mysqli_query($con, "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1");
+            if ($qAp && mysqli_fetch_row($qAp)) { $isApproved = true; }
+            if ($qAp) mysqli_free_result($qAp);
+          }
       ?>
         <div class="alert alert-info">Showing grid for <strong><?php echo h($month); ?></strong> <?php echo $courseId? ('| Course: '.h($courseId)) : ''; ?> — Dates: <?php echo count($visibleDates); ?>, Students: <?php echo count($students); ?></div>
+        <?php if (!empty($students) && $isApproved): ?>
+          <div class="alert alert-success py-2"><strong><i class="fas fa-lock mr-1"></i> HOD Approved:</strong> This month is locked. You can view the grid, but saving changes is disabled.</div>
+        <?php endif; ?>
         <!-- Quick action: mark a day as Holiday/Vacation (-1 for all visible students) -->
         <form method="post" action="<?php echo $base; ?>/controller/MarkHolidayDate.php" class="form-inline mb-2">
           <label class="mr-2">Mark date as Holiday/Vacation:</label>
@@ -340,7 +387,10 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             </table>
           </div>
           <div class="mt-2">
-            <button type="submit" class="btn btn-success">Save Grid</button>
+            <button type="submit" class="btn btn-success" <?php echo (!empty($students) && $isApproved) ? 'disabled title="Month is HOD-approved and locked"' : ''; ?>>Save Grid</button>
+            <?php if (!empty($students) && $isApproved): ?>
+              <span class="text-muted small ml-2">This month is HOD-approved. To make changes, an admin must remove the approval in the database.</span>
+            <?php endif; ?>
           </div>
         </form>
       <?php } ?>

@@ -431,7 +431,7 @@ if ($qpos) {
       <div class="card shadow-sm h-100 small">
         <div class="card-header d-flex justify-content-between align-items-center">
           <strong><i class="far fa-calendar-check mr-1"></i> Latest OnPeak Requests</strong>
-          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/onpeak/RequestOnPeak.php">Open</a>
+          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/hod/OnPeakQueue.php">Open</a>
         </div>
         <div class="card-body p-0" style="max-height: 360px; overflow-y: auto;">
           <table class="table table-sm table-hover mb-0">
@@ -440,7 +440,7 @@ if ($qpos) {
                 <th>Student</th>
                 <th>Exit</th>
                 <th>Return</th>
-                <th class="text-right">Actions</th>
+                
               </tr>
             </thead>
             <tbody>
@@ -466,18 +466,6 @@ if ($qpos) {
                     . '<td>' . htmlspecialchars($name) . ' <small class="text-muted">(' . htmlspecialchars($r['student_id']) . ')</small></td>'
                     . '<td>' . htmlspecialchars($r['exit_date']) . ' ' . htmlspecialchars($r['exit_time']) . '</td>'
                     . '<td>' . htmlspecialchars($r['return_date']) . ' ' . htmlspecialchars($r['return_time']) . '</td>'
-                    . '<td class="text-right">'
-                    . (($isPending && ($__is_hod || $__is_adm))
-                      ? '<form method="post" class="d-inline">'
-                        . '<input type="hidden" name="op_id" value="' . (int)$r['id'] . '">'
-                        . '<div class="btn-group btn-group-sm" role="group">'
-                        . '<button name="op_action" value="approve" class="btn btn-outline-success btn-icon" title="Approve" onclick="return confirm(\'Approve this request?\');"><i class="fas fa-check"></i></button>'
-                        . '<button name="op_action" value="reject" class="btn btn-outline-danger btn-icon" title="Reject" onclick="return confirm(\'Reject this request?\');"><i class="fas fa-times"></i></button>'
-                        . '</div>'
-                        . '</form>'
-                      : '<span class="text-muted small">—</span>'
-                    )
-                    . '</td>'
                     . '</tr>';
                 }
                 mysqli_free_result($rs);

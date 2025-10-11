@@ -229,13 +229,14 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
             <a class="dropdown-item" href="<?php echo $base; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
             <div class="dropdown-divider"></div>
             <a class="dropdown-item" href="<?php echo $base; ?>/attendance/BulkMonthlyMark.php">Bulk Monthly Mark</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/hod/OnPeakQueue.php"><i class="far fa-calendar-check mr-1"></i> OnPeak Queue</a>
           </div>
         </li>
 
         
 
         <!-- Groups: HOD can manage department groups -->
-        <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="hodGroups" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-users"></i> Groups
           </a>

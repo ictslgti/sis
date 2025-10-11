@@ -1047,14 +1047,22 @@ if (file_exists($topNav)) {
           workdays++;
         }
         const days = data && data.days ? data.days : {};
-        let present = 0,
-          absent = 0;
-        Object.keys(days).forEach(k => {
-          if (days[k] === 1) present++;
-          else if (days[k] === 0) absent++;
-        });
-        const notMarked = Math.max(0, workdays - (present + absent));
-        const pct = workdays > 0 ? Math.round((present / workdays) * 100) : 0;
+        let present = (data && typeof data.present === 'number') ? data.present : 0;
+        let absent = 0;
+        if (!(data && typeof data.present === 'number')) {
+          Object.keys(days).forEach(k => {
+            if (days[k] === 1) present++;
+          });
+        }
+        let marked = (data && typeof data.total_marked === 'number') ? data.total_marked : 0;
+        if (!(data && typeof data.total_marked === 'number')) {
+          Object.keys(days).forEach(k => {
+            if (days[k] === 0 || days[k] === 1) marked++;
+          });
+        }
+        absent = Math.max(0, marked - present);
+        const notMarked = Math.max(0, workdays - marked);
+        const pct = marked > 0 ? Math.round((present / marked) * 100) : 0;
         const fp = document.getElementById('footPresent');
         if (fp) fp.textContent = String(present);
         const fa = document.getElementById('footAbsent');
@@ -1086,7 +1094,6 @@ if (file_exists($topNav)) {
       if (!lastData) return;
       try {
         const month = monthInput.value;
-        // compute weekdays in month
         const [yy, mm] = month.split('-').map(n => parseInt(n, 10));
         const first = new Date(yy, mm - 1, 1);
         const last = new Date(yy, mm, 0);
@@ -1097,14 +1104,17 @@ if (file_exists($topNav)) {
           workdays++;
         }
         const days = lastData && lastData.days ? lastData.days : {};
-        let present = 0,
-          absent = 0;
-        Object.keys(days).forEach(k => {
-          if (days[k] === 1) present++;
-          else if (days[k] === 0) absent++;
-        });
-        const notMarked = Math.max(0, workdays - (present + absent));
-        const pct = workdays > 0 ? Math.round((present / workdays) * 100) : 0;
+        let present = (lastData && typeof lastData.present === 'number') ? lastData.present : 0;
+        let marked = (lastData && typeof lastData.total_marked === 'number') ? lastData.total_marked : 0;
+        if (!(lastData && typeof lastData.present === 'number')) {
+          Object.keys(days).forEach(k => { if (days[k] === 1) present++; });
+        }
+        if (!(lastData && typeof lastData.total_marked === 'number')) {
+          Object.keys(days).forEach(k => { if (days[k] === 0 || days[k] === 1) marked++; });
+        }
+        const absent = Math.max(0, marked - present);
+        const notMarked = Math.max(0, workdays - marked);
+        const pct = marked > 0 ? Math.round((present / marked) * 100) : 0;
         if (sumPresent) sumPresent.textContent = String(present);
         if (sumAbsent) sumAbsent.textContent = String(absent);
         if (sumNotMarked) sumNotMarked.textContent = String(notMarked);

@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $base = defined('APP_BASE') ? APP_BASE : '';
+@mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
 
 // HOD and IN3 can save daily attendance
 if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['HOD','IN3'], true)) {
@@ -35,6 +36,33 @@ if ($date === '' || !$slot) {
 
 // Use per-slot module name to avoid cross-slot duplicates (single slot = 1)
 $module_name = 'DAILY-S1';
+
+// Block if the month is HOD-approved for this scope
+// Determine month range
+try {
+  $firstDay = date('Y-m-01', strtotime($date));
+  $lastDay  = date('Y-m-t', strtotime($date));
+  // Build filter for students in this dept/course
+  $scopeWhere = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
+  if ($course !== '') { $scopeWhere .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
+  $scopeSQL = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id ".$scopeWhere."";
+  $scopeRs = mysqli_query($con, $scopeSQL);
+  $ids = [];
+  if ($scopeRs) { while($row = mysqli_fetch_assoc($scopeRs)) { $ids[] = "'".mysqli_real_escape_string($con, $row['student_id'])."'"; } mysqli_free_result($scopeRs); }
+  if (!empty($ids)) {
+    $idList = implode(',', $ids);
+    // Check approval flag on any attendance row in the month for these students
+    $qLock = "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1";
+    $rsLock = @mysqli_query($con, $qLock);
+    if ($rsLock && mysqli_fetch_row($rsLock)) {
+      if ($rsLock) mysqli_free_result($rsLock);
+      $qs = http_build_query(['date'=>$date,'course'=>$course,'err'=>'locked']);
+      header('Location: '.$base.'/attendance/DailyAttendance.php?'.$qs);
+      exit;
+    }
+    if ($rsLock) mysqli_free_result($rsLock);
+  }
+} catch (Throwable $e) { /* ignore */ }
 
 // Load target students for this save (dept + optional course, active statuses)
 $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";

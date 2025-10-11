@@ -30,6 +30,9 @@ $firstDay = $month.'-01';
 $lastDay = date('Y-m-t', strtotime($firstDay));
 $today = date('Y-m-d');
 
+// Best-effort: ensure approval column exists (MySQL 8 IF NOT EXISTS may not be available)
+@mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
+
 // Load holidays set (optional tables)
 function load_holidays_set($con, $firstDay, $lastDay) {
   $set = [];
@@ -98,6 +101,31 @@ function load_vacations_set($con, $firstDay, $lastDay) {
 
 $holidaySet = $respectHolidays ? load_holidays_set($con, $firstDay, $lastDay) : [];
 $vacationSet = $respectVacations ? load_vacations_set($con, $firstDay, $lastDay) : [];
+
+// Approval lock check: if any row in month+scope is approved, block
+function scope_students($con, $deptCode, $courseId, $groupId) {
+  $students = [];
+  if ($groupId !== '') {
+    if ($st = mysqli_prepare($con, "SELECT s.student_id FROM group_students gs JOIN student s ON s.student_id=gs.student_id WHERE gs.group_id=? AND (gs.status='active' OR gs.status IS NULL OR gs.status='')")) {
+      $gid = (int)$groupId; mysqli_stmt_bind_param($st,'i',$gid); mysqli_stmt_execute($st); $rs=mysqli_stmt_get_result($st); while($rs && ($r=mysqli_fetch_assoc($rs))){ $students[]=$r['student_id']; } mysqli_stmt_close($st);
+    }
+  } else {
+    $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
+    if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+    $sql = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where";
+    $rs = mysqli_query($con, $sql); if ($rs) { while($r=mysqli_fetch_assoc($rs)){ $students[]=$r['student_id']; } }
+  }
+  return $students;
+}
+
+$__students = scope_students($con, $deptCode, $courseId, $groupId);
+if (!empty($__students)) {
+  $idList = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $__students));
+  $qLock = "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1";
+  $rsLock = @mysqli_query($con, $qLock);
+  if ($rsLock && mysqli_fetch_row($rsLock)) { hredir(http_build_query(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'locked'])); }
+  if ($rsLock) mysqli_free_result($rsLock);
+}
 
 // Build list of dates to mark
 $dates = [];

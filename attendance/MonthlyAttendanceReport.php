@@ -258,7 +258,7 @@ if ($deptCode !== '') {
   if ($onlyAE === '1') {
     $where .= " AND s.allowance_eligible=1";
   }
-  $sql = "SELECT s.student_id, s.student_fullname, s.student_nic, se.course_id, c.course_name
+  $sql = "SELECT s.student_id, s.student_fullname, s.student_nic, s.bank_account_no, se.course_id, c.course_name
           FROM student_enroll se
           JOIN course c ON c.course_id = se.course_id
           JOIN student s ON s.student_id = se.student_id
@@ -266,6 +266,19 @@ if ($deptCode !== '') {
           ORDER BY s.student_id ASC";
   $res = mysqli_query($con, $sql);
   if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[$r['student_id']]=$r; } }
+}
+
+// Determine if month is HOD-approved for current scope
+$isApproved = false;
+if (!empty($students)) {
+  $ids = [];
+  foreach ($students as $sid => $_) { $ids[] = "'".mysqli_real_escape_string($con, $sid)."'"; }
+  $idList = implode(',', $ids);
+  // best-effort approved_status column
+  @mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
+  $qAp = mysqli_query($con, "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1");
+  if ($qAp && mysqli_fetch_row($qAp)) { $isApproved = true; }
+  if ($qAp) mysqli_free_result($qAp);
 }
 
 $results = [];
@@ -314,17 +327,17 @@ if ($isExport) {
   $html = "<table border='1'>";
   if ($view === 'detailed') {
     // Pre-header breakdown and excluded dates
-    $html .= "<tr><th colspan='".(3 + count($workDayDates) + 4)."' style='text-align:left'>".
+    $html .= "<tr><th colspan='".(4 + count($workDayDates) + 4)."' style='text-align:left'>".
              "Department: ".htmlspecialchars($deptCode)." | Month: ".htmlspecialchars($month)." | Considered Days: ".(int)$totalDays.
              " (Month Days: ".$countMonthDays.", Weekends: ".$countWeekends.", Holidays: ".$countHolidays.", Vacations: ".$countVacations.", Exceptions counted (Sat/Sun): ".$countExceptions.")".
              "</th></tr>";
-    $html .= "<tr><td colspan='".(3 + count($workDayDates) + 4)."' style='text-align:left'>".
+    $html .= "<tr><td colspan='".(4 + count($workDayDates) + 4)."' style='text-align:left'>".
              "Excluded Holiday Dates: ".(!empty($holidayExcludedDates) ? htmlspecialchars(implode(', ', $holidayExcludedDates)) : 'None').
              " | Excluded Vacation Dates: ".(!empty($vacationExcludedDates) ? htmlspecialchars(implode(', ', $vacationExcludedDates)) : 'None').
              "</td></tr>";
-    $html .= "<tr><td colspan='".(3 + count($workDayDates) + 4)."'>&nbsp;</td></tr>";
+    $html .= "<tr><td colspan='".(4 + count($workDayDates) + 4)."'>&nbsp;</td></tr>";
     // Header row with working days (exclude weekends/holidays/vacations unless exception)
-    $html .= "<tr><th>Student ID</th><th>Student Name</th><th>NIC</th>";
+    $html .= "<tr><th>Student ID</th><th>Student Name</th><th>NIC</th><th>Bank Account No</th>";
     foreach ($workDayDates as $idx=>$dstr) {
       $isExc = isset($exceptionalSet[$dstr]) && in_array((int)date('w', strtotime($dstr)), [0,6], true);
       $lbl = (int)$idx . ($isExc ? '*' : '');
@@ -339,6 +352,7 @@ if ($isExport) {
         $html .= "<td>".htmlspecialchars($sid)."</td>";
         $html .= "<td>".htmlspecialchars(isset($students[$sid]['student_fullname'])?$students[$sid]['student_fullname']:'')."</td>";
         $html .= "<td>".htmlspecialchars(isset($students[$sid]['student_nic'])?$students[$sid]['student_nic']:'')."</td>";
+        $html .= "<td>".htmlspecialchars(isset($students[$sid]['bank_account_no'])?$students[$sid]['bank_account_no']:'')."</td>";
         foreach ($workDayDates as $idx=>$dateKey) {
           $mark = isset($attByStudent[$sid][$dateKey]) ? ($attByStudent[$sid][$dateKey] ? 'P' : 'A') : '-';
           $html .= "<td>".$mark."</td>";
@@ -351,23 +365,24 @@ if ($isExport) {
         $html .= "</tr>";
       }
     } else {
-      $html .= "<tr><td colspan='".(3 + count($workDayDates) + 4)."'>No data available</td></tr>";
+      $html .= "<tr><td colspan='".(4 + count($workDayDates) + 4)."'>No data available</td></tr>";
     }
   } else {
     // Pre-header breakdown and excluded dates
-    $html .= "<tr><th colspan='6' style='text-align:left'>".
+    $html .= "<tr><th colspan='7' style='text-align:left'>".
              "Department: ".htmlspecialchars($deptCode)." | Month: ".htmlspecialchars($month)." | Considered Days: ".(int)$totalDays.
              " (Month Days: ".$countMonthDays.", Weekends: ".$countWeekends.", Holidays: ".$countHolidays.", Vacations: ".$countVacations.", Exceptions counted (Sat/Sun): ".$countExceptions.")".
              "</th></tr>";
-    $html .= "<tr><td colspan='6' style='text-align:left'>".
+    $html .= "<tr><td colspan='7' style='text-align:left'>".
              "Excluded Holiday Dates: ".(!empty($holidayExcludedDates) ? htmlspecialchars(implode(', ', $holidayExcludedDates)) : 'None').
              " | Excluded Vacation Dates: ".(!empty($vacationExcludedDates) ? htmlspecialchars(implode(', ', $vacationExcludedDates)) : 'None').
              "</td></tr>";
-    $html .= "<tr><td colspan='6'>&nbsp;</td></tr>";
+    $html .= "<tr><td colspan='7'>&nbsp;</td></tr>";
     // Summary header
     $html .= "<tr>
       <th>Student ID</th>
       <th>Student Name</th>
+      <th>Bank Account No</th>
       <th>Present Days</th>
       <th>Considered Days</th>
       <th>Percentage</th>
@@ -379,6 +394,7 @@ if ($isExport) {
         $html .= "<tr>";
         $html .= "<td>" . htmlspecialchars($row['student_id']) . "</td>";
         $html .= "<td>" . htmlspecialchars($row['student_fullname']) . "</td>";
+        $html .= "<td>" . htmlspecialchars(isset($students[$row['student_id']]['bank_account_no'])?$students[$row['student_id']]['bank_account_no']:'') . "</td>";
         $html .= "<td>" . (int)$row['present_days'] . "</td>";
         $html .= "<td>" . (int)$row['total_days'] . "</td>";
         $html .= "<td>" . number_format($row['percentage'], 2) . "%</td>";
@@ -387,7 +403,7 @@ if ($isExport) {
         $html .= "</tr>";
       }
     } else {
-      $html .= "<tr><td colspan='6'>No data available</td></tr>";
+      $html .= "<tr><td colspan='7'>No data available</td></tr>";
     }
   }
   $html .= "</table>";
@@ -449,7 +465,7 @@ if ($isExport) {
             </div>
             <div class="col-6 col-md-3 mb-2">
               <label for="month" class="small mb-1 text-muted">Month</label>
-              <input type="month" id="month" name="month" class="form-control form-control-sm" value="<?php echo htmlspecialchars($month); ?>" required>
+              <input type="month" id="month" name="month" class="form-control form-control-sm" value="<?php echo htmlspecialchars($month); ?>" required <?php echo ($isApproved && isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN3'], true)) ? 'disabled title="This month is HOD-approved and locked"' : ''; ?> >
             </div>
             <div class="col-12 col-md-3 mb-2">
               <div class="custom-control custom-checkbox mt-4">
@@ -474,6 +490,19 @@ if ($isExport) {
       <?php if ($deptCode===''): ?>
         <div class="alert alert-warning">Department not configured for your account. Please contact admin.</div>
       <?php else: ?>
+        <?php if ($isApproved): ?>
+          <div class="alert alert-success py-2 mb-2">
+            <strong><i class="fas fa-lock mr-1"></i> HOD Approved - </strong> This month is locked.
+          </div>
+        <?php endif; ?>
+        <?php if (!$isApproved && isset($_SESSION['user_type']) && $_SESSION['user_type']==='HOD'): ?>
+          <form method="post" action="<?php echo APP_BASE; ?>/controller/ApproveAttendanceMonth.php" class="mb-2" onsubmit="return confirm('Approve the selected month for this scope? This will lock attendance edits for the month.');">
+            <input type="hidden" name="month" value="<?php echo htmlspecialchars($month); ?>">
+            <input type="hidden" name="course_id" value="<?php echo htmlspecialchars($course); ?>">
+            <button type="submit" class="btn btn-sm btn-outline-primary"><i class="fas fa-check-circle mr-1"></i>Approve Month</button>
+            <span class="text-muted small ml-2">Approving locks the month; only admins can rollback in DB.</span>
+          </form>
+        <?php endif; ?>
         <?php if (isset($_GET['ok'])): ?>
           <div class="alert alert-success py-2">Operation completed successfully.</div>
         <?php endif; ?>
@@ -503,7 +532,7 @@ if ($isExport) {
         <?php if ($focusExplain !== ''): ?>
           <div class="text-info small mb-2"><i class="fas fa-info-circle"></i> <?php echo htmlspecialchars($focusExplain); ?></div>
         <?php endif; ?>
-        <?php if ($canNWD && $focusDate !== ''): ?>
+        <?php if ($canNWD && $focusDate !== '' && !$isApproved): ?>
           <?php if (isset($nwdOverrideSet[$focusDate])): ?>
             <form method="post" action="<?php echo APP_BASE; ?>/controller/RemoveNWDOverride.php" class="mb-2">
               <input type="hidden" name="date" value="<?php echo htmlspecialchars($focusDate); ?>">
@@ -527,28 +556,7 @@ if ($isExport) {
           <?php endif; ?>
         <?php endif; ?>
 
-        <?php if ($canNWD): ?>
-        <div class="mb-3 p-2 border rounded bg-light">
-          <div class="d-flex flex-wrap align-items-center">
-            <label class="mr-2 font-weight-bold mb-0">NWD Overrides:</label>
-            <input type="date" id="nwd_date_any" class="form-control form-control-sm mr-2" value="<?php echo htmlspecialchars($focusDate ?: $firstDay); ?>" style="max-width: 180px;">
-            <form method="post" action="<?php echo APP_BASE; ?>/controller/SetNWDOverride.php" class="mr-2 mb-0" onsubmit="document.getElementById('nwd_set_date').value=document.getElementById('nwd_date_any').value; return confirm('Mark '+document.getElementById('nwd_date_any').value+' as NWD (-1) for the selected scope?');">
-              <input type="hidden" id="nwd_set_date" name="date" value="">
-              <input type="hidden" name="department_id" value="<?php echo htmlspecialchars($deptCode); ?>">
-              <input type="hidden" name="course_id" value="<?php echo htmlspecialchars($course); ?>">
-              <input type="hidden" name="month" value="<?php echo htmlspecialchars($month); ?>">
-              <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-ban mr-1"></i>Add NWD override</button>
-            </form>
-            <form method="post" action="<?php echo APP_BASE; ?>/controller/RemoveNWDOverride.php" class="mb-0" onsubmit="document.getElementById('nwd_remove_date').value=document.getElementById('nwd_date_any').value; return confirm('Remove NWD override for '+document.getElementById('nwd_date_any').value+'?');">
-              <input type="hidden" id="nwd_remove_date" name="date" value="">
-              <input type="hidden" name="department_id" value="<?php echo htmlspecialchars($deptCode); ?>">
-              <input type="hidden" name="course_id" value="<?php echo htmlspecialchars($course); ?>">
-              <input type="hidden" name="month" value="<?php echo htmlspecialchars($month); ?>">
-              <button type="submit" class="btn btn-sm btn-outline-secondary"><i class="fas fa-undo mr-1"></i>Remove NWD override</button>
-            </form>
-          </div>
-        </div>
-        <?php endif; ?>
+        
         <div class="table-responsive">
           <?php if ($view === 'detailed'): ?>
             <?php

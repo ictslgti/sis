@@ -374,6 +374,8 @@ if ($showTopNav && (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_
 ?>
 <?php /** END DON'T CHANGE THE ORDER (moved to PHP comment) */ ?>
 
+<?php /* Removed full-width top hostel card; will render a right-side compact card beside profile */ ?>
+
 <?php if ($__loggedStudentId && $__conductChecked && $__requireConduct): ?>
   <div class="container mt-4">
     <div class="card shadow-sm">
@@ -896,7 +898,9 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
   }
 ?>
 
-<div class="form-row shadow p-2 mb-4 bg-white rounded">
+<div class="row">
+  <div class="col-12 col-lg-10">
+  <div class="form-row shadow p-2 mb-4 bg-white rounded">
     <div class="col-12 col-md-3 mb-3 text-center"> 
     <img src="/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail img-fluid d-block mx-auto" style="max-width:200px;width:100%;height:auto;object-fit:cover;border-radius:40px;">
     <?php
@@ -946,8 +950,8 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     <div class="col-12 col-md-9">
         <div class="mb-2">
           <div class="mb-2">
-            <h5 class="text-muted my-1"><b><?php echo htmlspecialchars(($title? $title.'. ' : '').$fname); ?> | Level: <?php echo htmlspecialchars($level); ?></b></h5>
-            <div class="text-muted small my-1">ID: <?php echo htmlspecialchars($username); ?> | NIC: <?php echo htmlspecialchars($nic); ?><?php if ($level): ?> <?php endif; ?></div>
+            <h5 class="text-muted my-1"><b><?php echo htmlspecialchars(($title ? ($title.'. ') : '').($fname ?? '')); ?> | Level: <?php echo htmlspecialchars($level ?? ''); ?></b></h5>
+            <div class="text-muted small my-1">ID: <?php echo htmlspecialchars(isset($username) ? $username : ($__profileSid ?? '')); ?> | NIC: <?php echo htmlspecialchars($nic ?? ''); ?><?php if (!empty($level)): ?> <?php endif; ?></div>
             <?php if ($hasUpdatedAt): ?>
             <small class="text-muted d-block">Last Edited: <?php echo $updatedAt ? date('Y-m-d H:i', strtotime($updatedAt)) : 'N/A'; ?></small>
             <?php endif; ?>
@@ -983,6 +987,35 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     <h6 class="text-muted">2017/ICT/BIT-06</h6>
     <h6 class="text-muted">2017/ICT/BIT-06</h6>
     </div> -->
+</div>
+  </div>
+  <div class="col-12 col-lg-2">
+    <?php
+      $__profileSidMini2 = (isset($_GET['Sid']) && $_GET['Sid']!=='') ? $_GET['Sid'] : (isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '');
+      $__hostelMini2 = null;
+      if ($__profileSidMini2 !== '') {
+        if ($stHM2 = mysqli_prepare($con, "SELECT a.allocated_at, a.leaving_at, r.room_no, b.name AS block_name, h.name AS hostel_name FROM hostel_allocations a JOIN hostel_rooms r ON r.id=a.room_id JOIN hostel_blocks b ON b.id=r.block_id JOIN hostels h ON h.id=b.hostel_id WHERE a.student_id=? AND a.status='active' ORDER BY a.allocated_at DESC LIMIT 1")) {
+          mysqli_stmt_bind_param($stHM2, 's', $__profileSidMini2);
+          mysqli_stmt_execute($stHM2);
+          $rsHM2 = mysqli_stmt_get_result($stHM2);
+          $__hostelMini2 = $rsHM2 ? mysqli_fetch_assoc($rsHM2) : null;
+          mysqli_stmt_close($stHM2);
+        }
+      }
+      if ($__hostelMini2) {
+        echo '<div class="card shadow-sm mb-4">'
+           .   '<div class="card-header py-2 text-white" style="background: linear-gradient(90deg,#0d6efd,#6610f2);"><strong><i class="fa fa-bed mr-1"></i> Hostel</strong></div>'
+           .   '<div class="card-body p-2">'
+           .     '<small class="text-muted d-block">Hostel</small><div class="font-weight-bold mb-1">'.htmlspecialchars($__hostelMini2['hostel_name'] ?? '').'</div>'
+          
+           .     '<small class="text-muted d-block">Room No</small><div class="font-weight-bold mb-1">'.htmlspecialchars($__hostelMini2['room_no'] ?? '').'</div>'
+           .     '<small class="text-muted d-block">Allocated on</small><div class="font-weight-bold mb-1">'.htmlspecialchars($__hostelMini2['allocated_at'] ?? '').'</div>'
+           .     '<small class="text-muted d-block">Leaving on</small><div class="font-weight-bold">'.htmlspecialchars($__hostelMini2['leaving_at'] ?? '—').'</div>'
+           .   '</div>'
+           . '</div>';
+      }
+    ?>
+  </div>
 </div>
 
 <!-- <div class="form-row shadow p-2 mb-4 bg-white rounded"> -->
