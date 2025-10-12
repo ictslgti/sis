@@ -23,7 +23,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
       </div>
       <div>
         <?php if (($_SESSION['user_type'] == 'ADM') || ($_SESSION['user_type'] == 'HOD')) { ?>
-          <a href="<?php echo $base; ?>/module/Addmodule.php<?php echo isset($_GET['course_id']) && $_GET['course_id'] !== '' ? ('?course_id=' . urlencode($_GET['course_id'])) : ''; ?>" class="btn btn-primary btn-sm"><i class="fas fa-plus mr-1"></i>Add Module</a>
+          <a href="<?php echo $base; ?>/module/AddModule.php<?php echo isset($_GET['course_id']) && $_GET['course_id'] !== '' ? ('?course_id=' . urlencode($_GET['course_id'])) : ''; ?>" class="btn btn-primary btn-sm"><i class="fas fa-plus mr-1"></i>Add Module</a>
         <?php } ?>
       </div>
     </div>
