@@ -25,9 +25,12 @@ if ($courseId === '') {
 
 // Detect available name/code columns in groups table to avoid schema mismatches
 $nameCol = $codeCol = '';
-$colRs = mysqli_query($con, "SELECT column_name FROM information_schema.columns WHERE table_schema=DATABASE() AND table_name='groups' AND column_name IN ('group_name','group_code','name')");
+// Alias COLUMN_NAME to ensure consistent array key case across DBs
+$colSql = "SELECT COLUMN_NAME AS column_name FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'groups' AND COLUMN_NAME IN ('group_name','group_code','name')";
+$colRs = mysqli_query($con, $colSql);
 if ($colRs) {
   while ($cr = mysqli_fetch_assoc($colRs)) {
+    if (!isset($cr['column_name'])) { continue; }
     $cn = strtolower($cr['column_name']);
     if ($cn === 'group_name' || $cn === 'name') { $nameCol = $cr['column_name']; }
     if ($cn === 'group_code') { $codeCol = $cr['column_name']; }

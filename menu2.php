@@ -234,9 +234,8 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
           </div>
         </li>
 
-        
-
         <!-- Groups: HOD can manage department groups -->
+        <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="hodGroups" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <i class="fas fa-users"></i> Groups
           </a>
@@ -245,6 +244,13 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
             <a class="dropdown-item" href="<?php echo $base; ?>/group/AddGroup.php?department_id=<?php echo urlencode($d_c); ?>">Add Group</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/group/Reports.php?department_id=<?php echo urlencode($d_c); ?>">Reports</a>
           </div>
+        </li>
+
+        <!-- Timetable: Department-level timetable management -->
+        <li class="nav-item">
+          <a class="nav-link" href="<?php echo $base; ?>/timetable/DepartmentTimetable.php">
+            <i class="fas fa-calendar-alt"></i> Timetable
+          </a>
         </li>
       <?php endif; ?>
 

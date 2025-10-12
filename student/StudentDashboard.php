@@ -1341,6 +1341,12 @@ if (file_exists($topNav)) {
           } [c]);
         });
       }
+      // Load timetable on page load
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', loadStudentTimetable);
+      } else {
+        loadStudentTimetable();
+      }
     })();
   </script>
 <?php endif; ?>

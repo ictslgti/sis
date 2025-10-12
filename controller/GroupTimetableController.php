@@ -442,9 +442,11 @@ class GroupTimetableController {
             return;
         }
         
+        // Base query: pick only ONE row per (group_id, weekday, period)
+        // We choose the most recently updated/inserted record (highest timetable_id) within the optional AY overlap
         $sql = "
             SELECT 
-                MIN(t.timetable_id) AS timetable_id,
+                t.timetable_id,
                 t.group_id,
                 t.weekday,
                 t.period,
@@ -458,9 +460,11 @@ class GroupTimetableController {
                 s.staff_name,
                 CONCAT(m.module_id, ' - ', m.module_name) AS module_full_name
             FROM group_timetable t
-            LEFT JOIN module m ON t.module_id = m.module_id
-            LEFT JOIN staff s ON t.staff_id = s.staff_id
-            WHERE t.group_id = ? AND t.active = 1
+            JOIN (
+                SELECT 
+                    gt.group_id, gt.weekday, gt.period, MAX(gt.timetable_id) AS max_id
+                FROM group_timetable gt
+                WHERE gt.group_id = ? AND gt.active = 1
         ";
         
         $params = [$group_id];
@@ -482,18 +486,21 @@ class GroupTimetableController {
             }
             $ay_start = sprintf('%04d-08-01', $start_year);
             $ay_end   = sprintf('%04d-05-31', $end_year);
-            // Overlap condition: (t.start_date <= ay_end) AND (t.end_date >= ay_start)
-            $sql .= " AND t.start_date <= ? AND t.end_date >= ?";
+            // Apply same overlap condition inside the subquery used for latest-per-slot
+            $sql .= " AND gt.start_date <= ? AND gt.end_date >= ?";
             $params[] = $ay_end;
             $params[] = $ay_start;
             $types .= 'ss';
         }
         
-        $sql .= " 
-            GROUP BY 
-                t.group_id, t.weekday, t.period, t.classroom, 
-                t.start_date, t.end_date, t.module_id, t.staff_id, 
-                m.module_name, m.module_id, s.staff_name
+        // Close the subquery and join back to the main table, then join module/staff
+        $sql .= "
+                GROUP BY gt.group_id, gt.weekday, gt.period
+            ) latest
+              ON latest.max_id = t.timetable_id
+            LEFT JOIN module m ON t.module_id = m.module_id
+            LEFT JOIN staff s ON t.staff_id = s.staff_id
+            WHERE t.active = 1
             ORDER BY t.weekday, t.period, t.start_date
         ";
         
