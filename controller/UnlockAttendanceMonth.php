@@ -34,7 +34,7 @@ if ($res) { while ($r=mysqli_fetch_assoc($res)) { $students[] = $r['student_id']
 
 if (empty($students)) { header('Location: '.$base.'/attendance/MonthlyAttendanceReport.php?'.http_build_query(['month'=>$month,'course_id'=>$courseId,'department_id'=>$departmentId,'err'=>'nostudents'])); exit; }
 
-$idList = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $students));
+$idList = implode(',', array_map(function($sid) use ($con) { return "'".mysqli_real_escape_string($con, $sid)."'"; }, $students));
 
 // Clear approved_status for all attendance rows in range
 $sqlUpd = "UPDATE attendance SET approved_status=NULL WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."'";
