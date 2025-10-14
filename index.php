@@ -147,6 +147,29 @@ if (isset($_POST['SignIn']) && !empty($_POST['username']) && !empty($_POST['pass
                 
                 // Check if user is active
                 if ($row['user_active'] == 1) {
+                    // Log login event (server-side) with current session id
+                    if (session_status() === PHP_SESSION_NONE) { session_start(); }
+                    $sid = session_id();
+                    $ua  = isset($_SERVER['HTTP_USER_AGENT']) ? substr($_SERVER['HTTP_USER_AGENT'],0,255) : '';
+                    $ip  = isset($_SERVER['REMOTE_ADDR']) ? $_SERVER['REMOTE_ADDR'] : '';
+                    @mysqli_query($con, "CREATE TABLE IF NOT EXISTS user_login_log (
+                      id INT AUTO_INCREMENT PRIMARY KEY,
+                      user_name VARCHAR(100) NOT NULL,
+                      session_id VARCHAR(128) NOT NULL,
+                      login_time DATETIME NULL,
+                      last_seen DATETIME NULL,
+                      logout_time DATETIME NULL,
+                      method VARCHAR(16) NULL,
+                      user_agent VARCHAR(255) NULL,
+                      ip VARCHAR(64) NULL,
+                      KEY idx_user (user_name),
+                      KEY idx_session (session_id)
+                    ) ENGINE=InnoDB DEFAULT CHARSET=utf8");
+                    if ($ins = @mysqli_prepare($con, 'INSERT INTO user_login_log (user_name, session_id, login_time, last_seen, method, user_agent, ip) VALUES (?,?,NOW(),NOW(),"login",?,?)')) {
+                        mysqli_stmt_bind_param($ins, 'ssss', $row['user_name'], $sid, $ua, $ip);
+                        @mysqli_stmt_execute($ins);
+                        @mysqli_stmt_close($ins);
+                    }
                     // Set department session data if needed
                     if ($row['user_table'] == 'staff') {
                         $dept_sql = "SELECT `department_id` FROM `staff` WHERE `staff_id` = ?";

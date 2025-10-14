@@ -98,6 +98,32 @@ if(!isset($_SESSION['user_name'])){
         setTimeout(function(){ if(!window.jQuery){ log('<b>WARNING:</b> jQuery not loaded before Bootstrap. Some UI may not work.'); } }, 1500);
       })();
     </script>
+    <script>
+      // Heartbeat to record activity and keep last_seen fresh; send beacon on unload to auto-logout
+      (function(){
+        if (!window.fetch) return; // minimal guard
+        var base = (typeof document.querySelector('base') !== 'undefined' && document.querySelector('base')) ? document.querySelector('base').getAttribute('href') || '' : '';
+        function url(p){ try { return (base||'') + p; } catch(e){ return p; } }
+        function ping(){
+          try { fetch(url('controller/Heartbeat.php'), { method:'POST', credentials:'include', cache:'no-cache' }); } catch(_){ }
+        }
+        // Ping right after load and every 60s
+        document.addEventListener('DOMContentLoaded', function(){
+          ping();
+          try { window.__slgtiHeartbeat = setInterval(ping, 60000); } catch(_){ }
+        });
+        // Use sendBeacon on page unload to mark logout due to close/navigation
+        function bye(reason){
+          try {
+            var data = new Blob([], {type: 'text/plain'});
+            if (navigator.sendBeacon) { navigator.sendBeacon(url('controller/LogoutBeacon.php?r=' + encodeURIComponent(reason||'close')), data); }
+            else { fetch(url('controller/LogoutBeacon.php?r=' + encodeURIComponent(reason||'close')), { method:'POST', credentials:'include', keepalive:true }); }
+          } catch(_){ }
+        }
+        window.addEventListener('beforeunload', function(){ bye('close'); });
+        document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') { bye('hidden'); } });
+      })();
+    </script>
     <?php } ?>
     <script>
       // Improve mobile: close sidebar after clicking a menu link

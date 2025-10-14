@@ -486,6 +486,15 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
             </li>
           <?php } ?>
 
+          <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM') { ?>
+            <li>
+              <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/LoginActivity.php">
+                <i class="fas fa-user-clock"></i>
+                <span>Login Activity</span>
+              </a>
+            </li>
+          <?php } ?>
+
 
           <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO') { ?>
             <!-- SAO: Hostel with submenu -->
