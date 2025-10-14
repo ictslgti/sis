@@ -491,18 +491,8 @@ if ($isExport) {
         <div class="alert alert-warning">Department not configured for your account. Please contact admin.</div>
       <?php else: ?>
         <?php if ($isApproved): ?>
-          <div class="alert alert-success py-2 mb-2 d-flex justify-content-between align-items-center">
-            <div>
-              <strong><i class="fas fa-lock mr-1"></i> HOD Approved - </strong> This month is locked.
-            </div>
-            <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type']==='ADM'): ?>
-              <form method="post" action="<?php echo APP_BASE; ?>/controller/UnlockAttendanceMonth.php" onsubmit="return confirm('Unlock the selected month for this scope? This will clear approval and allow edits.');" class="mb-0">
-                <input type="hidden" name="month" value="<?php echo htmlspecialchars($month); ?>">
-                <input type="hidden" name="department_id" value="<?php echo htmlspecialchars($deptCode); ?>">
-                <input type="hidden" name="course_id" value="<?php echo htmlspecialchars($course); ?>">
-                <button type="submit" class="btn btn-sm btn-outline-danger"><i class="fas fa-unlock mr-1"></i>Unlock Month</button>
-              </form>
-            <?php endif; ?>
+          <div class="alert alert-success py-2 mb-2">
+            <strong><i class="fas fa-lock mr-1"></i> HOD Approved - </strong> This month is locked.
           </div>
         <?php endif; ?>
         <?php if (!$isApproved && isset($_SESSION['user_type']) && $_SESSION['user_type']==='HOD'): ?>
