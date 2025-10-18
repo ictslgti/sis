@@ -688,6 +688,9 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">Import Student Enrollment</a>
                   </li>
+                  <li>
+                    <a href="#" onclick="(function(){var sid=prompt('Enter Student ID for ID Card:'); if(sid){ window.open('<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentIDCard.php?id='+encodeURIComponent(sid), '_blank'); }})(); return false;">Student ID Card</a>
+                  </li>
                 </ul>
               </div>
             </li> <?php } ?>

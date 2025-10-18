@@ -480,7 +480,7 @@ if (file_exists($topNav)) {
   $base_year = ($current_month >= 8) ? $current_year : ($current_year - 1);
   $stud_ac_year = $base_year . '-' . ($base_year + 1);
 
-  // Fetch group label for display
+  // Fetch group label for display (only show NAME; hide if empty)
   $stud_group_label = '';
   if ($student_group_id > 0) {
     if ($stg = @mysqli_prepare($con, "SELECT g.group_name, g.group_code FROM `groups` g WHERE g.id = ? LIMIT 1")) {
@@ -489,14 +489,11 @@ if (file_exists($topNav)) {
         $rg = @mysqli_stmt_get_result($stg);
         if ($rg && ($gr = @mysqli_fetch_assoc($rg))) {
           $nm = trim((string)($gr['group_name'] ?? ''));
-          $cd = trim((string)($gr['group_code'] ?? ''));
-          $stud_group_label = $nm !== '' ? $nm : ($cd !== '' ? $cd : ('Group #' . $student_group_id));
+          // Only the group NAME; if empty, keep blank (no fallback to code/ID)
+          $stud_group_label = $nm !== '' ? $nm : '';
         }
       }
       @mysqli_stmt_close($stg);
-    }
-    if ($stud_group_label === '') {
-      $stud_group_label = 'Group #' . $student_group_id;
     }
   }
   ?>
@@ -509,7 +506,7 @@ if (file_exists($topNav)) {
             <i class="fas fa-calendar-alt mr-1"></i>
             <strong>My Group Timetable</strong>
             <?php if (!empty($stud_group_label)): ?>
-              <span class="badge badge-info ml-2" title="Assigned Group"><?php echo htmlspecialchars($stud_group_label); ?></span>
+              <span class="ml-2 font-weight-bold text-primary" title="Assigned Group"><?php echo htmlspecialchars($stud_group_label); ?></span>
             <?php endif; ?>
           </div>
           <div class="small text-muted">Academic Year: <?php echo htmlspecialchars($stud_ac_year); ?></div>
