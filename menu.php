@@ -960,7 +960,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                       <hr>
                   </li> <?php } ?>
                 <li><?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport">Attendance</a>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">Attendance</a>
                 </li> <?php } ?>
                   </ul>
                 </div>
