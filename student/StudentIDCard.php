@@ -121,7 +121,7 @@ body{ background:#f4f5f7; }
 .brand-sm .ti{ font-size:9pt; font-weight:700; }
 .heading{ font-weight:700; font-size:18px !important; margin-top:.8mm; text-align:center; }
 .id-title{ text-align:center; font-weight:700; letter-spacing:.5px; text-transform:uppercase; font-size:12px !important; }
-.inst-name{ text-align:center; font-weight:600; font-size:16px !important; color:#495057; letter-spacing:.2px; margin-top:-3mm; }
+.inst-name{ text-align:center; font-weight:600; font-size:16px !important; color:#495057; letter-spacing:.2px; margin-top:-10mm; }
 .rowline{ display:flex; gap:5mm; align-items:flex-start; }
 .qrcol{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
 .photo{ width:var(--photo-w); height:var(--photo-h); border-radius:2mm; overflow:hidden; border:2px solid rgba(0,0,0,.08); background:#fafafa; box-shadow:0 2px 8px rgba(0,0,0,.06); }

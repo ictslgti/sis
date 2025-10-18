@@ -532,7 +532,10 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                 </ul>
               </div>
             </li>
-            <!-- SAO: Attendance Report -->
+          <?php } ?>
+
+          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['SAO','ADM'])) { ?>
+            <!-- SAO/ADM: Attendance Report -->
             <li>
               <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
                 <i class="fas fa-calendar-check"></i>
