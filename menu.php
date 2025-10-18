@@ -534,7 +534,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
             </li>
           <?php } ?>
 
-          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['SAO','ADM'])) { ?>
+          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['SAO'])) { ?>
             <!-- SAO/ADM: Attendance Report -->
             <li>
               <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
