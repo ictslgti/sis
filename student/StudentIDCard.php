@@ -120,8 +120,8 @@ body{ background:#f4f5f7; }
 .brand-sm img{ height:10mm; }
 .brand-sm .ti{ font-size:9pt; font-weight:700; }
 .heading{ font-weight:700; font-size:18px !important; margin-top:.8mm; text-align:center; }
-.id-title{ text-align:center; font-weight:700; letter-spacing:.5px; text-transform:uppercase; font-size:12px !important; }
-.inst-name{ text-align:center; font-weight:600; font-size:16px !important; color:#495057; letter-spacing:.2px; margin-top:-10mm; }
+.id-title{ text-align:center; font-weight:700; letter-spacing:.5px; text-transform:uppercase; font-size:12px !important; color: var(--red); }
+.inst-name{ text-align:center; font-weight:700; font-size:16px !important; color: var(--red); letter-spacing:.2px; margin-top:-6px; }
 .rowline{ display:flex; gap:5mm; align-items:flex-start; }
 .qrcol{ display:flex; flex-direction:column; align-items:center; justify-content:flex-start; }
 .photo{ width:var(--photo-w); height:var(--photo-h); border-radius:2mm; overflow:hidden; border:2px solid rgba(0,0,0,.08); background:#fafafa; box-shadow:0 2px 8px rgba(0,0,0,.06); }
@@ -131,6 +131,8 @@ body{ background:#f4f5f7; }
 .chip{ display:inline-block; border-radius:10px; font-size:7.5pt; font-weight:600; color:#222; margin-top:1mm; max-width:44mm; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; vertical-align:middle; }
 .label{ font-weight:600; color:#6c757d; margin-top:2mm; font-size:10px !important; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-align:left !important; }
 .val{ font-weight:600; color:#111; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:46mm; text-align:left !important; font-size:10px !important; }
+/* Show full course name by allowing wrap on course value only */
+.val.course-name{ white-space:normal; overflow:visible; text-overflow:unset; max-width:none; line-height:1.2; }
 .footer{ display:flex; justify-content:space-between; align-items:flex-end; gap:8mm; margin-top:-2mm; }
 .bar-bottom{ position:absolute; left:7mm; right:7mm; bottom:5mm; height:2mm; background:linear-gradient(90deg, var(--gold), var(--red), var(--black)); border-radius:1mm; opacity:.25; }
 .sig{ text-align:center; min-width:38mm; }
@@ -227,7 +229,7 @@ body{ background:#f4f5f7; }
           </div>
           <div class=""></div>
           <div class="inst-name">Sri Lanka German Training Institute</div>
-          <div class="heading id-title">Student ID</div> <br>
+          <div class="heading id-title">Student ID</div> 
           <div class="rowline" style="margin-top:3mm;">
             <div class="photo"><img src="<?php echo htmlspecialchars($photoUrl); ?>" alt="Photo"></div>
             <div class="fields">
@@ -239,7 +241,7 @@ body{ background:#f4f5f7; }
                 <div class="label">Department</div>
                 <div class="val"><?php echo htmlspecialchars($enroll['department_name']); ?></div>
                 <div class="label">Course</div>
-                <div class="val"><?php echo htmlspecialchars($enroll['course_name']); ?></div>
+                <div class="val course-name"><?php echo htmlspecialchars($enroll['course_name']); ?></div>
               <?php endif; ?>
             </div>
           </div>
