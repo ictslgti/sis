@@ -152,30 +152,30 @@ if ($rs = mysqli_query($con, "SELECT COUNT(academic_year) AS cnt FROM academic")
   if ($r = mysqli_fetch_assoc($rs)) { $acadCount = (int)$r['cnt']; }
   mysqli_free_result($rs);
 }
-// Students (current active) in the selected academic year
-// Definition: enrollment in selected year with status in ('Following','Active'), and student status not 'Inactive'
+// Students (current Following) in the selected academic year
+// Definition: enrollment in selected year with status = 'Following', and student status not 'Inactive'
 $yearCond = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
 $sqlStu = "SELECT COUNT(DISTINCT s.student_id) AS cnt
            FROM student s
-           JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+           JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status = 'Following'" . $yearCond . "
            WHERE COALESCE(s.student_status,'') <> 'Inactive'";
 if ($rs = mysqli_query($con, $sqlStu)) {
   if ($r = mysqli_fetch_assoc($rs)) { $studentCount = (int)$r['cnt']; }
   mysqli_free_result($rs);
 }
 
-// NVQ Level 4 & 5 student totals (active)
+// NVQ Level 4 & 5 student totals (Following)
 $nvq4Count = 0; $nvq5Count = 0;
 $sqlNvq4 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
             FROM student s
-            JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+            JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status = 'Following'" . $yearCond . "
             JOIN course c ON c.course_id = e.course_id
             WHERE COALESCE(s.student_status,'') <> 'Inactive' AND CAST(c.course_nvq_level AS CHAR) = '4'";
 if ($rs = mysqli_query($con, $sqlNvq4)) { if ($r = mysqli_fetch_assoc($rs)) { $nvq4Count = (int)$r['cnt']; } mysqli_free_result($rs); }
 
 $sqlNvq5 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
             FROM student s
-            JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+            JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status = 'Following'" . $yearCond . "
             JOIN course c ON c.course_id = e.course_id
             WHERE COALESCE(s.student_status,'') <> 'Inactive' AND CAST(c.course_nvq_level AS CHAR) = '5'";
 if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $nvq5Count = (int)$r['cnt']; } mysqli_free_result($rs); }
@@ -304,7 +304,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
       <div class="card-body d-flex align-items-center">
         <div class="icon mr-3"><i class="fas fa-users fa-lg"></i></div>
         <div>
-          <div class="stat-label">Students</div>
+          <div class="stat-label">Following Students</div>
           <div class="stat-value"><?php echo $studentCount; ?></div>
         </div>
       </div>
@@ -351,7 +351,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     FROM course c
     LEFT JOIN department d ON d.department_id = c.department_id
     LEFT JOIN student_enroll e ON e.course_id = c.course_id 
-      AND e.student_enroll_status IN ('Following','Active')" . $yearCondCourse . "
+      AND e.student_enroll_status = 'Following'" . $yearCondCourse . "
     LEFT JOIN student s ON s.student_id = e.student_id AND COALESCE(s.student_status,'') <> 'Inactive'
     WHERE LOWER(TRIM(d.department_name)) NOT IN ('admin','administration')
     GROUP BY d.department_name, c.course_id, c.course_name
@@ -382,7 +382,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
            COUNT(DISTINCT CASE WHEN s.student_gender='Female' AND COALESCE(s.student_status,'') <> 'Inactive' THEN s.student_id END) AS female
     FROM department d
     LEFT JOIN course c ON c.department_id = d.department_id
-    LEFT JOIN student_enroll e ON e.course_id = c.course_id AND e.student_enroll_status IN ('Following','Active') $yearCondG
+    LEFT JOIN student_enroll e ON e.course_id = c.course_id AND e.student_enroll_status = 'Following' $yearCondG
     LEFT JOIN student s ON s.student_id = e.student_id
     GROUP BY d.department_name
   ";

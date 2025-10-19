@@ -60,8 +60,8 @@ if ($u_t === 'MA4') {
   return; // stop sidebar rendering for MA4
 }
 
-// For SAO, HOD, DIR, ACC, FIN and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
-if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], true)) {
+// For SAO, HOD, DIR, ACC, FIN, EXAM and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
+if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN3'], true)) {
   $menu2 = __DIR__ . '/menu2.php';
   if (file_exists($menu2)) {
     include $menu2;
@@ -423,6 +423,8 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                 <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessmentType.php">Add Assessment Type</a></li>
                 
                 <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AssessmentReport.php">Assessment Report</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php">End Exams</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php#recent">End Exam Results</a></li>
               </ul>
             </div>
           </li>
@@ -515,6 +517,19 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                   <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffPositionType.php">Staff Position Types</a></li>
                   <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/Notice.php">Notice Info</a></li>
                   <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/AddNotice.php">Add Notice</a></li>
+                </ul>
+              </div>
+            </li>
+            <!-- ADM: Examinations submenu -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-award"></i>
+                <span>Examinations</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php">End Exams</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/Transcript.php">Transcript</a></li>
                 </ul>
               </div>
             </li>
@@ -721,12 +736,12 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/timetable/Timetable.php">Timetable</a>
                   </li>
-                  <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['WAR', 'HOD', 'ADM'])) { ?>
+                  <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['WAR', 'HOD'])) { ?>
                     <li>
                       <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/timetable/AddTimetable.php">Add a Timetable</a>
                     </li>
                   <?php } ?>
-                  <hr>
+                 
                   <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['WAR', 'HOD'])) { ?>
                     <li>
                       <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/Notice.php">Notice Info</a>
@@ -737,38 +752,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
               </div>
             </li>
           <?php } ?>
-          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO') { ?>
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-award"></i>
-                <span>Examinations</span>
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-                 
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessment.php">Add Assessment</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessmentType.php">Add Assessment Type</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessmentResults.php">Add Assessment Results</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AssessmentReport.php">Assessment Report</a>
-                  </li>
-                  <hr>
-                  <!-- <li>
-                  <a href="TVECExamination">TVEC Examinations Info</a>
-                </li>
-                <li>
-                  <a href="AddTVECExamination">Add TVEC Examination</a>
-                </li> -->
-                </ul>
-              </div>
-            </li>
-          <?php } ?>
+          
 
           <!-- Attendance menu hidden per requirement -->
           <?php /* if($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>

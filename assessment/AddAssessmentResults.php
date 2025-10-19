@@ -38,13 +38,21 @@ $sql = null;
 if (isset($_GET['StudentMarks'])) {
 # code...
 $id_x=$_GET['StudentMarks'];
-$sql_x = "SELECT assessments.assessment_id, assessments.course_id, assessments.academic_year,assessments.module_id,student_enroll.student_id
-
-FROM `assessments_marks`,student_enroll,assessments
-WHERE student_enroll.course_id =assessments.course_id AND assessments.assessment_id ='$id_x' group by student_id";
+// build student list: same academic year + repeat candidates (prior failed in this module)
+$sql_x = "SELECT a.assessment_id, a.course_id, a.academic_year, a.module_id, se.student_id
+          FROM assessments a
+          JOIN student_enroll se ON se.course_id = a.course_id AND se.academic_year = a.academic_year
+          WHERE a.assessment_id = '".$id_x."'
+          UNION
+          SELECT a.assessment_id, a.course_id, a.academic_year, a.module_id, m.student_id
+          FROM assessments a
+          JOIN assessments_marks m ON m.module_id = a.module_id
+          WHERE a.assessment_id = '".$id_x."' AND m.assessment_marks < 40";
 
 $result_x = mysqli_query($con, $sql_x);
-if (mysqli_num_rows($result_x)>0) {
+if ($result_x === false) {
+    echo '<div class="alert alert-danger">DB error (save list): '.htmlspecialchars(mysqli_error($con)).'</div>';
+} elseif (mysqli_num_rows($result_x)>0) {
 # code...
 while ($row_x = mysqli_fetch_assoc($result_x)) {
      $postnamem = "M".$row_x['student_id'];
@@ -58,7 +66,7 @@ while ($row_x = mysqli_fetch_assoc($result_x)) {
      //insert 
      $sql .= "INSERT INTO `assessments_marks` 
      (`assessment_id`,`module_id`, `student_id`, `assessment_attempt`, `assessment_marks`) 
-     VALUES ('$id_x','$module_id','$student_id','$assessment_attempt','$assessments_marks');";
+     VALUES ('".$id_x."','".$module_id."','".$student_id."','".$assessment_attempt."','".$assessments_marks."');";
      //end insert
 
 }
@@ -68,7 +76,7 @@ echo $sql;
 
 //end
 
-if(mysqli_multi_query($con,$sql))
+if(!empty($sql) && mysqli_multi_query($con,$sql))
 {
   echo '
     <div class="alert alert-success alert-dismissible fade show" role="alert">
@@ -122,7 +130,8 @@ else{
             <br>
             <form  method="POST">
                 <!-- table -->
-                <table class="table">
+                <div class="table-responsive">
+                <table class="table table-sm table-striped">
                     <thead>
                         <tr>
                             <th scope="col">Assessment ID</th>
@@ -142,13 +151,20 @@ else{
                         if (isset($_GET['StudentMarks'])) {
                             # code...
                              $id=$_GET['StudentMarks'];
-                          $sql = "SELECT assessments.assessment_id, assessments.course_id, assessments.academic_year,assessments.module_id,student_enroll.student_id
-                             
-                            FROM `assessments_marks`,student_enroll,assessments
-                            WHERE student_enroll.course_id =assessments.course_id AND assessments.assessment_id ='$id' group by student_id";
+                          $sql = "SELECT a.assessment_id, a.course_id, a.academic_year, a.module_id, se.student_id
+                                  FROM assessments a
+                                  JOIN student_enroll se ON se.course_id = a.course_id AND se.academic_year = a.academic_year
+                                  WHERE a.assessment_id = '".$id."'
+                                  UNION
+                                  SELECT a.assessment_id, a.course_id, a.academic_year, a.module_id, m.student_id
+                                  FROM assessments a
+                                  JOIN assessments_marks m ON m.module_id = a.module_id
+                                  WHERE a.assessment_id = '".$id."' AND m.assessment_marks < 40";
 
                             $result = mysqli_query($con, $sql);
-                            if (mysqli_num_rows($result)>0) {
+                            if ($result === false) {
+                                echo '<tr><td colspan="6" class="text-danger">DB error: '.htmlspecialchars(mysqli_error($con)).'</td></tr>';
+                            } elseif (mysqli_num_rows($result)>0) {
                                 # code...
                                 while ($row = mysqli_fetch_assoc($result)) {
                                     # code...
@@ -164,14 +180,14 @@ else{
                         
                         <td>
                             <div class="input-group mb-3">
-                                <input type="text" class="form-control" placeholder="Enter the Marks" 
+                                <input type="text" class="form-control form-control-sm" placeholder="Enter the Marks" 
                                     aria-label="Username" aria-describedby="basic-addon1" id="assessments_marks" name="M' . $row ["student_id"].'" required>
                             </div>
                         </td>
                         <td>
                             <div class="input-group mb-3">
 
-                                <select class="custom-select" id="assessment_attempt" name="A' . $row ["student_id"].'">
+                                <select class="custom-select custom-select-sm" id="assessment_attempt" name="A' . $row ["student_id"].'">
                                     <option selected>----Choose Attempt--- </option>
                                     <option value="1">Attempt 1</option>
                                     <option value="2">Attempt 2</option>
@@ -212,6 +228,7 @@ else{
 
                     </tbody>
                 </table>
+                </div>
                 <div class="row">
                     <div class="col">
 
@@ -220,7 +237,7 @@ else{
 
                     </div>
                     <div class="col col-lg-2">
-                        <button type="submit" class="btn btn-outline-primary" name="save" id="save">&nbsp;&nbsp;&nbsp;<i
+                        <button type="submit" class="btn btn-sm btn-outline-primary" name="save" id="save">&nbsp;&nbsp;&nbsp;<i
                                 class="fas fa-save"></i>&nbsp;&nbsp;Save&nbsp;&nbsp;&nbsp;</button>
                     </div>
                 </div>

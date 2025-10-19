@@ -13,15 +13,15 @@ $d_c  = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : '';
 // Base path helper
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-// Only render for SAO, HOD, DIR, ACC, FIN and instructor roles (IN1, IN2, IN3);
+// Only render for SAO, HOD, DIR, ACC, FIN, EXAM and instructor roles (IN1, IN2, IN3);
 // otherwise do nothing to avoid unintended menus
-if (!in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], true)) {
+if (!in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN3'], true)) {
   return;
 }
-// Decide content container: full-width on dashboard index, centered elsewhere
+// Decide content container: center the dashboard like other pages
 $__script = isset($_SERVER['SCRIPT_NAME']) ? $_SERVER['SCRIPT_NAME'] : (isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '');
 $__is_dash_index = (strpos($__script, '/dashboard/index.php') !== false);
-$__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4' : 'container';
+$__content_container = 'container';
 ?>
 <style>
   /* Minor UX tweaks for better mobile usability */
@@ -93,42 +93,7 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
     }
   }
 </style>
-<?php if ($__is_dash_index) { ?>
-  <style>
-    /* Dashboard index: full width with modest side gutters */
-    @media (min-width: 992px) {
-      .page-wrapper .page-content {
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-      }
-
-      .page-content>.container,
-      .page-content>.container-fluid {
-        max-width: 100% !important;
-      }
-
-      /* Add gentle side padding for readability */
-      .page-content .container-fluid {
-        padding-left: 1rem !important;
-        padding-right: 1rem !important;
-      }
-    }
-
-    @media (min-width: 1200px) {
-      .page-content .container-fluid {
-        padding-left: 1.25rem !important;
-        padding-right: 1.25rem !important;
-      }
-    }
-
-    @media (min-width: 1400px) {
-      .page-content .container-fluid {
-        padding-left: 1.5rem !important;
-        padding-right: 1.5rem !important;
-      }
-    }
-  </style>
-<?php } ?>
+<?php /* Dashboard full-width override removed to keep dashboard centered like other pages */ ?>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top px-2 px-md-3 px-lg-4">
   <a class="navbar-brand" href="<?php echo $base; ?><?php echo (in_array($u_t, ['HOD', 'IN1', 'IN2', 'IN3'], true)) ? '/hod/Dashboard.php' : '/dashboard/index.php'; ?>">MIS@SLGTI</a>
   <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#saoNavbar" aria-controls="saoNavbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -154,6 +119,22 @@ $__content_container = $__is_dash_index ? 'container-fluid px-2 px-md-3 px-lg-4'
             <a class="dropdown-item" href="<?php echo $base; ?>/hostel/BulkRoomAssign.php">Bulk Assign</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/hostel/ManualAllocate.php">Manual Allocate</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/hostel/Payments.php">Hostel Payments</a>
+          </div>
+        </li>
+      <?php endif; ?>
+
+      <!-- Examinations: EXAM role gets exam-wide tools across departments -->
+      <?php if ($u_t === 'EXAM'): ?>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="examMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-award"></i> Examinations
+          </a>
+          <div class="dropdown-menu" aria-labelledby="examMenu">
+            <a class="dropdown-item" href="<?php echo $base; ?>/exam/EndExams.php"><i class="fas fa-clipboard-check mr-1"></i> End Exams</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/assessment/Assessment.php"><i class="fas fa-list mr-1"></i> Assessment Info</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/assessment/AssessmentReport.php"><i class="fas fa-chart-bar mr-1"></i> Assessment Report</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/exam/Transcript.php"><i class="fas fa-file-alt mr-1"></i> Transcript</a>
           </div>
         </li>
       <?php endif; ?>

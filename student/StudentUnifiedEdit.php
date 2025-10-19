@@ -52,7 +52,7 @@ if ($r = mysqli_query($con, $enrollSql)) {
   mysqli_free_result($r);
 }
 
-// Determine current profile image (by path)
+// Determine current profile image (by path) and build cache-busted URL
 if ($student) {
   $tmp = trim((string)($student['student_profile_img'] ?? ''));
   if ($tmp !== '') {
@@ -60,6 +60,13 @@ if ($student) {
     // If the file exists under the project, use the relative path; otherwise leave null
     if ($abs && file_exists($abs)) { $profileImgPath = $tmp; }
   }
+}
+// Build cache-busting query using filemtime (prevents stale cached image after update)
+$profileImgUrl = null;
+if ($profileImgPath) {
+  $abs = realpath(__DIR__ . '/../' . $profileImgPath);
+  $ver = ($abs && file_exists($abs)) ? (string)@filemtime($abs) : (string)time();
+  $profileImgUrl = rtrim($base, '/') . '/' . $profileImgPath . '?v=' . urlencode($ver);
 }
 
 // Dropdown data
@@ -362,8 +369,8 @@ include_once __DIR__ . '/../menu.php';
       <div class="d-flex align-items-start justify-content-between mb-2">
         <div></div>
         <div class="text-right">
-          <?php if ($profileImgPath): ?>
-            <img src="<?php echo $base . '/' . h($profileImgPath); ?>" alt="Profile Photo" class="img-thumbnail" style="width:120px;height:160px;object-fit:cover;">
+          <?php if ($profileImgUrl): ?>
+            <img src="<?php echo h($profileImgUrl); ?>" alt="Profile Photo" class="img-thumbnail" style="width:120px;height:160px;object-fit:cover;">
           <?php endif; ?>
           <?php if ($can_edit_profile): ?>
             <form method="post" enctype="multipart/form-data" class="mt-2" id="profileImgForm">
