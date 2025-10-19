@@ -675,7 +675,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
             <div>
               <div class="topline"></div>
               <div class="brand-line">
-                <div class="brand-right" style="margin-top:-30px;">
+                <div class="brand-right" style="margin-top:-34px;">
                   <?php if ($ministryLogo !== ''): ?>
                     <img src="<?php echo htmlspecialchars($ministryLogo); ?>" alt="Ministry" style="margin-right:50px;">
                   <?php endif; ?>
