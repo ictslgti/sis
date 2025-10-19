@@ -360,8 +360,8 @@ include_once __DIR__ . '/../menu.php';
   <ul class="nav nav-tabs" id="ueTabs" role="tablist">
     <li class="nav-item"><a class="nav-link active" id="profile-tab" data-toggle="tab" href="#profile" role="tab">Profile</a></li>
     <li class="nav-item"><a class="nav-link" id="enroll-tab" data-toggle="tab" href="#enroll" role="tab">Enrollment</a></li>
-    <li class="nav-item"><a class="nav-link" id="hostel-tab" data-toggle="tab" href="#hostel" role="tab">Hostel</a></li>
-    <li class="nav-item"><a class="nav-link" id="transport-tab" data-toggle="tab" href="#transport" role="tab">Transport</a></li>
+    <li class="nav-item"><a class="nav-link" id="docs-tab" data-toggle="tab" href="#documents" role="tab">Documents</a></li>
+    <li class="nav-item"><a class="nav-link" id="bank-tab" data-toggle="tab" href="#bank" role="tab">Bank Details</a></li>
   </ul>
   <div class="tab-content border-left border-right border-bottom p-3 bg-white" id="ueContent">
     <!-- Profile Tab -->
@@ -595,7 +595,10 @@ include_once __DIR__ . '/../menu.php';
       </div>
       <form method="post">
         <input type="hidden" name="form" value="profile">
-        <div class="form-row">
+        <div class="card mb-3">
+          <div class="card-header bg-white"><strong>Personal Details</strong></div>
+          <div class="card-body">
+            <div class="form-row">
           <div class="form-group col-md-2">
             <label>Title</label>
             <input type="text" class="form-control" name="student_title" value="<?php echo h($student['student_title'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -604,8 +607,8 @@ include_once __DIR__ . '/../menu.php';
             <label>Full Name</label>
             <input type="text" class="form-control" name="student_fullname" value="<?php echo h($student['student_fullname'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
-        </div>
-        <div class="form-row">
+            </div>
+            <div class="form-row">
           <div class="form-group col-md-6">
             <label>Name with Initials</label>
             <input type="text" class="form-control" name="student_ininame" value="<?php echo h($student['student_ininame'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -630,8 +633,8 @@ include_once __DIR__ . '/../menu.php';
             <label>NIC</label>
             <input type="text" class="form-control" name="student_nic" value="<?php echo h($student['student_nic'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
-        </div>
-        <div class="form-row">
+            </div>
+            <div class="form-row">
           <div class="form-group col-md-4">
             <label>Email</label>
             <input type="email" class="form-control" name="student_email" value="<?php echo h($student['student_email'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -644,8 +647,8 @@ include_once __DIR__ . '/../menu.php';
             <label>WhatsApp</label>
             <input type="text" class="form-control" name="student_whatsapp" value="<?php echo h($student['student_whatsapp'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
-        </div>
-        <div class="form-row">
+            </div>
+            <div class="form-row">
           <div class="form-group col-md-3">
             <label>Date of Birth</label>
             <input type="date" class="form-control" name="student_dob" value="<?php echo h($student['student_dob'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -661,13 +664,13 @@ include_once __DIR__ . '/../menu.php';
           <div class="form-group col-md-3">
             <label>Blood</label>
             <select class="form-control" name="student_blood" <?php echo $can_edit_profile?'':'disabled'; ?>>
-              <?php $bloodOpts = ['','A+','A-','B+','B-','AB+','AB-','O+','O-']; $curBlood = $student['student_blood'] ?? ''; foreach($bloodOpts as $b): ?>
+              <?php $bloodOpts = ['',"A+","A-","B+","B-","AB+","AB-","O+","O-"]; $curBlood = $student['student_blood'] ?? ''; foreach($bloodOpts as $b): ?>
                 <option value="<?php echo h($b); ?>" <?php echo ($curBlood===$b?'selected':''); ?>><?php echo h($b===''?'-- Select --':$b); ?></option>
               <?php endforeach; ?>
             </select>
           </div>
-        </div>
-        <div class="form-row">
+            </div>
+            <div class="form-row">
           <div class="form-group col-md-6">
             <label>Address</label>
             <input type="text" class="form-control" name="student_address" value="<?php echo h($student['student_address'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -680,8 +683,14 @@ include_once __DIR__ . '/../menu.php';
             <label>District</label>
             <select class="form-control" name="student_district" id="district_select" <?php echo $can_edit_profile?'':'disabled'; ?>></select>
           </div>
+            </div>
+          </div>
         </div>
-        <div class="form-row">
+
+        <div class="card mb-3">
+          <div class="card-header bg-white"><strong>Parent/Guardian Details</strong></div>
+          <div class="card-body">
+            <div class="form-row">
           <div class="form-group col-md-3">
             <label>Emergency Name</label>
             <input type="text" class="form-control" name="student_em_name" value="<?php echo h($student['student_em_name'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
@@ -694,11 +703,13 @@ include_once __DIR__ . '/../menu.php';
             <label>Emergency Phone</label>
             <input type="text" class="form-control" name="student_em_phone" value="<?php echo h($student['student_em_phone'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
           </div>
-        </div>
-        <div class="form-row">
+            </div>
+            <div class="form-row">
           <div class="form-group col-md-3">
             <label>Emergency Relation</label>
             <input type="text" class="form-control" name="student_em_relation" value="<?php echo h($student['student_em_relation'] ?? ''); ?>" <?php echo $can_edit_profile?'':'disabled'; ?>>
+          </div>
+            </div>
           </div>
         </div>
         <?php if ($can_edit_profile): ?>
@@ -798,98 +809,22 @@ include_once __DIR__ . '/../menu.php';
       </form>
     </div>
 
-    <!-- Hostel Tab -->
-    <div class="tab-pane fade" id="hostel" role="tabpanel">
-      <div class="alert alert-info">Manage active hostel allocation for this student. Use move or leave actions below. For advanced operations, visit Hostel > Manage.</div>
-      <div class="form-row">
-        <div class="form-group col-md-4">
-          <label>Current Allocation</label>
-          <?php
-            $alloc = null;
-            $q = "SELECT a.id, a.room_id, a.allocated_at, a.leaving_at, a.status, r.room_no, b.name AS block_name, h.name AS hostel_name
-                  FROM hostel_allocations a
-                  LEFT JOIN hostel_rooms r ON r.id=a.room_id
-                  LEFT JOIN hostel_blocks b ON b.id=r.block_id
-                  LEFT JOIN hostels h ON h.id=b.hostel_id
-                  WHERE a.student_id='".mysqli_real_escape_string($con,$sid)."' AND a.status='active' LIMIT 1";
-            if ($rr = mysqli_query($con, $q)) { $alloc = mysqli_fetch_assoc($rr) ?: null; mysqli_free_result($rr);}  
-          ?>
-          <div class="form-control" readonly>
-            <?php if ($alloc): ?>
-              <?php echo h(($alloc['hostel_name']??''). ' / '.($alloc['block_name']??''). ' / '.($alloc['room_no']??'')); ?>
-              <div class="small text-muted">Since <?php echo h($alloc['allocated_at'] ?? ''); ?></div>
-            <?php else: ?>
-              <span class="text-muted">No active allocation</span>
-            <?php endif; ?>
-          </div>
+    <!-- Documents Tab -->
+    <div class="tab-pane fade" id="documents" role="tabpanel">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-2">Manage student documents.</div>
+          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/student/StudentDocuments.php?Sid=<?php echo urlencode($sid); ?>">Open Documents</a>
         </div>
       </div>
-      <?php if ($can_mutate): ?>
-      <div class="form-row">
-        <div class="form-group col-md-3">
-          <label>Move to Room ID</label>
-          <input type="number" id="to_room_id" class="form-control" placeholder="Room ID">
-        </div>
-        <div class="form-group col-md-3 align-self-end">
-          <button class="btn btn-secondary" id="btnMove"><i class="fas fa-exchange-alt mr-1"></i>Move</button>
-          <?php if ($alloc): ?>
-            <button class="btn btn-warning" id="btnLeave"><i class="fas fa-door-open mr-1"></i>Mark as Left</button>
-          <?php endif; ?>
-        </div>
-      </div>
-      <div id="hostelMsg"></div>
-      <script>
-        (function(){
-          var btnMove = document.getElementById('btnMove');
-          if (btnMove) {
-            btnMove.addEventListener('click', function(ev){
-              ev.preventDefault();
-              var toRoom = document.getElementById('to_room_id').value.trim();
-              if (!toRoom) { alert('Enter target Room ID'); return; }
-              fetch('<?php echo $base; ?>/controller/HostelAllocationActions.php', {
-                method: 'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({ action:'move', student_id:'<?php echo h($sid); ?>', from_room_id:'<?php echo h((string)($alloc['room_id'] ?? 0)); ?>', to_room_id: toRoom })
-              }).then(r=>r.json()).then(j=>{
-                var d=document.getElementById('hostelMsg');
-                if (j.ok) { d.innerHTML='<div class="alert alert-success">'+(j.message||'Moved')+'</div>'; location.reload(); }
-                else { d.innerHTML='<div class="alert alert-danger">'+(j.message||'Failed')+'</div>'; }
-              }).catch(()=>{ document.getElementById('hostelMsg').innerHTML='<div class="alert alert-danger">Request failed</div>'; });
-            });
-          }
-          var btnLeave = document.getElementById('btnLeave');
-          if (btnLeave) {
-            btnLeave.addEventListener('click', function(ev){
-              ev.preventDefault();
-              fetch('<?php echo $base; ?>/controller/HostelAllocationActions.php', {
-                method: 'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-                body: new URLSearchParams({ action:'leave', student_id:'<?php echo h($sid); ?>', room_id:'<?php echo h((string)($alloc['room_id'] ?? 0)); ?>' })
-              }).then(r=>r.json()).then(j=>{
-                var d=document.getElementById('hostelMsg');
-                if (j.ok) { d.innerHTML='<div class="alert alert-success">'+(j.message||'Left')+'</div>'; location.reload(); }
-                else { d.innerHTML='<div class="alert alert-danger">'+(j.message||'Failed')+'</div>'; }
-              }).catch(()=>{ document.getElementById('hostelMsg').innerHTML='<div class="alert alert-danger">Request failed</div>'; });
-            });
-          }
-        })();
-      </script>
-      <?php endif; ?>
     </div>
 
-    <!-- Transport Tab -->
-    <div class="tab-pane fade" id="transport" role="tabpanel">
-      <div class="alert alert-warning mb-3"><strong>Transport (Bus/Season):</strong> No transport tables were found in the codebase. This tab is a placeholder. Tell me the exact fields (e.g., route, stop, season start/end, fee) or the DB table names and I will wire them here.</div>
-      <div class="form-row">
-        <div class="form-group col-md-4">
-          <label>Route (placeholder)</label>
-          <input type="text" class="form-control" value="" disabled>
-        </div>
-        <div class="form-group col-md-4">
-          <label>Stop (placeholder)</label>
-          <input type="text" class="form-control" value="" disabled>
-        </div>
-        <div class="form-group col-md-4">
-          <label>Season Validity (placeholder)</label>
-          <input type="text" class="form-control" value="" disabled>
+    <!-- Bank Details Tab -->
+    <div class="tab-pane fade" id="bank" role="tabpanel">
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-2">Edit student bank details.</div>
+          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/finance/StudentBankDetails.php?Sid=<?php echo urlencode($sid); ?>">Open Bank Details</a>
         </div>
       </div>
     </div>

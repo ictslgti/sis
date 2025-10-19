@@ -884,23 +884,34 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
 <br>
 <div class="container">
 <form method="POST" enctype="multipart/form-data">
+<style>
+/* Profile view alignment tweaks */
+.profile-grid > [class^="col-"] { display: flex; }
+.profile-grid .card { width: 100%; }
+.card { border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,.06); }
+.card-header { padding: .55rem .9rem; border-top-left-radius: 12px; border-top-right-radius: 12px; }
+.card-body { padding: .9rem 1rem; }
+.list-row { padding: .4rem 0; border-bottom: 1px solid #eee; }
+.list-row:last-child { border-bottom: 0; }
+.text-break { word-break: break-word; }
+.progress { height: 8px; }
+/* header summary row */
+.summary-row { align-items: center; }
+.summary-row .img-thumbnail { border-radius: 50%; max-width: 180px; }
+.summary-row h5 { margin: .25rem 0; font-weight: 600; }
+.summary-row .badge { font-weight: 500; }
+</style>
 
 <?php
   $__isStu = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU';
   $__selfView = ($__isStu && isset($_SESSION['user_name']) && (!isset($_GET['Sid']) || $_GET['Sid'] === $_SESSION['user_name']));
   $__inEdit = (isset($_GET['edit']) && !isset($_GET['Sid']));
-  if ($__selfView && !$__inEdit) {
-    echo '<div class="d-flex justify-content-end mb-2">'
-      . '<a href="/student/Student_profile.php?edit=1" class="btn btn-sm btn-primary">'
-      . '<i class="fa fa-edit"></i> Edit Profile'
-      . '</a>'
-      . '</div>';
-  }
+  $__showEditBtn = ($__selfView && !$__inEdit);
 ?>
 
 <div class="row">
   <div class="col-12 col-lg-10">
-  <div class="form-row shadow p-2 mb-4 bg-white rounded">
+  <div class="form-row shadow p-2 mb-4 bg-white rounded summary-row">
     <div class="col-12 col-md-3 mb-3 text-center"> 
     <img src="/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail img-fluid d-block mx-auto" style="max-width:200px;width:100%;height:auto;object-fit:cover;border-radius:40px;">
     <?php
@@ -948,6 +959,11 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     <!-- <button type="button" class="btn btn-outline-success">Success</button> -->
     </div>
     <div class="col-12 col-md-9">
+        <?php if ($__showEditBtn): ?>
+        <div class="d-flex justify-content-end mb-2">
+          <a href="/student/Student_profile.php?edit=1" class="btn btn-sm btn-outline-primary"><i class="fa fa-edit"></i> Edit Profile</a>
+        </div>
+        <?php endif; ?>
         <div class="mb-2">
           <div class="mb-2">
             <h5 class="text-muted my-1"><b><?php echo htmlspecialchars(($title ? ($title.'. ') : '').($fname ?? '')); ?> | Level: <?php echo htmlspecialchars($level ?? ''); ?></b></h5>
@@ -1023,28 +1039,28 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
   <div class="tab-content shadow p-2 mb-4 bg-white rounded" id="nav-tabContent">
   <div class="tab-pane fade show active" id="nav-home" role="tabpanel" aria-labelledby="nav-home-tab"><br>
         <?php if(!isset($_GET['edit'])): ?>
-        <div class="row">
+        <div class="row profile-grid">
           <div class="col-md-6 mb-4">
             <div class="card h-100">
               <div class="card-header text-light" style="background-color: rgba(208, 3, 3, 0.98);">Emergency Contact Information</div>
               <div class="card-body">
-                <div class="progress mb-2 w-100" style="height: 6px;">
+                <div class="progress mb-2 w-100">
                   <div class="progress-bar bg-danger" role="progressbar" style="width: <?php echo $profileCompletion; ?>%;" aria-valuenow="<?php echo $profileCompletion; ?>" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted d-block mb-2 text-left"><?php echo $profileCompletion; ?>%</small>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Name</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($ename ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Phone No</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($ephone ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Address</small>
                   <span class="text-dark font-weight-bold d-block text-break"><?php echo htmlspecialchars($eaddress ?: '—'); ?></span>
                 </div>
-                <div class="py-1">
+                <div class="list-row">
                   <small class="text-muted d-block">Relationship</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($erelation ?: '—'); ?></span>
                 </div>
@@ -1056,48 +1072,48 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="card h-100">
               <div class="card-header bg-primary text-white">Personal Information</div>
               <div class="card-body">
-                <div class="progress mb-2 w-100" style="height: 6px;">
+                <div class="progress mb-2 w-100">
                   <div class="progress-bar bg-primary" role="progressbar" style="width: <?php echo $profileCompletion; ?>%;" aria-valuenow="<?php echo $profileCompletion; ?>" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted d-block mb-2 text-left"><?php echo $profileCompletion; ?>%</small>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Name with Initials</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars(($title? $title.'.' : '').$ininame); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Nationality</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($nationality ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Religion</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($religion ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Gender</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($gender ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Date of Birth</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($dob ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Civil Status</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($civil ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Enroll Date</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($enroll ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Exit Date</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($exit ?: '—'); ?></span>
                 </div>
-                <div class="py-1">
+                <div class="list-row">
                   <small class="text-muted d-block">Blood Group</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($blood ?: '—'); ?></span>
                 </div>
                 <?php if ($hasUpdatedAt): ?>
-                <div class="py-1 border-top mt-2">
+                <div class="list-row border-0 mt-2" style="border-top:1px solid #eee;">
                   <small class="text-muted d-block">Last Edited</small>
                   <span class="text-dark font-weight-bold"><?php echo $updatedAt ? date('Y-m-d H:i', strtotime($updatedAt)) : 'N/A'; ?></span>
                 </div>
@@ -1110,39 +1126,39 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="card h-100">
               <div class="card-header text-light" style="background-color: rgba(5, 139, 27, 0.98);">Contact Information</div>
               <div class="card-body">
-                <div class="progress mb-2 w-100" style="height: 6px;">
+                <div class="progress mb-2 w-100">
                   <div class="progress-bar " role="progressbar" style="width: <?php echo $profileCompletion; ?>%; background-color: rgba(5, 139, 27, 0.98);" aria-valuenow="<?php echo $profileCompletion; ?>" aria-valuemin="0" aria-valuemax="100"></div>
                 </div>
                 <small class="text-muted d-block mb-2 text-left"><?php echo $profileCompletion; ?>%</small>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Email</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($email ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Phone No</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($phone ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">WhatsApp</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($whatsapp ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Address</small>
                   <span class="text-dark font-weight-bold d-block text-break"><?php echo htmlspecialchars($address ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Province</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($province ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">District</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($district ?: '—'); ?></span>
                 </div>
-                <div class="py-1 border-bottom">
+                <div class="list-row">
                   <small class="text-muted d-block">Zip Code</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($zip ?: '—'); ?></span>
                 </div>
-                <div class="py-1">
+                <div class="list-row">
                   <small class="text-muted d-block">Divisional Secretariat</small>
                   <span class="text-dark font-weight-bold"><?php echo htmlspecialchars($division ?: '—'); ?></span>
                 </div>
@@ -1167,7 +1183,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                     if ($_SESSION['user_type'] === 'STU' && isset($_SESSION['user_name']) && $_SESSION['user_name'] === $username) { $canUploadDoc = true; }
                   }
                   if ($canUploadDoc) { ?>
-                  <a class="btn btn-sm btn-primary ml-2" href="/student/UploadDocumentation.php?Sid=<?php echo urlencode($username); ?>">
+                  <a class="btn btn-sm btn-primary ml-2" href="/student/StudentDocuments.php?Sid=<?php echo urlencode($username); ?>">
                     <i class="fa fa-upload"></i> Upload / Replace
                   </a>
                 <?php } ?>
@@ -1302,7 +1318,17 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="form-row">
               <div class="form-group col-md-4">
                 <label>Nationality</label>
-                <input type="text" class="form-control" name="nationality" value="<?php echo htmlspecialchars($nationality); ?>" />
+                <select class="form-control" name="nationality">
+                  <?php $nationalities = ['Sri Lankan','Indian','Bangladeshi','Pakistani','Nepalese','Maldivian','Chinese','Other'];
+                  $curNat = (string)$nationality; $hasNat = in_array($curNat, $nationalities, true);
+                  if (!$hasNat && $curNat !== '') { echo '<option value="'.htmlspecialchars($curNat).'" selected>'.htmlspecialchars($curNat).' (current)</option>'; }
+                  echo '<option value="">Select Nationality</option>';
+                  foreach ($nationalities as $nat) {
+                    $sel = ($curNat === $nat) ? 'selected' : '';
+                    echo '<option value="'.htmlspecialchars($nat).'" '.$sel.'>'.htmlspecialchars($nat).'</option>';
+                  }
+                  ?>
+                </select>
               </div>
               <div class="form-group col-md-4">
                 <label>Religion</label>
@@ -1318,7 +1344,13 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="form-row">
               <div class="form-group col-md-4">
                 <label>Blood Group</label>
-                <input type="text" class="form-control" name="blood" value="<?php echo htmlspecialchars($blood); ?>" />
+                <select class="form-control" name="blood">
+                  <?php $bloodOpts = ['', 'A+','A-','B+','B-','AB+','AB-','O+','O-'];
+                  $curBlood = (string)$blood; if ($curBlood!=='' && !in_array($curBlood, $bloodOpts, true)) { echo '<option value="'.htmlspecialchars($curBlood).'" selected>'.htmlspecialchars($curBlood).' (current)</option>'; }
+                  echo '<option value="">-- Select --</option>';
+                  foreach ($bloodOpts as $b) { if ($b==='') continue; $sel = ($curBlood===$b)?'selected':''; echo '<option value="'.htmlspecialchars($b).'" '.$sel.'>'.htmlspecialchars($b).'</option>'; }
+                  ?>
+                </select>
               </div>
             </div>
         
@@ -1354,7 +1386,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
               </div>
               <div class="form-group col-md-4">
                 <label>Zip</label>
-                <input type="text" class="form-control" name="zip" value="<?php echo htmlspecialchars($zip); ?>" />
+                <input type="text" class="form-control" id="zipInput" name="zip" value="<?php echo htmlspecialchars($zip); ?>" />
               </div>
             </div>
             <script>
@@ -1373,6 +1405,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                 };
                 const provSel = document.getElementById('provinceSelect');
                 const distSel = document.getElementById('districtSelect');
+                const zipInput = document.getElementById('zipInput');
                 if (!provSel || !distSel) return;
                 const currentProv = <?php echo json_encode($province); ?> || '';
                 const currentDist = <?php echo json_encode($district); ?> || '';
@@ -1387,8 +1420,22 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
                   distSel.innerHTML = '<option value="">Select District</option>' +
                     list.map(d => `<option value="${d}">${d}</option>`).join('');
                   if (prov === currentProv && list.includes(currentDist)) distSel.value = currentDist;
+                  updateZip();
+                }
+                // Basic district to main postal code map (can be refined as needed)
+                const districtZip = {
+                  "Colombo":"00100","Gampaha":"11000","Kalutara":"12000","Kandy":"20000","Matale":"21000","Nuwara Eliya":"22200",
+                  "Galle":"80000","Matara":"81000","Hambantota":"82000","Jaffna":"40000","Kilinochchi":"42000","Mannar":"41000",
+                  "Mullaitivu":"43000","Vavuniya":"43000","Trincomalee":"31000","Batticaloa":"30000","Ampara":"32000","Kurunegala":"60000",
+                  "Puttalam":"61000","Anuradhapura":"50000","Polonnaruwa":"51000","Badulla":"90000","Monaragala":"91000","Kegalle":"71000","Ratnapura":"70000"
+                };
+                function updateZip(){
+                  if (!zipInput) return;
+                  const d = distSel.value;
+                  if (districtZip[d]) { zipInput.value = districtZip[d]; }
                 }
                 provSel.addEventListener('change', function(){ renderDistricts(this.value); });
+                distSel.addEventListener('change', updateZip);
                 // init
                 renderProvinces();
                 renderDistricts(currentProv);
@@ -1397,11 +1444,6 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <div class="form-group">
               <label>Divisional Secretariat</label>
               <input type="text" class="form-control" name="division" value="<?php echo htmlspecialchars($division); ?>" />
-            </div>
-            <div class="form-group">
-              <label>Student Divisions</label>
-              <input type="text" class="form-control" name="student_divisions" value="<?php echo htmlspecialchars($u_division); ?>" />
-              <small class="form-text text-muted">Optional text field mapped to student_divisions.</small>
             </div>
             <hr/>
             <h6 class="mt-3">People's Bank Details</h6>
@@ -1585,6 +1627,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     if (this.form) this.form.submit();
   });
 })();
+// Phone fields: no client-side validation or normalization as per request
 </script>
 
 <!---BLOCK 03--->
