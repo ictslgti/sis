@@ -13,6 +13,8 @@ $today = date('Y-m-d');
 $department_id=$course_id=$module_id=$academic_year=$staff_id=$weekdays=$timep=$classroom=$start_date=$end_date=$tid=null;
 // Determine if current user is a student and fetch their current course for scoping
 $isSTU = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'STU';
+$isADM = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM';
+$isDIR = isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'DIR';
 $studentCourseId = null;
 if ($isSTU && isset($_SESSION['user_name'])) {
     $sid = mysqli_real_escape_string($con, $_SESSION['user_name']);
@@ -26,6 +28,9 @@ if ($isSTU && isset($_SESSION['user_name'])) {
 }
 
 // Optional Group filter: if provided, use group's course_id and academic_year to scope timetable
+$selectedDept = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
+$selectedCourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
+$selectedYear = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
 $selectedGroup = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
 $groupInfo = null; $groupCourseId = null; $groupAcademicYear = null;
 if ($selectedGroup > 0) {
@@ -36,6 +41,42 @@ if ($selectedGroup > 0) {
         $rg = mysqli_stmt_get_result($stg);
         if ($rg && ($g = mysqli_fetch_assoc($rg))) { $groupInfo = $g; $groupCourseId = $g['course_id']; $groupAcademicYear = $g['academic_year']; }
         mysqli_stmt_close($stg);
+    }
+}
+
+// Load filter option lists
+$departments = [];
+$courses = [];
+$groups = [];
+$years = [];
+if (!$isSTU) {
+    // Departments
+    $rd = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
+    if ($rd) { while ($row = mysqli_fetch_assoc($rd)) { $departments[] = $row; } }
+    // Courses (filtered by department if selected)
+    if ($selectedDept !== '') {
+        $stc = mysqli_prepare($con, "SELECT course_id, course_name, department_id FROM course WHERE department_id = ? ORDER BY course_name");
+        if ($stc) { mysqli_stmt_bind_param($stc, 's', $selectedDept); mysqli_stmt_execute($stc); $rc = mysqli_stmt_get_result($stc); while ($rc && ($r=mysqli_fetch_assoc($rc))) { $courses[]=$r; } mysqli_stmt_close($stc); }
+    } else {
+        $rc = mysqli_query($con, "SELECT course_id, course_name, department_id FROM course ORDER BY course_name");
+        if ($rc) { while ($r = mysqli_fetch_assoc($rc)) { $courses[] = $r; } }
+    }
+    // Academic years (from academic table)
+    $ry = mysqli_query($con, "SELECT academic_year, academic_year_status FROM academic ORDER BY academic_year DESC");
+    if ($ry) { while ($r = mysqli_fetch_assoc($ry)) { $years[] = $r; } }
+    // Groups (filtered by course and/or academic year and/or department)
+    $gsql = "SELECT g.id, g.name, g.course_id, g.academic_year FROM `groups` g LEFT JOIN course c ON c.course_id = g.course_id WHERE 1";
+    $gparams = []; $gtypes = '';
+    if ($selectedDept !== '') { $gsql .= " AND c.department_id = ?"; $gparams[] = $selectedDept; $gtypes .= 's'; }
+    if ($selectedCourse !== '') { $gsql .= " AND g.course_id = ?"; $gparams[] = $selectedCourse; $gtypes .= 's'; }
+    if ($selectedYear !== '') { $gsql .= " AND g.academic_year = ?"; $gparams[] = $selectedYear; $gtypes .= 's'; }
+    $gsql .= " ORDER BY g.created_at DESC";
+    if ($gtypes === '') {
+        $rg = mysqli_query($con, $gsql);
+        if ($rg) { while ($r = mysqli_fetch_assoc($rg)) { $groups[] = $r; } }
+    } else {
+        $stg2 = mysqli_prepare($con, $gsql);
+        if ($stg2) { mysqli_stmt_bind_param($stg2, $gtypes, ...$gparams); mysqli_stmt_execute($stg2); $rg = mysqli_stmt_get_result($stg2); while ($rg && ($r = mysqli_fetch_assoc($rg))) { $groups[] = $r; } mysqli_stmt_close($stg2); }
     }
 }
 ?>
@@ -51,24 +92,15 @@ if ($selectedGroup > 0) {
     <div class="form-row pb-4">
         <div class="col-md-3 col-sm-12">
             <div class="form-row align-items-center">
-                <select class="selectpicker mr-sm-2" id="GroupSelect" name="group_id" data-live-search="true" data-width="100%">
-                    <option value="0" <?php echo ($selectedGroup===0?'selected':'');?>>-- Select a Group (optional) --</option>
-                    <?php
-                    $sql = "SELECT id, name, course_id, academic_year FROM `groups` ORDER BY created_at DESC";
-                    $result = mysqli_query($con, $sql);
-                    if ($result && mysqli_num_rows($result) > 0) {
-                        while($row = mysqli_fetch_assoc($result)) {
-                            echo '<option value="'.(int)$row['id'].'"';
-                            if ($selectedGroup === (int)$row['id']) echo ' selected';
-                            echo '>'.htmlspecialchars($row['name'].' — '.$row['course_id'].' — '.$row['academic_year']).'</option>';
-                        }
-                    } else {
-                        echo '<option value="0" disabled>-- No Groups --</option>';
-                    }
-                    ?>
+                <select class="selectpicker mr-sm-2" id="DepartmentSelect" name="department_id" data-live-search="true" data-width="100%" onchange="this.form.submit()">
+                    <option value="">-- All Departments --</option>
+                    <?php foreach ($departments as $d): ?>
+                        <option value="<?php echo htmlspecialchars($d['department_id']); ?>" <?php echo ($selectedDept===(string)$d['department_id'])?'selected':''; ?>><?php echo htmlspecialchars($d['department_name']); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
+        <?php if (!($isADM || $isDIR)) { ?>
         <div class="col-3">
             <div class="form-row align-items-center">
                 <select class="selectpicker mr-sm-2" id="TeacherName" name="staff_id" data-live-search="true"
@@ -90,27 +122,21 @@ if ($selectedGroup > 0) {
                 </select>
             </div>
         </div>
+        <?php } ?>
 
         <div class="col-md-3 col-sm-12">
             <div class="form-row align-items-center">
                 <select class="selectpicker mr-sm-2" id="Course" onchange="showModule(this.value)" name="course_id"
                     data-live-search="true" data-width="100%">
-                    <option value="null" selected disabled>-- Select a Course --</option>
-                    <?php
-          $sql = "SELECT * FROM `course`";
-          $result = mysqli_query($con, $sql);
-          if (mysqli_num_rows($result) > 0) {
-          while($row = mysqli_fetch_assoc($result)) {
-            echo '<option  value="'.$row["course_id"].'" required>(' . $row["course_id"].') '.$row["course_name"].'</option>';
-          }
-          }else{
-            echo '<option value="null"   selected disabled>-- No Teacher --</option>';
-          }
-          ?>
+                    <option value="">-- All Courses --</option>
+                    <?php foreach ($courses as $c): ?>
+                        <option value="<?php echo htmlspecialchars($c['course_id']); ?>" <?php echo ($selectedCourse===(string)$c['course_id'])?'selected':''; ?>>(<?php echo htmlspecialchars($c['course_id']); ?>) <?php echo htmlspecialchars($c['course_name']); ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
         </div>
 
+        <?php if (!($isADM || $isDIR)) { ?>
         <div class="col-md-3 col-sm-12">
             <div class="form-row align-items-center">
                 <select class="custom-select mr-sm-2" id="Module" name="module_id">
@@ -118,25 +144,31 @@ if ($selectedGroup > 0) {
                 </select>
             </div>
         </div>
+        <?php } ?>
 
         <div class="col-md-2 col-sm-12">
             <div class="form-row align-items-center">
                 <select class="selectpicker mr-sm-2" id="academic_year" name="academic_year" data-live-search="true"
                     data-width="100%">
-                    <option value="null" selected disabled>-- Select a Academic Year --</option>
-                    <?php
-          $sql = "SELECT * FROM `academic` ORDER BY `academic_year` DESC";
-          $result = mysqli_query($con, $sql);
-          if (mysqli_num_rows($result) > 0) {
-          while($row = mysqli_fetch_assoc($result)) {
-            echo '<option  value="'.$row["academic_year"].'"'; 
-            if($row["academic_year_status"]=='Active') echo ' selected ';
-            echo 'required>'.$row["academic_year"].'</option>';
-          }
-          }else{
-            echo '<option value="null"   selected disabled>-- No Teacher --</option>';
-          }
-          ?>
+                    <option value="">-- All Academic Years --</option>
+                    <?php foreach ($years as $y): ?>
+                        <option value="<?php echo htmlspecialchars($y['academic_year']); ?>" <?php echo ($selectedYear===(string)$y['academic_year'] || ($selectedYear==='' && $y['academic_year_status']==='Active'))?'selected':''; ?>><?php echo htmlspecialchars($y['academic_year']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+
+        <div class="col-md-3 col-sm-12">
+            <div class="form-row align-items-center">
+                <select class="selectpicker mr-sm-2" id="GroupSelect" name="group_id" data-live-search="true" data-width="100%">
+                    <option value="0" <?php echo ($selectedGroup===0?'selected':'');?>>-- Select a Group (optional) --</option>
+                    <?php if (!empty($groups)) {
+                        foreach ($groups as $row) {
+                            echo '<option value="'.(int)$row['id'].'"';
+                            if ($selectedGroup === (int)$row['id']) echo ' selected';
+                            echo '>'.htmlspecialchars($row['name'].' — '.$row['course_id'].' — '.$row['academic_year']).'</option>';
+                        }
+                    } else { echo '<option value="0" disabled>-- No Groups --</option>'; } ?>
                 </select>
             </div>
         </div>
@@ -199,6 +231,9 @@ if ($selectedGroup > 0) {
                 $escC = mysqli_real_escape_string($con, $groupCourseId);
                 $escY = mysqli_real_escape_string($con, $groupAcademicYear);
                 $sql .= " AND `course_id` = '".$escC."' AND `academic_year` = '".$escY."'";
+            } elseif ($selectedCourse !== '' || $selectedYear !== '') {
+                if ($selectedCourse !== '') { $sql .= " AND `course_id` = '".mysqli_real_escape_string($con,$selectedCourse)."'"; }
+                if ($selectedYear !== '') { $sql .= " AND `academic_year` = '".mysqli_real_escape_string($con,$selectedYear)."'"; }
             } elseif ($isSTU && $studentCourseId) {
                 $esc = mysqli_real_escape_string($con, $studentCourseId);
                 $sql .= " AND `course_id` = '".$esc."'";
@@ -232,6 +267,9 @@ if ($selectedGroup > 0) {
                 $escC = mysqli_real_escape_string($con, $groupCourseId);
                 $escY = mysqli_real_escape_string($con, $groupAcademicYear);
                 $sql .= " AND `course_id` = '".$escC."' AND `academic_year` = '".$escY."'";
+            } elseif ($selectedCourse !== '' || $selectedYear !== '') {
+                if ($selectedCourse !== '') { $sql .= " AND `course_id` = '".mysqli_real_escape_string($con,$selectedCourse)."'"; }
+                if ($selectedYear !== '') { $sql .= " AND `academic_year` = '".mysqli_real_escape_string($con,$selectedYear)."'"; }
             } elseif ($isSTU && $studentCourseId) { $esc = mysqli_real_escape_string($con, $studentCourseId); $sql .= " AND `course_id` = '".$esc."'"; }
             $result = mysqli_query($con, $sql);
             if (mysqli_num_rows($result) > 0) {
@@ -260,6 +298,9 @@ if ($selectedGroup > 0) {
                 $escC = mysqli_real_escape_string($con, $groupCourseId);
                 $escY = mysqli_real_escape_string($con, $groupAcademicYear);
                 $sql .= " AND `course_id` = '".$escC."' AND `academic_year` = '".$escY."'";
+            } elseif ($selectedCourse !== '' || $selectedYear !== '') {
+                if ($selectedCourse !== '') { $sql .= " AND `course_id` = '".mysqli_real_escape_string($con,$selectedCourse)."'"; }
+                if ($selectedYear !== '') { $sql .= " AND `academic_year` = '".mysqli_real_escape_string($con,$selectedYear)."'"; }
             } elseif ($isSTU && $studentCourseId) { $esc = mysqli_real_escape_string($con, $studentCourseId); $sql .= " AND `course_id` = '".$esc."'"; }
             $result = mysqli_query($con, $sql);
             if (mysqli_num_rows($result) > 0) {
@@ -288,6 +329,9 @@ if ($selectedGroup > 0) {
                 $escC = mysqli_real_escape_string($con, $groupCourseId);
                 $escY = mysqli_real_escape_string($con, $groupAcademicYear);
                 $sql .= " AND `course_id` = '".$escC."' AND `academic_year` = '".$escY."'";
+            } elseif ($selectedCourse !== '' || $selectedYear !== '') {
+                if ($selectedCourse !== '') { $sql .= " AND `course_id` = '".mysqli_real_escape_string($con,$selectedCourse)."'"; }
+                if ($selectedYear !== '') { $sql .= " AND `academic_year` = '".mysqli_real_escape_string($con,$selectedYear)."'"; }
             } elseif ($isSTU && $studentCourseId) { $esc = mysqli_real_escape_string($con, $studentCourseId); $sql .= " AND `course_id` = '".$esc."'"; }
             $result = mysqli_query($con, $sql);
             if (mysqli_num_rows($result) > 0) {

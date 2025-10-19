@@ -487,14 +487,38 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
           <?php } ?>
 
           <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM') { ?>
-            <li>
-              <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/LoginActivity.php">
-                <i class="fas fa-user-clock"></i>
-                <span>Login Activity</span>
+            <!-- Admin: Academic menu -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Academic</span>
               </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AcademicYear.php">Academic Years</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AddAcademicYear.php">Add Academic Year</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add Course</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules</a></li>
+                </ul>
+              </div>
+            </li>
+            <!-- Admin: Admin menu -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-tools"></i>
+                <span>Admin</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/LoginActivity.php">Login Activity</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffPositionType.php">Staff Position Types</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/Notice.php">Notice Info</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/AddNotice.php">Add Notice</a></li>
+                </ul>
+              </div>
             </li>
           <?php } ?>
-
 
           <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO') { ?>
             <!-- SAO: Hostel with submenu -->
@@ -544,26 +568,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
             </li>
           <?php } ?>
 
-          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD', 'IN1', 'IN2', 'LE1', 'LE2', 'ADM'])) { ?>
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-users"></i>
-                <span>Groups</span>
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-                  <?php if ($_SESSION['user_type'] === 'HOD') { ?>
-                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Groups.php">Groups</a></li>
-                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/AddGroup.php">Add Group</a></li>
-                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Reports.php">Reports</a></li>
-                  <?php } else { ?>
-                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Groups.php">My Groups</a></li>
-                  <?php } ?>
-                </ul>
-              </div>
-            </li>
-          <?php } ?>
-          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD', 'IN1', 'IN2', 'LE1', 'LE2', 'ADM'])) { ?>
+          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD', 'IN1', 'IN2', 'LE1', 'LE2'])) { ?>
             <li class="sidebar-dropdown">
               <a href="#">
                 <i class="fas fa-university"></i>
@@ -581,23 +586,23 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                     <?php } ?>
                   </li>
                   <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AcademicYear.php">Academic Years Info</a>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AcademicYear.php">Academic Years</a>
                   </li>
                   <li>
                     <?php if (($_SESSION['user_type'] == 'ADM')) { ?>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AddAcademicYear.php">Add a Academic Year</a>
+                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AddAcademicYear.php">Add Academic Year</a>
                     <?php } ?>
                   </li>
                   <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses Info</a>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses</a>
                   </li>
                   <li>
                     <?php if (($_SESSION['user_type'] == 'ADM') || ($_SESSION['user_type'] == 'HOD')) { ?>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add a Course</a>
+                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add Course</a>
                     <?php } ?>
                   </li>
                   <li>
-                    <?php if (($_SESSION['user_type'] == 'ADM') || ($_SESSION['user_type'] == 'HOD')) { ?><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules Info</a><?php } ?>
+                    <?php if (($_SESSION['user_type'] == 'ADM') || ($_SESSION['user_type'] == 'HOD')) { ?><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules</a><?php } ?>
                   </li>
                   <!-- <li>
                 <?php if (($_SESSION['user_type'] == 'ADM') || ($_SESSION['user_type'] == 'HOD')) { ?><a href="../module/ModuleEnrollement.php">Add a Module<?php } ?>
@@ -636,7 +641,8 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
               </a>
             </li>
           <?php } ?>
-          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO' && !is_role('IN2')) { ?> <li class="sidebar-dropdown">
+          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO' && !is_role('IN2')) { ?> 
+            <li class="sidebar-dropdown">
               <a href="#">
                 <i class="fas fa-user-tie"></i>
                 <span>Staffs</span>
@@ -649,11 +655,8 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffManage.php">Manage Staff</a>
 
                   </li>
-                  <li>
-                    <?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffPositionType.php">Staff Position Types</a>
-                    <?php } ?>
-                  </li>
+                  <!-- Staff Position Types moved under Admin menu for ADM -->
+
                   <?php if ($_SESSION['user_type'] == 'HOD') { ?>
                     <li>
                       <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffModuleEnrollment.php">Module Enrollment</a>
@@ -666,7 +669,8 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
               </div>
             </li>
           <?php } ?>
-          <?php if ($_SESSION['user_type'] == 'ADM') { ?> <li class="sidebar-dropdown">
+          <?php if ($_SESSION['user_type'] == 'ADM') { ?> 
+            <li class="sidebar-dropdown">
               <a href="#">
                 <i class="fas fa-user-graduate"></i>
                 <span>Students</span>
@@ -696,7 +700,8 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                   </li>
                 </ul>
               </div>
-            </li> <?php } ?>
+            </li> 
+          <?php } ?>
           <?php if (can_view(['HOD'])) { ?>
             <li>
               <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/DepartmentStudents.php">
@@ -722,16 +727,12 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'IN1', 'IN2', 'IN3'], tru
                     </li>
                   <?php } ?>
                   <hr>
-                  <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['WAR', 'HOD', 'ADM'])) { ?>
+                  <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['WAR', 'HOD'])) { ?>
                     <li>
                       <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/Notice.php">Notice Info</a>
                     </li>
                   <?php } ?>
-                  <?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/AddNotice.php">Add a Notice</a>
-                    </li>
-                  <?php } ?>
+                  <!-- ADM notice links are available under Admin menu -->
                 </ul>
               </div>
             </li>
