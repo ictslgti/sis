@@ -181,6 +181,17 @@ if ($export) {
   echo $html; exit;
 }
 
+$sumAmount = 0.0; $sumQty = 0; $sumTotal = 0.0;
+if ($group === 'detailed') {
+  foreach ($rows as $r) { $sumAmount += (float)$r['pays_amount']; $sumQty += (int)$r['pays_qty']; $sumTotal += (float)$r['total']; }
+} elseif ($group === 'student') {
+  foreach ($agg as $a) { $sumAmount += (float)$a['amount']; $sumQty += (int)$a['qty']; $sumTotal += (float)$a['total']; }
+} elseif ($group === 'department') {
+  foreach ($agg as $a) { $sumAmount += (float)$a['amount']; $sumQty += (int)$a['qty']; $sumTotal += (float)$a['total']; }
+} else { // type
+  foreach ($agg as $a) { $sumAmount += (float)$a['amount']; $sumQty += (int)$a['qty']; $sumTotal += (float)$a['total']; }
+}
+
 $title = 'Payments Summary | SLGTI';
 require_once __DIR__ . '/../head.php';
 require_once __DIR__ . '/../menu.php';
@@ -309,6 +320,16 @@ require_once __DIR__ . '/../menu.php';
                 <tr><td colspan="9" class="text-center text-muted">No data</td></tr>
               <?php endif; ?>
             </tbody>
+            <?php if (!empty($rows)): ?>
+            <tfoot>
+              <tr class="font-weight-bold">
+                <td colspan="6" class="text-right">Grand Total</td>
+                <td class="text-right"><?php echo number_format((float)$sumAmount,2); ?></td>
+                <td class="text-right"><?php echo (int)$sumQty; ?></td>
+                <td class="text-right"><?php echo number_format((float)$sumTotal,2); ?></td>
+              </tr>
+            </tfoot>
+            <?php endif; ?>
           </table>
         </div>
       <?php elseif ($group === 'student'): ?>
@@ -336,6 +357,17 @@ require_once __DIR__ . '/../menu.php';
                 <tr><td colspan="5" class="text-center text-muted">No data</td></tr>
               <?php endif; ?>
             </tbody>
+            <?php if (!empty($agg)): ?>
+            <tfoot>
+              <tr class="font-weight-bold">
+                <td class="text-right">Grand Total</td>
+                <td></td>
+                <td class="text-right"><?php echo number_format((float)$sumAmount,2); ?></td>
+                <td class="text-right"><?php echo (int)$sumQty; ?></td>
+                <td class="text-right"><?php echo number_format((float)$sumTotal,2); ?></td>
+              </tr>
+            </tfoot>
+            <?php endif; ?>
           </table>
         </div>
       <?php elseif ($group === 'department'): ?>
@@ -361,6 +393,16 @@ require_once __DIR__ . '/../menu.php';
                 <tr><td colspan="4" class="text-center text-muted">No data</td></tr>
               <?php endif; ?>
             </tbody>
+            <?php if (!empty($agg)): ?>
+            <tfoot>
+              <tr class="font-weight-bold">
+                <td class="text-right">Grand Total</td>
+                <td class="text-right"><?php echo number_format((float)$sumAmount,2); ?></td>
+                <td class="text-right"><?php echo (int)$sumQty; ?></td>
+                <td class="text-right"><?php echo number_format((float)$sumTotal,2); ?></td>
+              </tr>
+            </tfoot>
+            <?php endif; ?>
           </table>
         </div>
       <?php else: ?>
