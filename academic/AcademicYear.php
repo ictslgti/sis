@@ -22,7 +22,7 @@ include_once("../menu.php");
         <small class="text-light-50">Manage academic years and dates</small>
       </div>
       <?php if(($_SESSION['user_type'] =='ADM')) { ?>
-        <a href="AddAcademicYear.php" class="btn btn-success"><i class="fas fa-plus"></i> Add Academic Year</a>
+        <a href="academic/AddAcademicYear.php" class="btn btn-success"><i class="fas fa-plus"></i> Add Academic Year</a>
       <?php }?>
     </div>
     <div class="card-body p-0">
@@ -85,8 +85,8 @@ include_once("../menu.php");
           echo '<td><span class="badge ' . $statusClass . '">' . htmlspecialchars($row["academic_year_status"]) . '</span></td>';
           if(($_SESSION['user_type'] =='ADM')) {
             echo '<td class="text-right">';
-            echo '<a href="AddAcademicYear.php?edit=' . rawurlencode($row["academic_year"]) . '" class="btn btn-sm btn-warning mr-1"><i class="far fa-edit"></i> Edit</a>';
-            echo '<a href="?delete=' . rawurlencode($row["academic_year"]) . '&csrf_token=' . urlencode($_SESSION['csrf_token']) . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure you want to delete this academic year?\');"><i class="fas fa-trash"></i> Delete</a>';
+            echo '<a href="academic/AddAcademicYear.php?edit=' . rawurlencode($row["academic_year"]) . '" class="btn btn-sm btn-warning mr-1"><i class="far fa-edit"></i> Edit</a>';
+            echo '<a href="academic/AcademicYear.php?delete=' . rawurlencode($row["academic_year"]) . '&csrf_token=' . urlencode($_SESSION['csrf_token']) . '" class="btn btn-sm btn-danger" onclick="return confirm(\'Are you sure you want to delete this academic year?\');"><i class="fas fa-trash"></i> Delete</a>';
             echo '</td>';
           }
           echo '</tr>';

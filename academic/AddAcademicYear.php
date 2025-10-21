@@ -54,7 +54,7 @@ if(isset($_POST['Add'])){
     if ($stmt = mysqli_prepare($con, $sql)) {
       mysqli_stmt_bind_param($stmt, 'ssssss', $academic_year, $first_semi_start_date, $first_semi_end_date, $second_semi_start_date, $second_semi_end_date, $academic_year_status);
       if (mysqli_stmt_execute($stmt)) {
-        ay_safe_redirect('AcademicYear.php?status=added');
+        ay_safe_redirect('academic/AcademicYear.php?status=added');
       } else {
         echo '<div class="container mt-3"><div class="alert alert-danger">Error: ' . htmlspecialchars(mysqli_error($con)) . '</div></div>';
       }
@@ -76,7 +76,7 @@ if(isset($_POST['Edit']) && isset($_GET['edit'])){
     if ($stmt = mysqli_prepare($con, $sql)) {
       mysqli_stmt_bind_param($stmt, 'ssssss', $first_semi_start_date, $first_semi_end_date, $second_semi_start_date, $second_semi_end_date, $academic_year_status, $key);
       if (mysqli_stmt_execute($stmt)) {
-        ay_safe_redirect('AcademicYear.php?status=updated');
+        ay_safe_redirect('academic/AcademicYear.php?status=updated');
       } else {
         echo '<div class="container mt-3"><div class="alert alert-danger">Error: ' . htmlspecialchars(mysqli_error($con)) . '</div></div>';
       }
@@ -131,7 +131,7 @@ if(isset($_POST['Edit']) && isset($_GET['edit'])){
         </div>
 
         <div class="d-flex justify-content-between">
-          <a href="AcademicYear.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Back</a>
+          <a href="academic/AcademicYear.php" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> Back</a>
           <div>
             <?php if(isset($_GET['edit'])) { ?>
               <button type="submit" name="Edit" class="btn btn-primary"><i class="far fa-save"></i> Update</button>
