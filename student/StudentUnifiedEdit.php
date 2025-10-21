@@ -598,7 +598,9 @@ include_once __DIR__ . '/../menu.php';
                   }
                   // If a compressed data URL is present, avoid sending the original large file
                   // to prevent 413 (Request Entity Too Large) at the Nginx layer.
-                  // Keep the file input enabled so server has a fallback even if it cannot process data URL
+                  if (hidden && typeof hidden.value === 'string' && hidden.value.indexOf('data:image') === 0) {
+                    fileInput.disabled = true;
+                  }
                 });
               })();
             </script>
