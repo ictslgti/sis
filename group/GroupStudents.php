@@ -16,6 +16,8 @@ if (!in_array($role, ['HOD','IN1','IN2','IN3'], true)) {
 }
 
 $group_id = isset($_GET['group_id']) ? (int)$_GET['group_id'] : 0;
+// Allow alias 'group__id' (with double underscore) to be tolerant of URL typos
+if ($group_id <= 0 && isset($_GET['group__id'])) { $group_id = (int)$_GET['group__id']; }
 if ($group_id<=0) {
   if (!empty($redirect) && $redirect === 'group_timetable') {
     $_SESSION['info'] = 'Please select a group to view its timetable';
@@ -80,11 +82,23 @@ $q = mysqli_prepare($con,'SELECT gs.id, gs.student_id, s.student_fullname
                           ORDER BY s.student_fullname, s.student_id');
 if ($q){ mysqli_stmt_bind_param($q,'i',$group_id); mysqli_stmt_execute($q); $res=mysqli_stmt_get_result($q); while($res && ($r=mysqli_fetch_assoc($res))){ $cur[]=$r; } mysqli_stmt_close($q);} 
 
-// Candidates: by course + academic year from student_enroll not yet in group
+// Candidates: by course + academic year from student_enroll not yet assigned to any active group for the same course & academic year
 $candidates = [];
-$qc = mysqli_prepare($con,'SELECT se.student_id, s.student_fullname FROM student_enroll se INNER JOIN student s ON s.student_id=se.student_id WHERE se.course_id=? AND se.academic_year=? AND se.student_id NOT IN (SELECT student_id FROM group_students WHERE group_id=?) ORDER BY s.student_fullname');
+$qc = mysqli_prepare($con,'SELECT se.student_id, s.student_fullname 
+                          FROM student_enroll se 
+                          INNER JOIN student s ON s.student_id=se.student_id 
+                          WHERE se.course_id=? AND se.academic_year=? 
+                            AND NOT EXISTS (
+                              SELECT 1 FROM group_students gs 
+                              JOIN `groups` g2 ON g2.id = gs.group_id 
+                              WHERE gs.student_id = se.student_id 
+                                AND gs.status = "active"
+                                AND g2.course_id = se.course_id 
+                                AND g2.academic_year = se.academic_year
+                            )
+                          ORDER BY s.student_fullname');
 if ($qc){
-  mysqli_stmt_bind_param($qc,'ssi',$grp['course_id'],$grp['academic_year'],$group_id);
+  mysqli_stmt_bind_param($qc,'ss',$grp['course_id'],$grp['academic_year']);
   mysqli_stmt_execute($qc);
   $resc=mysqli_stmt_get_result($qc);
   while($resc && ($r=mysqli_fetch_assoc($resc))){ $candidates[]=$r; }
@@ -92,9 +106,22 @@ if ($qc){
 }
 // Fallback: if academic_year does not match, show active enrollments for this course regardless of year
 if (empty($candidates)) {
-  $qf = mysqli_prepare($con,'SELECT DISTINCT se.student_id, s.student_fullname FROM student_enroll se INNER JOIN student s ON s.student_id=se.student_id WHERE se.course_id=? AND COALESCE(se.student_enroll_status,\'\') IN (\'Following\',\'Active\') AND se.student_id NOT IN (SELECT student_id FROM group_students WHERE group_id=?) ORDER BY s.student_fullname');
+  $qf = mysqli_prepare($con,'SELECT DISTINCT se.student_id, s.student_fullname 
+                             FROM student_enroll se 
+                             INNER JOIN student s ON s.student_id=se.student_id 
+                             WHERE se.course_id=? 
+                               AND COALESCE(se.student_enroll_status,\'\') IN (\'Following\',\'Active\') 
+                               AND NOT EXISTS (
+                                 SELECT 1 FROM group_students gs 
+                                 JOIN `groups` g2 ON g2.id = gs.group_id 
+                                 WHERE gs.student_id = se.student_id 
+                                   AND gs.status = "active"
+                                   AND g2.course_id = se.course_id 
+                                   AND g2.academic_year = ?
+                               )
+                             ORDER BY s.student_fullname');
   if ($qf){
-    mysqli_stmt_bind_param($qf,'si',$grp['course_id'],$group_id);
+    mysqli_stmt_bind_param($qf,'ss',$grp['course_id'],$grp['academic_year']);
     mysqli_stmt_execute($qf);
     $resf=mysqli_stmt_get_result($qf);
     while($resf && ($r=mysqli_fetch_assoc($resf))){ $candidates[]=$r; }
@@ -124,9 +151,7 @@ if (empty($candidates)) {
             <label for="student_ids">Select Students</label>
             <select name="student_ids[]" id="student_ids" class="form-control select2" multiple size="15">
               <?php foreach ($candidates as $s): ?>
-                <option value="<?php echo h($s['student_id']); ?>">
-                  <?php echo h($s['student_id'] . ' - ' . $s['student_fullname']); ?>
-                </option>
+                <option value="<?php echo h($s['student_id']); ?>"><?php echo h($s['student_fullname']); ?></option>
               <?php endforeach; ?>
             </select>
             <small class="form-text text-muted">Tip: Hold Ctrl (Cmd on Mac) to select multiple students.</small>
