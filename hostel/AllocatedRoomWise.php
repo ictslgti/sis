@@ -10,6 +10,8 @@ include_once __DIR__ . '/../head.php';
 include_once __DIR__ . '/../menu.php';
 
 function esc($s){ return htmlspecialchars((string)$s, ENT_QUOTES, 'UTF-8'); }
+// Base path helper for links
+$base = defined('APP_BASE') ? APP_BASE : '';
 
 // Selected filters
 $hostelId = isset($_GET['hostel_id']) ? (int)$_GET['hostel_id'] : 0;
@@ -126,12 +128,17 @@ if ($blockId > 0) {
                     <ul class="list-unstyled mb-0">
                       <?php foreach ($rows as $rr): if (empty($rr['student_id'])) continue; ?>
                         <li class="mb-1">
-                          <div class="d-flex justify-content-between">
+                          <div class="d-flex justify-content-between align-items-center">
                             <span>
                               <?php echo esc($rr['student_ininame'] ?: $rr['student_fullname']); ?>
                               <span class="text-muted small">(<?php echo esc($rr['student_id']); ?>)</span>
                             </span>
-                            <span class="small text-muted text-right"><?php echo esc($rr['department_name']); ?></span>
+                            <span class="d-flex align-items-center">
+                              <span class="small text-muted mr-2"><?php echo esc($rr['department_name']); ?></span>
+                              <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/student/Student_profile.php?Sid=<?php echo urlencode($rr['student_id']); ?>" title="View profile">
+                                View
+                              </a>
+                            </span>
                           </div>
                         </li>
                       <?php endforeach; ?>

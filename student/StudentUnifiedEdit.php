@@ -801,7 +801,7 @@ include_once __DIR__ . '/../menu.php';
           <div class="form-group col-md-2">
             <label>Status</label>
             <select class="form-control" name="student_enroll_status" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
-              <?php foreach (["Following","Completed","Dropout","Long Absent"] as $st): ?>
+              <?php foreach (["Following","Internship","Completed","Dropout"] as $st): ?>
                 <option value="<?php echo h($st); ?>" <?php echo (($enroll['student_enroll_status'] ?? '')===$st?'selected':''); ?>><?php echo h($st); ?></option>
               <?php endforeach; ?>
             </select>

@@ -212,6 +212,8 @@ $fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $fgender = isset($_GET['gender']) ? trim($_GET['gender']) : '';
 // Group filter (HOD group-wise)
 $fgroup  = isset($_GET['group_id']) ? trim($_GET['group_id']) : '';
+// Academic Year filter
+$fyear   = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
 
 // For DIR (view-only), restrict to Active students regardless of requested filter
 if ($is_dir) {
@@ -272,6 +274,9 @@ if ($fgroup !== '') {
   $gid = (int)$fgroup;
   $where[] = "EXISTS (SELECT 1 FROM `group_students` AS `gs` WHERE `gs`.`student_id` = `s`.`student_id` AND `gs`.`group_id` = {$gid} AND `gs`.`status` = 'active')";
 }
+if ($fyear !== '') {
+  $where[] = "e.academic_year = '" . mysqli_real_escape_string($con, $fyear) . "'";
+}
 if ($fconduct === 'accepted') {
   $where[] = "s.student_conduct_accepted_at IS NOT NULL";
 } elseif ($fconduct === 'pending') {
@@ -301,6 +306,7 @@ if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
       'gender' => $fgender,
       'conduct' => $fconduct,
       'group_id' => $fgroup,
+      'academic_year' => $fyear,
     ])) . '</div>'
     . '<div><strong>SQL (list)</strong> <code style="white-space:pre-wrap;">' . h($sqlList) . '</code></div>'
     . '<div><strong>Rows</strong> ' . (int)$total_count . '</div>'
@@ -372,11 +378,19 @@ if ($r = mysqli_query($con, "SELECT course_id, course_name, department_id FROM c
   mysqli_free_result($r);
 }
 
+// Load academic years (descending)
+$years = [];
+if ($r = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+  while ($row = mysqli_fetch_assoc($r)) { $years[] = $row['academic_year']; }
+  mysqli_free_result($r);
+}
+
 // Load groups list (scoped by department/course when provided)
 $groups = [];
-$grpSql = "SELECT g.id, g.name, g.course_id, c.department_id FROM `groups` g JOIN `course` c ON c.course_id = g.course_id WHERE 1=1";
+$grpSql = "SELECT g.id, g.name, g.course_id, g.academic_year, c.department_id FROM `groups` g JOIN `course` c ON c.course_id = g.course_id WHERE 1=1";
 if ($fdept !== '') { $grpSql .= " AND c.department_id='" . mysqli_real_escape_string($con, $fdept) . "'"; }
 if ($fcourse !== '') { $grpSql .= " AND g.course_id='" . mysqli_real_escape_string($con, $fcourse) . "'"; }
+if ($fyear !== '') { $grpSql .= " AND g.academic_year='" . mysqli_real_escape_string($con, $fyear) . "'"; }
 $grpSql .= " ORDER BY g.name";
 if ($r = mysqli_query($con, $grpSql)) {
   while ($row = mysqli_fetch_assoc($r)) { $groups[] = $row; }
@@ -469,11 +483,20 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                   </select>
                 </div>
                 <div class="form-group col-12 col-md-4">
+                  <label for="fyear" class="small text-muted mb-1">Academic Year</label>
+                  <select id="fyear" name="academic_year" class="form-control">
+                    <option value="">-- Any --</option>
+                    <?php foreach ($years as $y): ?>
+                      <option value="<?php echo h($y); ?>" <?php echo ($fyear === $y ? 'selected' : ''); ?>><?php echo h($y); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-4">
                   <label for="fgroup" class="small text-muted mb-1">Group</label>
                   <select id="fgroup" name="group_id" class="form-control">
                     <option value="">-- Any --</option>
                     <?php foreach ($groups as $g): ?>
-                      <option value="<?php echo (int)$g['id']; ?>" data-dept="<?php echo h($g['department_id']); ?>" data-course="<?php echo h($g['course_id']); ?>" <?php echo ($fgroup !== '' && (int)$fgroup === (int)$g['id'] ? 'selected' : ''); ?>><?php echo h($g['name']); ?></option>
+                      <option value="<?php echo (int)$g['id']; ?>" data-dept="<?php echo h($g['department_id']); ?>" data-course="<?php echo h($g['course_id']); ?>" data-year="<?php echo h($g['academic_year']); ?>" <?php echo ($fgroup !== '' && (int)$fgroup === (int)$g['id'] ? 'selected' : ''); ?>><?php echo h($g['name']); ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
@@ -572,11 +595,12 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
         }
       </style>
       <script>
-        // Client-side filter: limit course options by selected department
+        // Client-side filter: limit course options by selected department and group options by department/course/year
         (function() {
           var dept = document.getElementById('fdept');
           var course = document.getElementById('fcourse');
           var groupSel = document.getElementById('fgroup');
+          var yearSel = document.getElementById('fyear');
           if (!dept || !course) return;
           var allCourses = Array.prototype.slice.call(course.options).map(function(o) {
             return {
@@ -586,7 +610,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
             };
           });
           var allGroups = groupSel ? Array.prototype.slice.call(groupSel.options).map(function(o){
-            return { value:o.value, text:o.text, dept:o.getAttribute('data-dept'), course:o.getAttribute('data-course') };
+            return { value:o.value, text:o.text, dept:o.getAttribute('data-dept'), course:o.getAttribute('data-course'), year:o.getAttribute('data-year') };
           }) : [];
 
           function apply() {
@@ -620,6 +644,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
             // Rebuild groups based on dept and selected course
             if (groupSel) {
               var selectedCourse = course.value;
+              var selectedYear = yearSel ? yearSel.value : '';
               var keepGroup = groupSel.value;
               while (groupSel.options.length) groupSel.remove(0);
               var g0 = document.createElement('option');
@@ -628,7 +653,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
               groupSel.add(g0);
               allGroups.forEach(function(it){
                 if (!it.value) return;
-                if (( !d || it.dept === d ) && ( !selectedCourse || it.course === selectedCourse )) {
+                if (( !d || it.dept === d ) && ( !selectedCourse || it.course === selectedCourse ) && ( !selectedYear || it.year === selectedYear )) {
                   var go = document.createElement('option');
                   go.value = it.value; go.text = it.text;
                   groupSel.add(go);
@@ -643,6 +668,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
           }
           dept.addEventListener('change', apply);
           if (course) course.addEventListener('change', apply);
+          if (yearSel) yearSel.addEventListener('change', apply);
           // Initialize on load
           apply();
         })();

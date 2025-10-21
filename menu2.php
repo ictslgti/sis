@@ -143,14 +143,17 @@ $__content_container = 'container';
       <?php if (in_array($u_t, ['FIN', 'ACC'], true)): ?>
         <li class="nav-item dropdown">
           <a class="nav-link dropdown-toggle" href="#" id="finMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            <i class="fas fa-coins"></i> Finance
+            <i class="fas fa-money-bill-wave"></i> Finance
           </a>
           <div class="dropdown-menu" aria-labelledby="finMenu">
-            <a class="dropdown-item" href="<?php echo $base; ?>/finance/StudentBankDetails.php"><i class="fas fa-university mr-1"></i> Student Bank Details</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/CollectPayment.php"><i class="fas fa-cash-register mr-1"></i> Collect Payment</a>
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/PaymentsSummary.php"><i class="fas fa-table mr-1"></i> Payments Summary</a>
             
             <a class="dropdown-item" href="<?php echo $base; ?>/finance/ManagePaymentTypes.php"><i class="fas fa-tags mr-1"></i> Manage Payment Types</a>
+            <?php if ($u_t === 'ACC'): ?>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="<?php echo $base; ?>/finance/PaymentEditDelete.php"><i class="fas fa-edit mr-1"></i> Edit/Delete Payments</a>
+            <?php endif; ?>
           </div>
         </li>
 
