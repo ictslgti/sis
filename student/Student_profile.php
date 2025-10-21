@@ -977,7 +977,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
             <span class="badge badge-light mr-2 my-1 px-2 py-1" style="font-size: 0.95rem;">Department: <?php echo htmlspecialchars($depth); ?></span>
           <?php endif; ?>
           <?php if ($coid): ?>
-            <span class="badge badge-light mr-2 my-1 px-2 py-1" style="font-size: 0.95rem; display:inline-block; max-width:100%; white-space: normal; overflow:hidden; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; display: -webkit-box;">Course: <?php echo htmlspecialchars($coid); ?></span>
+            <span class="badge badge-light mr-2 my-1 px-2 py-1 text-left d-block" style="font-size: 0.95rem; max-width:100%; white-space: normal; overflow:hidden; text-overflow: ellipsis; -webkit-box-orient: vertical; -webkit-line-clamp: 2; display: -webkit-box; text-align:left;">Course: <?php echo htmlspecialchars($coid); ?></span>
           <?php endif; ?>
           
          
