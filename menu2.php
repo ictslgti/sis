@@ -173,8 +173,8 @@ $__content_container = 'container';
         </li>
       <?php endif; ?>
 
-      <!-- Director/Accounts quick links -->
-      <?php if (in_array($u_t, ['DIR', 'ACC'], true)): ?>
+      <!-- Director/Accounts/Finance quick links -->
+      <?php if (in_array($u_t, ['DIR', 'ACC', 'FIN'], true)): ?>
 
         <li class="nav-item">
           <a class="nav-link" href="<?php echo $base; ?>/hostel/AllocatedRoomWise.php">
