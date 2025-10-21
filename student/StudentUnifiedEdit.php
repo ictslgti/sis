@@ -203,12 +203,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Fallback: handle uploaded file and compress to JPEG
     if (!$saved) {
       if (!isset($_FILES['profile_img']) || $_FILES['profile_img']['error'] !== UPLOAD_ERR_OK) {
-        $errors[] = 'Select an image to upload.';
+        $err = isset($_FILES['profile_img']['error']) ? (int)$_FILES['profile_img']['error'] : UPLOAD_ERR_NO_FILE;
+        if ($err === UPLOAD_ERR_INI_SIZE) { $errors[] = 'Image exceeds server limit (upload_max_filesize).'; }
+        else if ($err === UPLOAD_ERR_FORM_SIZE) { $errors[] = 'Image exceeds form limit.'; }
+        else if ($err === UPLOAD_ERR_PARTIAL) { $errors[] = 'Image was only partially uploaded.'; }
+        else if ($err === UPLOAD_ERR_NO_FILE) { $errors[] = 'Select an image to upload.'; }
+        else if ($err === UPLOAD_ERR_NO_TMP_DIR) { $errors[] = 'Missing temporary folder on server.'; }
+        else if ($err === UPLOAD_ERR_CANT_WRITE) { $errors[] = 'Failed to write file to disk.'; }
+        else if ($err === UPLOAD_ERR_EXTENSION) { $errors[] = 'Upload stopped by a PHP extension.'; }
+        else { $errors[] = 'Image upload failed.'; }
       } else {
         $up = $_FILES['profile_img'];
         $tmp = $up['tmp_name'];
         if ($canWriteDest && $gdAvailable) {
           $jpeg = ue_cover_to_id_jpeg($tmp, true, 600, 800, 85, 200*1024);
+
           if ($jpeg === false) {
             // As a last resort, move original
             $saved = @move_uploaded_file($tmp, $dest);
@@ -579,6 +588,9 @@ include_once __DIR__ . '/../menu.php';
                   // If we have generated a data URL, server will use it. Otherwise proceed as-is.
                   if (!fileInput || !fileInput.files || !fileInput.files.length) {
                     e.preventDefault(); alert('Select an image to upload.'); return false;
+                  }
+                  if (fileInput && fileInput.files && fileInput.files[0] && fileInput.files[0].size > 10*1024*1024) {
+                    e.preventDefault(); alert('Image is larger than 10MB. Please choose a smaller image.'); return false;
                   }
                   // If a compressed data URL is present, avoid sending the original large file
                   // to prevent 413 (Request Entity Too Large) at the Nginx layer.

@@ -959,19 +959,17 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
     <!-- <button type="button" class="btn btn-outline-success">Success</button> -->
     </div>
     <div class="col-12 col-md-9">
-        <?php if ($__showEditBtn): ?>
-        <div class="d-flex justify-content-end mb-2">
-          <a href="/student/Student_profile.php?edit=1" class="btn btn-sm btn-outline-primary"><i class="fa fa-edit"></i> Edit Profile</a>
-        </div>
-        <?php endif; ?>
         <div class="mb-2">
-          <div class="mb-2">
-            <h5 class="text-muted my-1"><b><?php echo htmlspecialchars(($title ? ($title.'. ') : '').($fname ?? '')); ?> | Level: <?php echo htmlspecialchars($level ?? ''); ?></b></h5>
-            <div class="text-muted small my-1">ID: <?php echo htmlspecialchars(isset($username) ? $username : ($__profileSid ?? '')); ?> | NIC: <?php echo htmlspecialchars($nic ?? ''); ?><?php if (!empty($level)): ?> <?php endif; ?></div>
-            <?php if ($hasUpdatedAt): ?>
-            <small class="text-muted d-block">Last Edited: <?php echo $updatedAt ? date('Y-m-d H:i', strtotime($updatedAt)) : 'N/A'; ?></small>
+          <div class="d-flex justify-content-between align-items-center mb-1">
+            <h5 class="text-muted my-1 mb-0"><b><?php echo htmlspecialchars(($title ? ($title.'. ') : '').($fname ?? '')); ?> | Level: <?php echo htmlspecialchars($level ?? ''); ?></b></h5>
+            <?php if ($__showEditBtn): ?>
+              <a href="/student/Student_profile.php?edit=1" class="btn btn-sm btn-primary"><i class="fa fa-edit"></i> Edit Profile</a>
             <?php endif; ?>
           </div>
+          <div class="text-muted small my-1">ID: <?php echo htmlspecialchars(isset($username) ? $username : ($__profileSid ?? '')); ?> | NIC: <?php echo htmlspecialchars($nic ?? ''); ?><?php if (!empty($level)): ?> <?php endif; ?></div>
+          <?php if ($hasUpdatedAt): ?>
+          <small class="text-muted d-block">Last Edited: <?php echo $updatedAt ? date('Y-m-d H:i', strtotime($updatedAt)) : 'N/A'; ?></small>
+          <?php endif; ?>
         </div>
        
         <div class="mb-2 d-flex flex-column align-items-start py-1">
