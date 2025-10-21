@@ -189,13 +189,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $saved = false;
     $canWriteDest = is_dir($dir) && is_writable($dir);
     $gdAvailable = function_exists('imagecreatefromstring') && function_exists('imagecreatetruecolor') && function_exists('imagejpeg');
-    if ($canWriteDest && $gdAvailable && $dataUrl !== '' && strpos($dataUrl, 'data:image') === 0) {
+    if ($canWriteDest && $dataUrl !== '' && strpos($dataUrl, 'data:image') === 0) {
       $parts = explode(',', $dataUrl, 2);
       if (count($parts) === 2) {
         $raw = base64_decode($parts[1]);
         if ($raw !== false) {
-          $jpeg = ue_cover_to_id_jpeg($raw, false, 600, 800, 85, 200*1024);
-          if ($jpeg !== false) { $saved = @file_put_contents($dest, $jpeg) !== false; }
+          if ($gdAvailable) {
+            $jpeg = ue_cover_to_id_jpeg($raw, false, 600, 800, 85, 200*1024);
+            if ($jpeg !== false) { $saved = @file_put_contents($dest, $jpeg) !== false; }
+          }
+          // If GD is not available or conversion failed, write the decoded bytes directly (already client-cropped JPEG)
+          if (!$saved) { $saved = @file_put_contents($dest, $raw) !== false; }
         }
       }
     }
@@ -594,11 +598,7 @@ include_once __DIR__ . '/../menu.php';
                   }
                   // If a compressed data URL is present, avoid sending the original large file
                   // to prevent 413 (Request Entity Too Large) at the Nginx layer.
-                  if (hidden && typeof hidden.value === 'string' && hidden.value.indexOf('data:image') === 0) {
-                    // Disable the file input so the browser does not include the original file
-                    // in the multipart/form-data request body. The server will read profile_img_data instead.
-                    fileInput.disabled = true;
-                  }
+                  // Keep the file input enabled so server has a fallback even if it cannot process data URL
                 });
               })();
             </script>
