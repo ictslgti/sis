@@ -210,6 +210,8 @@ $fconduct = isset($_GET['conduct']) ? trim($_GET['conduct']) : '';
 $fdept   = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 $fcourse = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $fgender = isset($_GET['gender']) ? trim($_GET['gender']) : '';
+// Group filter (HOD group-wise)
+$fgroup  = isset($_GET['group_id']) ? trim($_GET['group_id']) : '';
 
 // For DIR (view-only), restrict to Active students regardless of requested filter
 if ($is_dir) {
@@ -266,6 +268,10 @@ if ($fcourse !== '') {
 if ($fgender !== '') {
   $where[] = "s.student_gender = '" . mysqli_real_escape_string($con, $fgender) . "'";
 }
+if ($fgroup !== '') {
+  $gid = (int)$fgroup;
+  $where[] = "EXISTS (SELECT 1 FROM `group_students` AS `gs` WHERE `gs`.`student_id` = `s`.`student_id` AND `gs`.`group_id` = {$gid} AND `gs`.`status` = 'active')";
+}
 if ($fconduct === 'accepted') {
   $where[] = "s.student_conduct_accepted_at IS NOT NULL";
 } elseif ($fconduct === 'pending') {
@@ -294,6 +300,7 @@ if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
       'course_id' => $fcourse,
       'gender' => $fgender,
       'conduct' => $fconduct,
+      'group_id' => $fgroup,
     ])) . '</div>'
     . '<div><strong>SQL (list)</strong> <code style="white-space:pre-wrap;">' . h($sqlList) . '</code></div>'
     . '<div><strong>Rows</strong> ' . (int)$total_count . '</div>'
@@ -362,6 +369,17 @@ if ($r = mysqli_query($con, "SELECT course_id, course_name, department_id FROM c
   while ($row = mysqli_fetch_assoc($r)) {
     $courses[] = $row;
   }
+  mysqli_free_result($r);
+}
+
+// Load groups list (scoped by department/course when provided)
+$groups = [];
+$grpSql = "SELECT g.id, g.name, g.course_id, c.department_id FROM `groups` g JOIN `course` c ON c.course_id = g.course_id WHERE 1=1";
+if ($fdept !== '') { $grpSql .= " AND c.department_id='" . mysqli_real_escape_string($con, $fdept) . "'"; }
+if ($fcourse !== '') { $grpSql .= " AND g.course_id='" . mysqli_real_escape_string($con, $fcourse) . "'"; }
+$grpSql .= " ORDER BY g.name";
+if ($r = mysqli_query($con, $grpSql)) {
+  while ($row = mysqli_fetch_assoc($r)) { $groups[] = $row; }
   mysqli_free_result($r);
 }
 
@@ -447,6 +465,15 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                     <option value="">-- Any --</option>
                     <?php foreach ($courses as $c): ?>
                       <option value="<?php echo h($c['course_id']); ?>" data-dept="<?php echo h($c['department_id']); ?>" <?php echo ($fcourse === $c['course_id'] ? 'selected' : ''); ?>><?php echo h($c['course_name']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-12 col-md-4">
+                  <label for="fgroup" class="small text-muted mb-1">Group</label>
+                  <select id="fgroup" name="group_id" class="form-control">
+                    <option value="">-- Any --</option>
+                    <?php foreach ($groups as $g): ?>
+                      <option value="<?php echo (int)$g['id']; ?>" data-dept="<?php echo h($g['department_id']); ?>" data-course="<?php echo h($g['course_id']); ?>" <?php echo ($fgroup !== '' && (int)$fgroup === (int)$g['id'] ? 'selected' : ''); ?>><?php echo h($g['name']); ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
@@ -549,14 +576,18 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
         (function() {
           var dept = document.getElementById('fdept');
           var course = document.getElementById('fcourse');
+          var groupSel = document.getElementById('fgroup');
           if (!dept || !course) return;
-          var all = Array.prototype.slice.call(course.options).map(function(o) {
+          var allCourses = Array.prototype.slice.call(course.options).map(function(o) {
             return {
               value: o.value,
               text: o.text,
               dept: o.getAttribute('data-dept')
             };
           });
+          var allGroups = groupSel ? Array.prototype.slice.call(groupSel.options).map(function(o){
+            return { value:o.value, text:o.text, dept:o.getAttribute('data-dept'), course:o.getAttribute('data-course') };
+          }) : [];
 
           function apply() {
             var d = dept.value;
@@ -567,7 +598,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
             opt.value = '';
             opt.text = '-- Any --';
             course.add(opt);
-            all.forEach(function(it) {
+            allCourses.forEach(function(it) {
               if (!it.value) return; // skip placeholder
               if (!d || it.dept === d) {
                 var o = document.createElement('option');
@@ -585,8 +616,33 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                 }
               }
             }
+
+            // Rebuild groups based on dept and selected course
+            if (groupSel) {
+              var selectedCourse = course.value;
+              var keepGroup = groupSel.value;
+              while (groupSel.options.length) groupSel.remove(0);
+              var g0 = document.createElement('option');
+              g0.value = '';
+              g0.text = '-- Any --';
+              groupSel.add(g0);
+              allGroups.forEach(function(it){
+                if (!it.value) return;
+                if (( !d || it.dept === d ) && ( !selectedCourse || it.course === selectedCourse )) {
+                  var go = document.createElement('option');
+                  go.value = it.value; go.text = it.text;
+                  groupSel.add(go);
+                }
+              });
+              if (keepGroup) {
+                for (var j=0; j<groupSel.options.length; j++) {
+                  if (groupSel.options[j].value === keepGroup) { groupSel.selectedIndex = j; break; }
+                }
+              }
+            }
           }
           dept.addEventListener('change', apply);
+          if (course) course.addEventListener('change', apply);
           // Initialize on load
           apply();
         })();
