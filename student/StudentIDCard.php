@@ -200,6 +200,15 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
     }
 
     .topline {
+      height: 1.8mm;
+      width: 100%;
+      margin-left: 0;
+      margin-bottom:-1.5mm;
+      background: linear-gradient(90deg, var(--black) 0 34%, var(--red) 34% 67%, var(--gold) 67% 100%);
+      border-radius: 2mm;
+    }
+
+    .topline1 {
       height: 3mm;
       width: 30mm;
       background: linear-gradient(90deg, var(--black) 0 34%, var(--red) 34% 67%, var(--gold) 67% 100%);
@@ -577,7 +586,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
     }
 
     .id-title {
-      font-size: 9px !important;
+      font-size: 11px !important;
     }
 
     .back-head {
@@ -673,22 +682,25 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
         <div class="card-iso">
           <div class="face">
             <div>
-              <div class="topline"></div>
+              
               <div class="brand-line">
-                <div class="brand-right" style="margin-top:-34px;">
+                <div class="brand-right" style="margin-top:-10px; ">
                   <?php if ($ministryLogo !== ''): ?>
-                    <img src="<?php echo htmlspecialchars($ministryLogo); ?>" alt="Ministry" style="margin-right:50px;">
+                    <img src="<?php echo htmlspecialchars($ministryLogo); ?>" alt="Ministry" style="margin-right:170px;">
                   <?php endif; ?>
                   <img src="<?php echo $__base; ?>img/SLGTI_logo.png" alt="SLGTI">
                 </div>
               </div>
-              <div style="margin-top: -4mm;">
+              <div style="margin-top: -3mm;">
                 <div class="two-lines">
+                  <div class="heading id-title" style="margin-bottom: 0.5mm;">Student ID Card</div>
+                  
+                  <div class="inst-name" style="margin-bottom: 1mm;">Sri Lanka German Training Institute</div>
                   <p>Ministry of Education, Higher Education and Vocational Education</p>
                   <p>Vocational Education Division</p>
                 </div>
-                <div class="inst-name">Sri Lanka German Training Institute</div>
-                <div class="heading id-title">Student ID</div>
+                <div style="margin-bottom: 1mm;"></div>
+                
               </div>
 
               <div class="rowline" style="margin-top:3mm;">
@@ -708,15 +720,15 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
               </div>
             </div>
             <div class="footer">
-              <div class="notice smalltxt"></div>
+              
             </div>
-            <div class="bar-bottom"></div>
+            <div class="topline"></div>
           </div>
         </div>
         <div class="card-iso back">
           <div class="face">
             <div>
-              <div class="topline"></div>
+              <div class="topline1"></div>
               <div class="back-head">Scan to Verify</div>
               <div class="rowline" style="margin-top:4mm; align-items:flex-start;">
                 <div class="qrcol">
