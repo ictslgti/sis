@@ -89,7 +89,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
     $dtEnroll = new DateTime($enroll['student_enroll_date']);
     $enrollDateFmt = $dtEnroll->format('d/m/Y');
     $dtExpire = clone $dtEnroll;
-    $dtExpire->add(new DateInterval('P2Y6M')); // 2.5 years
+    $dtExpire->add(new DateInterval('P3Y')); // 2.5 years
     $expireDateFmt = $dtExpire->format('d/m/Y');
   } catch (Exception $e) { /* ignore parse errors */
   }
@@ -209,7 +209,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
     }
 
     .topline1 {
-      height: 3mm;
+      height: 2mm;
       width: 30mm;
       background: linear-gradient(90deg, var(--black) 0 34%, var(--red) 34% 67%, var(--gold) 67% 100%);
       border-radius: 2mm;
@@ -265,14 +265,14 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
       letter-spacing: .5px;
       text-transform: uppercase;
       font-size: 12px !important;
-      color: var(--red);
+      color: var(--black);
     }
 
     .inst-name {
       text-align: center;
       font-weight: 700;
       font-size: 16px !important;
-      color: var(--red);
+      color: var(--black);
       letter-spacing: .2px;
       margin-top: -6px;
       white-space: nowrap;
@@ -648,7 +648,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
       margin: 0;
       line-height: 1.1;
       text-align: center;
-      color: red;
+      color: black;
     }
 
 
@@ -728,7 +728,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
         <div class="card-iso back">
           <div class="face">
             <div>
-              <div class="topline1"></div>
+              
               <div class="back-head">Scan to Verify</div>
               <div class="rowline" style="margin-top:4mm; align-items:flex-start;">
                 <div class="qrcol">
@@ -738,7 +738,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
                 </div>
                 <div class="fields" style="margin-top:-4mm;">
                   <div class="label">Instructions</div>
-                  <div class="smalltxt" style="text-align: justify;">This card belongs to SLGTI. Return if found. Do not fold or punch the QR code. Must return after course completion.</div>
+                  <div class="smalltxt" style="text-align: justify; margin-right: 5mm;" >This card belongs to SLGTI. Return if found. Do not fold or punch the QR code. Must return after course completion.</div>
                   <br>
                   <div class="label" style="margin-top:3mm;">Validity</div>
 
