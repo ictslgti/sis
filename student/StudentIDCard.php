@@ -738,7 +738,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
                 </div>
                 <div class="fields" style="margin-top:-4mm;">
                   <div class="label">Instructions</div>
-                  <div class="smalltxt" style="text-align: justify; margin-right: 5mm;" >This ID card belongs to SLGTI. If you find this ID card, please return it to SLGTI. Do not fold, bend, or punch the QR code. This ID card is the property of SLGTI and must be returned after completing the course</div>
+                  <div class="smalltxt" style="text-align: justify; margin-right: 5mm;" >This ID card is the property of SLGTI. If you find it, please hand over to SLGTI. Do not fold, bend, or punch the QR code. It should be returned after completing the course.</div>
                   <br>
                   <div class="label" style="margin-top:3mm;">Validity</div>
 
