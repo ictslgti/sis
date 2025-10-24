@@ -586,7 +586,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
     }
 
     .id-title {
-      font-size: 11px !important;
+      font-size: 9px !important;
     }
 
     .back-head {
@@ -693,7 +693,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
               </div>
               <div style="margin-top: -3mm;">
                 <div class="two-lines">
-                  <div class="heading id-title" style="margin-bottom: 0.5mm;">Student ID Card</div>
+                  <div class="heading id-title" style="margin-bottom: 0.5mm;">Student Identity Card</div>
                   
                   <div class="inst-name" style="margin-bottom: 1mm;">Sri Lanka German Training Institute</div>
                   <p>Ministry of Education, Higher Education and Vocational Education</p>
@@ -738,7 +738,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
                 </div>
                 <div class="fields" style="margin-top:-4mm;">
                   <div class="label">Instructions</div>
-                  <div class="smalltxt" style="text-align: justify; margin-right: 5mm;" >This card belongs to SLGTI. Return if found. Do not fold or punch the QR code. Must return after course completion.</div>
+                  <div class="smalltxt" style="text-align: justify; margin-right: 5mm;" >This ID card belongs to SLGTI. If you find this ID card, please return it to SLGTI. Do not fold, bend, or punch the QR code. This ID card is the property of SLGTI and must be returned after completing the course</div>
                   <br>
                   <div class="label" style="margin-top:3mm;">Validity</div>
 
@@ -747,9 +747,9 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
                   </div>
                   <div class="sig" style="margin-top:-2mm; margin-right:10mm;">
                     <?php if ($principalSig !== ''): ?>
-                      <img src="<?php echo htmlspecialchars($principalSig); ?>" alt="Principal Signature">
+                      <img src="<?php echo htmlspecialchars($principalSig); ?>" style="width: 50%; margin-right: 5mm;" alt="Principal Signature">
                     <?php else: ?>
-                      <div style="height:12mm"></div>
+                      <div style="height:8mm"></div>
                     <?php endif; ?>
                     <div class="cap">Principal</div>
                   </div>
