@@ -930,7 +930,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
           <small class="form-text text-muted">Maximum file size: 50MB. Allowed formats: JPG, PNG, GIF</small>
           <div class="d-flex flex-column flex-sm-row mt-2">
             <button type="button" id="triggerImageUpload" class="btn btn-sm btn-outline-primary mr-sm-2 mb-2 mb-sm-0 flex-fill">Upload New Photo</button>
-            <a class="btn btn-sm btn-primary flex-fill" href="/student/Student_profile.php?edit=1">Edit Profile</a>
+            
           </div>
         </div>
       
