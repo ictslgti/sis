@@ -963,7 +963,7 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
           <div class="d-flex justify-content-between align-items-center mb-1">
             <h5 class="text-muted my-1 mb-0"><b><?php echo htmlspecialchars(($title ? ($title.'. ') : '').($fname ?? '')); ?> | Level: <?php echo htmlspecialchars($level ?? ''); ?></b></h5>
             <?php if ($__showEditBtn): ?>
-              <a href="/student/Student_profile.php?edit=1" class="btn btn-sm btn-primary"><i class="fa fa-edit"></i> Edit Profile</a>
+              
             <?php endif; ?>
           </div>
           <div class="text-muted small my-1">ID: <?php echo htmlspecialchars(isset($username) ? $username : ($__profileSid ?? '')); ?> | NIC: <?php echo htmlspecialchars($nic ?? ''); ?><?php if (!empty($level)): ?> <?php endif; ?></div>
