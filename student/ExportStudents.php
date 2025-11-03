@@ -45,6 +45,7 @@ $qs = [
   'gender' => isset($_GET['gender']) ? trim((string)$_GET['gender']) : '',
   'province' => isset($_GET['province']) ? trim((string)$_GET['province']) : '',
   'district' => isset($_GET['district']) ? trim((string)$_GET['district']) : '',
+  'no_photo' => isset($_GET['no_photo']) ? (string)$_GET['no_photo'] : '',
 ];
 ?>
 <div class="container mt-4">
@@ -94,6 +95,12 @@ $qs = [
         <div class="custom-control custom-checkbox mt-4">
           <input type="checkbox" class="custom-control-input" id="onlyActive" name="active" value="1" <?php echo ($qs['active']==='1'?'checked':''); ?>>
           <label class="custom-control-label" for="onlyActive">Only Active (exclude Inactive/Dropout)</label>
+        </div>
+      </div>
+      <div class="form-group col-md-3">
+        <div class="custom-control custom-checkbox mt-4">
+          <input type="checkbox" class="custom-control-input" id="onlyNoPhoto" name="no_photo" value="1" <?php echo ($qs['no_photo']==='1'?'checked':''); ?>>
+          <label class="custom-control-label" for="onlyNoPhoto">Only students without profile image</label>
         </div>
       </div>
     </div>

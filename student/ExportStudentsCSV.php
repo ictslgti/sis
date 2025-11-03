@@ -19,6 +19,7 @@ $courseFilter = isset($_GET['course_id']) ? trim((string)$_GET['course_id']) : '
 $genderFilter = isset($_GET['gender']) ? trim((string)$_GET['gender']) : '';
 $provFilter   = isset($_GET['province']) ? trim((string)$_GET['province']) : '';
 $distFilter   = isset($_GET['district']) ? trim((string)$_GET['district']) : '';
+$noPhotoOnly  = isset($_GET['no_photo']) ? (trim((string)$_GET['no_photo']) === '1') : false;
 
 // Build query: base student table, left join latest enrollment to get department/course
 $sql = "SELECT 
@@ -98,6 +99,9 @@ if ($provFilter !== '') {
 if ($distFilter !== '') {
   $where[] = "(COALESCE(s.student_district,'') = ?)";
   $params[] = $distFilter; $types .= 's';
+}
+if ($noPhotoOnly) {
+  $where[] = "(s.student_profile_img IS NULL OR TRIM(COALESCE(s.student_profile_img,'')) = '')";
 }
 if (!empty($where)) { $sql .= ' WHERE ' . implode(' AND ', $where); }
 $sql .= ' ORDER BY s.student_fullname';
