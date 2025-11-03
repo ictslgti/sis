@@ -375,6 +375,7 @@ include_once __DIR__ . '/../menu.php';
     <li class="nav-item"><a class="nav-link" id="enroll-tab" data-toggle="tab" href="#enroll" role="tab">Enrollment</a></li>
     <li class="nav-item"><a class="nav-link" id="docs-tab" data-toggle="tab" href="#documents" role="tab">Documents</a></li>
     <li class="nav-item"><a class="nav-link" id="bank-tab" data-toggle="tab" href="#bank" role="tab">Bank Details</a></li>
+    <li class="nav-item"><a class="nav-link" href="<?php echo $base; ?>/password/change_password.php" target="_blank" rel="noopener">Change Password</a></li>
   </ul>
   <div class="tab-content border-left border-right border-bottom p-3 bg-white" id="ueContent">
     <!-- Profile Tab -->
