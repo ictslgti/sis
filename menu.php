@@ -563,6 +563,9 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Manage Students</a>
                   </li>
                   <li>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ExportStudents.php">Export Students (CSV)</a>
+                  </li>
+                  <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">Add a Student</a>
                   </li>
                   <li>
@@ -696,6 +699,9 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
 
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Manage Students</a>
+                  </li>
+                  <li>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ExportStudents.php">Export Students (CSV)</a>
                   </li>
 
                   <li>
