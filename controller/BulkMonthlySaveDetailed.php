@@ -24,11 +24,12 @@ if ($deptCode === '') { back(['err'=>'nodept']); }
 $month = isset($_POST['month']) && preg_match('/^\d{4}-\d{2}$/', $_POST['month']) ? $_POST['month'] : date('Y-m');
 $courseId = isset($_POST['course_id']) ? trim($_POST['course_id']) : '';
 $groupId = isset($_POST['group_id']) ? trim($_POST['group_id']) : '';
+$academicYear = isset($_POST['academic_year']) ? trim((string)$_POST['academic_year']) : '';
 $includeWeekends = !empty($_POST['include_weekends']) ? 1 : 0;
 $respectHolidays = !empty($_POST['respect_holidays']) ? 1 : 0;
 $respectVacations = !empty($_POST['respect_vacations']) ? 1 : 0;
 $dates = isset($_POST['dates']) && is_array($_POST['dates']) ? array_values(array_unique($_POST['dates'])) : [];
-if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'nodates']); }
+if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'academic_year'=>$academicYear,'err'=>'nodates']); }
 
 // Approval lock check for the month scope
 $firstDay = $month.'-01';
@@ -42,6 +43,7 @@ if ($groupId !== '') {
 } else {
   $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
   if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+  if ($academicYear !== '') { $where .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'"; }
   $sqlSt = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where";
   $res = mysqli_query($con, $sqlSt);
   if ($res) { while ($r=mysqli_fetch_assoc($res)) { $__students[] = $r['student_id']; } }
@@ -50,14 +52,14 @@ if (!empty($__students)) {
   $idList = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $__students));
   $qLock = "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1";
   $rsLock = @mysqli_query($con, $qLock);
-  if ($rsLock && mysqli_fetch_row($rsLock)) { if ($rsLock) mysqli_free_result($rsLock); back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'locked']); }
+  if ($rsLock && mysqli_fetch_row($rsLock)) { if ($rsLock) mysqli_free_result($rsLock); back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'academic_year'=>$academicYear,'err'=>'locked']); }
   if ($rsLock) mysqli_free_result($rsLock);
 }
 
 // Only consider past or today
 $today = date('Y-m-d');
   $dates = array_values(array_filter($dates, function($d) use ($today){ return preg_match('/^\d{4}-\d{2}-\d{2}$/',$d) && $d <= $today; }));
-  if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'err'=>'nodates']); }
+  if (empty($dates)) { back(['month'=>$month,'course_id'=>$courseId,'academic_year'=>$academicYear,'err'=>'nodates']); }
 
 // Students scope (Active/Following) — by group if provided, else by course/department
 $students = [];
@@ -78,11 +80,12 @@ if ($groupId !== '') {
 } else {
   $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
   if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+  if ($academicYear !== '') { $where .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'"; }
   $sqlSt = "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id";
   $res = mysqli_query($con, $sqlSt);
   if ($res) { while ($r=mysqli_fetch_assoc($res)) { $students[] = $r['student_id']; } }
 }
-if (empty($students)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'nostudents']); }
+if (empty($students)) { back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'academic_year'=>$academicYear,'err'=>'nostudents']); }
 
 // Input present map: present[sid][] = list of dates with present
 $presentSet = [];
@@ -205,6 +208,7 @@ if ($ok) {
     'month'=>$month,
     'course_id'=>$courseId,
     'group_id'=>$groupId,
+    'academic_year'=>$academicYear,
     'ok'=>1,
     'ins'=>$ins,
     'upd'=>$upd,
@@ -216,5 +220,5 @@ if ($ok) {
   ]);
 } else {
   mysqli_rollback($con);
-  back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'dberror','load'=>1]);
+  back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'academic_year'=>$academicYear,'err'=>'dberror','load'=>1]);
 }

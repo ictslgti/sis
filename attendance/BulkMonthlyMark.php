@@ -27,9 +27,16 @@ if ($deptCode !== '') {
   if ($qr) { mysqli_stmt_bind_param($qr,'s',$deptCode); mysqli_stmt_execute($qr); $res = mysqli_stmt_get_result($qr); while($res && ($row=mysqli_fetch_assoc($res))){ $courses[]=$row; } mysqli_stmt_close($qr);} 
 }
 
+// Load academic years for filter
+$academicYears = [];
+if ($resAy = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+  while ($row = mysqli_fetch_assoc($resAy)) { $academicYears[] = $row['academic_year']; }
+}
+
 $month = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month']) ? $_GET['month'] : date('Y-m');
 $courseId = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $groupId = isset($_GET['group_id']) ? trim($_GET['group_id']) : '';
+$academicYear = isset($_GET['academic_year']) ? trim((string)$_GET['academic_year']) : '';
 $includeWeekends = isset($_GET['include_weekends']) ? (int)$_GET['include_weekends'] : 0;
 $respectHolidays = isset($_GET['respect_holidays']) ? (int)$_GET['respect_holidays'] : 1;
 $respectVacations = isset($_GET['respect_vacations']) ? (int)$_GET['respect_vacations'] : 1;
@@ -128,6 +135,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             }
           } else {
             $w = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
+            if ($academicYear !== '') { $w .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'"; }
             if ($courseId !== '') { $w .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
             $qr = mysqli_query($con, "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $w");
             if ($qr) { while($row=mysqli_fetch_assoc($qr)){ $scopeStudents[]=$row['student_id']; } }
@@ -152,12 +160,21 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
               <input type="hidden" name="month" value="<?php echo h($month); ?>">
             <?php endif; ?>
           </div>
+          <div class="form-group col-md-3">
+            <label for="g_academic_year">Academic Year (optional)</label>
+            <select class="form-control" id="g_academic_year" name="academic_year">
+              <option value="">All academic years</option>
+              <?php foreach ($academicYears as $ay): ?>
+                <option value="<?php echo h($ay); ?>" <?php echo ($academicYear===$ay)?'selected':''; ?>><?php echo h($ay); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
           <div class="form-group col-md-4">
             <label for="g_course">Course (optional)</label>
             <select class="form-control" id="g_course" name="course_id">
               <option value="">All courses in department</option>
               <?php foreach ($courses as $c): ?>
-                <option value="<?php echo h($c['course_id']); ?>" <?php echo ($courseId===$c['course_id'])?'selected':''; ?>><?php echo h($c['course_id'].' - '.$c['course_name']); ?></option>
+                <option value="<?php echo h($c['course_id']); ?>" <?php echo ($courseId===$c['course_id'])?'selected':'>'; ?>><?php echo h($c['course_id'].' - '.$c['course_name']); ?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -286,6 +303,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             // Original: by department (and optional course)
             $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
             if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+            if ($academicYear !== '') { $where .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'"; }
             $where .= " AND se.student_enroll_status IN ('Following','Active')";
             $sql = "SELECT s.student_id, s.student_fullname FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id ASC";
             $res = mysqli_query($con, $sql);
@@ -337,6 +355,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           <input type="hidden" name="month" value="<?php echo h($month); ?>">
           <input type="hidden" name="course_id" value="<?php echo h($courseId); ?>">
           <input type="hidden" name="group_id" value="<?php echo h($groupId); ?>">
+          <input type="hidden" name="academic_year" value="<?php echo h($academicYear); ?>">
           <button type="submit" class="btn btn-outline-danger">Lock Date (-1)</button>
         </form>
 
@@ -344,6 +363,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           <input type="hidden" name="month" value="<?php echo h($month); ?>">
           <input type="hidden" name="course_id" value="<?php echo h($courseId); ?>">
           <input type="hidden" name="group_id" value="<?php echo h($groupId); ?>">
+          <input type="hidden" name="academic_year" value="<?php echo h($academicYear); ?>">
           <input type="hidden" name="include_weekends" value="<?php echo (int)$includeWeekends; ?>">
           <input type="hidden" name="respect_holidays" value="<?php echo (int)$respectHolidays; ?>">
           <input type="hidden" name="respect_vacations" value="<?php echo (int)$respectVacations; ?>">
