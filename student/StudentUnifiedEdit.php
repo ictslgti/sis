@@ -340,6 +340,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
   }
 
+  if ($form === 'reset_password') {
+    if (!($is_admin || $is_sao)) {
+      http_response_code(403);
+      echo 'Forbidden: cannot reset passwords';
+      exit;
+    }
+    $new = isset($_POST['new_password']) ? (string)$_POST['new_password'] : '';
+    $rep = isset($_POST['repeat_password']) ? (string)$_POST['repeat_password'] : '';
+    if ($new === '' || $rep === '') {
+      $errors[] = 'Password fields cannot be empty';
+    } elseif ($new !== $rep) {
+      $errors[] = 'Passwords do not match';
+    } elseif (strlen($new) < 8) {
+      $errors[] = 'Password too short (min 8 characters)';
+    } else {
+      $exists = false;
+      if ($rs = mysqli_prepare($con, "SELECT 1 FROM `user` WHERE `user_name`=? LIMIT 1")) {
+        mysqli_stmt_bind_param($rs, 's', $sid);
+        mysqli_stmt_execute($rs);
+        mysqli_stmt_store_result($rs);
+        $exists = mysqli_stmt_num_rows($rs) > 0;
+        mysqli_stmt_close($rs);
+      }
+      if (!$exists) {
+        $errors[] = 'User account not found for this student.';
+      } else {
+        $hash = hash('sha256', $new);
+        if ($st = mysqli_prepare($con, "UPDATE `user` SET `user_password_hash`=? WHERE `user_name`=?")) {
+          mysqli_stmt_bind_param($st, 'ss', $hash, $sid);
+          if (mysqli_stmt_execute($st)) {
+            $messages[] = 'Password reset successfully.';
+          } else {
+            $errors[] = 'Failed to reset password.';
+          }
+          mysqli_stmt_close($st);
+        } else {
+          $errors[] = 'Database error while preparing reset.';
+        }
+      }
+    }
+  }
+
   // Redirect PRG
   if ($messages || $errors) {
     $_SESSION['flash_messages'] = $messages;
@@ -375,7 +417,9 @@ include_once __DIR__ . '/../menu.php';
     <li class="nav-item"><a class="nav-link" id="enroll-tab" data-toggle="tab" href="#enroll" role="tab">Enrollment</a></li>
     <li class="nav-item"><a class="nav-link" id="docs-tab" data-toggle="tab" href="#documents" role="tab">Documents</a></li>
     <li class="nav-item"><a class="nav-link" id="bank-tab" data-toggle="tab" href="#bank" role="tab">Bank Details</a></li>
-    <li class="nav-item"><a class="nav-link" href="<?php echo $base; ?>/password/change_password.php" target="_blank" rel="noopener">Change Password</a></li>
+    <?php if ($is_admin || $is_sao): ?>
+    <li class="nav-item"><a class="nav-link" id="pwd-tab" data-toggle="tab" href="#password" role="tab">Password</a></li>
+    <?php endif; ?>
   </ul>
   <div class="tab-content border-left border-right border-bottom p-3 bg-white" id="ueContent">
     <!-- Profile Tab -->
@@ -843,6 +887,30 @@ include_once __DIR__ . '/../menu.php';
         </div>
       </div>
     </div>
+
+    <?php if ($is_admin || $is_sao): ?>
+    <div class="tab-pane fade" id="password" role="tabpanel">
+      <div class="card">
+        <div class="card-header bg-white"><strong>Reset Password</strong></div>
+        <div class="card-body">
+          <form method="post" autocomplete="off">
+            <input type="hidden" name="form" value="reset_password">
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>New Password</label>
+                <input type="password" class="form-control" name="new_password" minlength="8" required>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Confirm Password</label>
+                <input type="password" class="form-control" name="repeat_password" minlength="8" required>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-danger"><i class="fas fa-key mr-1"></i>Reset Password</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <?php endif; ?>
   </div>
 </div>
 <?php include_once __DIR__ . '/../footer.php'; ?>
