@@ -232,6 +232,7 @@ $params = [];
 $baseSql = "SELECT DISTINCT
               `s`.`student_id`,
               `s`.`student_fullname`,
+              `s`.`student_ininame`,
               `s`.`student_email`,
               `s`.`student_phone`,
               `s`.`student_nic`,
@@ -334,12 +335,13 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
   echo "\xEF\xBB\xBF";
   $out = fopen('php://output', 'w');
   // Header row
-  fputcsv($out, ['Student ID', 'Full Name', 'Email', 'Phone', 'NIC', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At', 'Bank', 'Account No', 'Branch', 'Bank Front Page']);
+  fputcsv($out, ['Student ID', 'Full Name', 'Name with Initial', 'Email', 'Phone', 'NIC', 'Status', 'Gender', 'Course', 'Department', 'Conduct Accepted At', 'Bank', 'Account No', 'Branch', 'Bank Front Page']);
   if ($qr = mysqli_query($con, $sqlExport)) {
     while ($r = mysqli_fetch_assoc($qr)) {
       fputcsv($out, [
         $r['student_id'],
         display_name($r['student_fullname'] ?? ''),
+        $r['student_ininame'] ?? '',
         $r['student_email'] ?? '',
         $r['student_phone'] ?? '',
         $r['student_nic'] ?? '',
