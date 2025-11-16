@@ -706,7 +706,7 @@ if (!empty($enroll) && !empty($enroll['student_enroll_date'])) {
               <div class="rowline" style="margin-top:3mm;">
                 <div class="photo"><img src="<?php echo htmlspecialchars($photoUrl); ?>" alt="Photo"></div>
                 <div class="fields">
-                  <div class="name"><?php echo htmlspecialchars($student['student_fullname'] ?: $student['student_ininame']); ?></div>
+                  <div class="name"><?php echo htmlspecialchars(strtoupper($student['student_ininame'])); ?></div>
                   <div class="chip">ID: <?php echo htmlspecialchars($student['student_id']); ?></div>
                   <div class="label">NIC</div>
                   <div class="val"><?php echo htmlspecialchars($student['student_nic']); ?></div>
