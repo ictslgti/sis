@@ -175,10 +175,9 @@ foreach ($dayDates as $idx=>$dstr) {
   $w = (int)date('w', strtotime($dstr)); // 0=Sun,6=Sat
   // NWD override (never counted)
   if (isset($nwdOverrideSet[$dstr])) { $countNWDOverrides++; continue; }
-  // Weekend: count ONLY if attendance exists (exception weekend day)
+  // Weekend: do NOT count weekends, regardless of attendance
   if ($w === 0 || $w === 6) {
-    if (isset($exceptionalSet[$dstr])) { $workDayDates[$idx] = $dstr; $countWorking++; $countExceptions++; }
-    else { $countWeekends++; }
+    $countWeekends++;
     continue;
   }
   // Holiday (never counted in totals)

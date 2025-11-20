@@ -208,10 +208,8 @@ $countWorking = 0;
 foreach ($dayDates as $idx=>$dstr) {
   $w = (int)date('w', strtotime($dstr)); // 0=Sun,6=Sat
   if (isset($nwdOverrideSet[$dstr])) { continue; }
-  if ($w === 0 || $w === 6) {
-    if (isset($exceptionalSet[$dstr])) { $workDayDates[$idx] = $dstr; $countWorking++; }
-    continue;
-  }
+  // Exclude weekends entirely, regardless of attendance
+  if ($w === 0 || $w === 6) { continue; }
   if (isset($holidaySet[$dstr]) || isset($vacationSet[$dstr])) { continue; }
   $workDayDates[$idx] = $dstr; $countWorking++;
 }
