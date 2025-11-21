@@ -62,6 +62,8 @@ $course = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $view = (isset($_GET['view']) && in_array($_GET['view'], ['summary','detailed'], true)) ? $_GET['view'] : 'detailed';
 // Optional: only allowance-eligible students
 $onlyAE = (isset($_GET['only_allowance']) && $_GET['only_allowance'] === '1') ? '1' : '';
+// Optional: academic year
+$academicYear = isset($_GET['academic_year']) ? trim((string)$_GET['academic_year']) : '';
 
 // Compute month range
 $firstDay = $month.'-01';
@@ -247,12 +249,21 @@ if ($deptCode !== '') {
   if ($dq) { while($row=mysqli_fetch_assoc($dq)){ $courses[]=$row; } }
 }
 
+// Load academic years for filter
+$academicYears = [];
+if ($resAy = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+  while ($row = mysqli_fetch_assoc($resAy)) { $academicYears[] = $row['academic_year']; }
+}
+
 // Load students in scope
 $students = [];
 if ($deptCode !== '') {
   $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
   if ($course !== '') {
     $where .= " AND c.course_id='".mysqli_real_escape_string($con,$course)."'";
+  }
+  if ($academicYear !== '') {
+    $where .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'";
   }
   if ($onlyAE === '1') {
     $where .= " AND s.allowance_eligible=1";
@@ -462,6 +473,15 @@ if ($isExport) {
                 <?php endforeach; ?>
               </select>
             </div>
+            <div class="col-12 col-md-3 mb-2">
+              <label for="academic_year" class="small mb-1 text-muted">Academic Year</label>
+              <select id="academic_year" name="academic_year" class="form-control form-control-sm" onchange="this.form.submit()">
+                <option value="">-- All --</option>
+                <?php foreach ($academicYears as $ay): ?>
+                  <option value="<?php echo htmlspecialchars($ay); ?>" <?php echo ($academicYear===$ay)?'selected':''; ?>><?php echo htmlspecialchars($ay); ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
             <div class="col-6 col-md-3 mb-2">
               <label for="month" class="small mb-1 text-muted">Month</label>
               <input type="month" id="month" name="month" class="form-control form-control-sm" value="<?php echo htmlspecialchars($month); ?>" required <?php echo ($isApproved && isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN3'], true)) ? 'disabled title="This month is HOD-approved and locked"' : ''; ?> >
@@ -476,7 +496,7 @@ if ($isExport) {
               <div class="btn-group btn-group-sm ml-md-auto" role="group">
                 <input type="hidden" name="view" value="detailed">
                 <button class="btn btn-primary"><i class="fas fa-sync-alt mr-1"></i></button>
-                <a href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php?export=1&view=detailed&month=<?php echo urlencode($month); ?><?php echo $deptCode?('&department_id='.urlencode($deptCode)) : ''; ?><?php echo $course?('&course_id='.urlencode($course)) : ''; ?><?php echo ($onlyAE==='1')?'&only_allowance=1':''; ?>" class="btn btn-success" id="exportBtn" title="Export to Excel">
+                <a href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php?export=1&view=detailed&month=<?php echo urlencode($month); ?><?php echo $deptCode?('&department_id='.urlencode($deptCode)) : ''; ?><?php echo $course?('&course_id='.urlencode($course)) : ''; ?><?php echo ($academicYear!=='')?('&academic_year='.urlencode($academicYear)) : ''; ?><?php echo ($onlyAE==='1')?'&only_allowance=1':''; ?>" class="btn btn-success" id="exportBtn" title="Export to Excel">
                   <i class="fas fa-file-excel mr-1"></i>
                 </a>
               </div>
