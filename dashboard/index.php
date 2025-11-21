@@ -164,6 +164,29 @@ if ($rs = mysqli_query($con, $sqlStu)) {
   mysqli_free_result($rs);
 }
 
+// Active students in the selected academic year (status = 'Active')
+$activeCount = 0;
+$sqlActive = "SELECT COUNT(DISTINCT s.student_id) AS cnt
+              FROM student s
+              JOIN student_enroll e ON e.student_id = s.student_id AND e.student_enroll_status = 'Active'" . $yearCond . "
+              WHERE COALESCE(s.student_status,'') <> 'Inactive'";
+if ($rs = mysqli_query($con, $sqlActive)) {
+  if ($r = mysqli_fetch_assoc($rs)) { $activeCount = (int)$r['cnt']; }
+  mysqli_free_result($rs);
+}
+
+// Internship count in selected academic year (students with OJT record linked to enrollments of the year)
+$internCount = 0;
+$sqlIntern = "SELECT COUNT(DISTINCT o.student_id) AS cnt
+              FROM ojt o
+              JOIN student_enroll e ON e.student_id = o.student_id AND e.student_enroll_status IN ('Following','Active')" . $yearCond . "
+              JOIN student s ON s.student_id = e.student_id
+              WHERE COALESCE(s.student_status,'') <> 'Inactive'";
+if ($rs = mysqli_query($con, $sqlIntern)) {
+  if ($r = mysqli_fetch_assoc($rs)) { $internCount = (int)$r['cnt']; }
+  mysqli_free_result($rs);
+}
+
 // NVQ Level 4 & 5 student totals (Following)
 $nvq4Count = 0; $nvq5Count = 0;
 $sqlNvq4 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
@@ -260,6 +283,29 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
         <h4 class="mb-0 font-weight-bold text-dark text-left text-md-left">Sri Lanka German Training Institute - MIS</h4>
         <div class="text-muted small text-left text-md-left">Dashboard Overview</div>
       </div>
+      <div class="ml-md-auto">
+        <form method="get" action="" class="form-inline mb-2">
+          <label class="mr-2 small text-muted">Academic Year</label>
+          <select name="academic_year" class="form-control form-control-sm mr-2" style="min-width:200px;">
+            <option value="">-- Latest Active --</option>
+            <?php
+            $years = [];
+            if ($rs = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+              while ($r = mysqli_fetch_assoc($rs)) { $years[] = $r['academic_year']; }
+              mysqli_free_result($rs);
+            }
+            foreach ($years as $y) {
+              $sel = ($selectedYear === $y) ? 'selected' : '';
+              echo '<option value="'.htmlspecialchars($y).'" '.$sel.'>'.htmlspecialchars($y).'</option>';
+            }
+            ?>
+          </select>
+          <button type="submit" class="btn btn-primary btn-sm">Apply</button>
+          <?php if (!empty($_GET['academic_year'])): ?>
+            <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-link btn-sm ml-2">Clear</a>
+          <?php endif; ?>
+        </form>
+      </div>
     </div>
     <hr class="mt-1 mb-2">
   </div>
@@ -306,6 +352,28 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
         <div>
           <div class="stat-label">Following Students</div>
           <div class="stat-value"><?php echo $studentCount; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-teal shadow-sm" style="background: linear-gradient(135deg,#20c997 0%, #0f766e 100%);">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-user-check fa-lg"></i></div>
+        <div>
+          <div class="stat-label">Active Students</div>
+          <div class="stat-value"><?php echo $activeCount; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card bg-orange shadow-sm" style="background: linear-gradient(135deg,#fd7e14 0%, #c05621 100%);">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3"><i class="fas fa-briefcase fa-lg"></i></div>
+        <div>
+          <div class="stat-label">Internships</div>
+          <div class="stat-value"><?php echo $internCount; ?></div>
         </div>
       </div>
     </div>
