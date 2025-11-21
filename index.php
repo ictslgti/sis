@@ -1,9 +1,16 @@
-<!-- BLOCK#1 START DON'T CHANGE THE ORDER-->
 <?php
 $title = "Sign in to continue to MIS @ SLGTI";
 include_once("config.php");
+$activeStudentsCount = null;
+if (isset($con) && $con) {
+  $qAct = "SELECT COUNT(*) AS cnt FROM student WHERE student_status = 'Active'";
+  if ($rsAct = @mysqli_query($con, $qAct)) {
+    if ($rowAct = @mysqli_fetch_assoc($rsAct)) { $activeStudentsCount = (int)$rowAct['cnt']; }
+    @mysqli_free_result($rsAct);
+  }
+}
 ?>
-<!--END DON'T CHANGE THE ORDER-->
+
 <?php
 
 //loginWithCookieData
@@ -421,12 +428,7 @@ if (isset($_GET['signout'])) {
                     <div class="container">
                         <div class="row">
                             <div class="col-lg-10 col-xl-7 mx-auto">
-                                <div class="text-center mb-3">
-                                  <img src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/SLGTI_logo.png" alt="SLGTI" style="max-height:72px;width:auto;" class="mb-2">
-                     
-                                  <p class="text-muted small mb-1">Sri Lanka-German Training Institute</p>
-                                  <p class="text-muted">Management Information System</p>
-                                </div>
+                                
                                 <form  method="post">
                                     <?php
                                     if (!empty($msg))

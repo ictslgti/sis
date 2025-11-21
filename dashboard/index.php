@@ -334,17 +334,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
       </div>
     </div>
   </div>
-  <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-yellow shadow-sm">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-calendar-alt fa-lg"></i></div>
-        <div>
-          <div class="stat-label">Academic Years</div>
-          <div class="stat-value"><?php echo $acadCount; ?></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  
   <div class="col-md-4 col-sm-6 col-12 mb-3">
     <div class="card stat-card bg-blue shadow-sm">
       <div class="card-body d-flex align-items-center">
@@ -356,17 +346,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
       </div>
     </div>
   </div>
-  <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-teal shadow-sm" style="background: linear-gradient(135deg,#20c997 0%, #0f766e 100%);">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-user-check fa-lg"></i></div>
-        <div>
-          <div class="stat-label">Active Students</div>
-          <div class="stat-value"><?php echo $activeCount; ?></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  
   <div class="col-md-4 col-sm-6 col-12 mb-3">
     <div class="card stat-card bg-orange shadow-sm" style="background: linear-gradient(135deg,#fd7e14 0%, #c05621 100%);">
       <div class="card-body d-flex align-items-center">
