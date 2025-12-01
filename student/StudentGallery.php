@@ -129,11 +129,10 @@ function student_img_src_fs(array $row, string $baseWeb, string $baseFs): string
     if (preg_match('#^[a-zA-Z]:/#', $raw) || strpos($raw, '/www/sis/') !== false) {
       $raw = basename($raw);
     }
-    // If it contains student_profile (correct) or Studnet_profile (legacy typo), extract filename after it
-    if (stripos($raw, 'student_profile/') !== false || stripos($raw, 'Studnet_profile/') !== false) {
-      $marker = stripos($raw, 'student_profile/') !== false ? 'student_profile/' : 'Studnet_profile/';
-      $pos = stripos($raw, $marker);
-      $raw = substr($raw, $pos + strlen($marker));
+    // If it contains student_profile, extract filename after it
+    if (stripos($raw, 'student_profile/') !== false) {
+      $pos = stripos($raw, 'student_profile/');
+      $raw = substr($raw, $pos + strlen('student_profile/'));
     }
     // If path contains directories, reduce to filename
     if (strpos($raw, '/') !== false) {
@@ -141,27 +140,16 @@ function student_img_src_fs(array $row, string $baseWeb, string $baseFs): string
     }
     // Now $raw should be a filename like STU001.jpg
     if ($raw !== '') {
-      // Check both correct and legacy folder names on disk
-      $fs1 = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . $raw; // correct folder
-      $fsLegacy = realpath(dirname($baseFs)) . DIRECTORY_SEPARATOR . 'Studnet_profile' . DIRECTORY_SEPARATOR . $raw;
-      if (is_file($fs1)) {
-        return rtrim($baseWeb, '/') . '/' . 'img/student_profile/' . rawurlencode($raw);
-      } elseif ($fsLegacy && is_file($fsLegacy)) {
-        return rtrim($baseWeb, '/') . '/' . 'img/Studnet_profile/' . rawurlencode($raw);
-      }
+      // Check only the correct folder on disk
+      $fs1 = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . $raw;
+      if (is_file($fs1)) { return rtrim($baseWeb, '/') . '/' . 'img/student_profile/' . rawurlencode($raw); }
     }
     // Secondary: if original looked like a full relative path under img/student_profile
     $rel = ltrim($sp, '/');
-    if (stripos($rel, 'img/student_profile/') === 0 || stripos($rel, 'img/Studnet_profile/') === 0) {
-      $isLegacy = stripos($rel, 'img/Studnet_profile/') === 0;
-      $sub = substr($rel, strlen($isLegacy ? 'img/Studnet_profile/' : 'img/student_profile/'));
+    if (stripos($rel, 'img/student_profile/') === 0) {
+      $sub = substr($rel, strlen('img/student_profile/'));
       $fs = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . $sub;
-      $fsLegacy = realpath(dirname($baseFs)) . DIRECTORY_SEPARATOR . 'Studnet_profile' . DIRECTORY_SEPARATOR . $sub;
-      if (is_file($fs)) {
-        return rtrim($baseWeb, '/') . '/' . str_replace('\\', '/', $rel);
-      } elseif ($fsLegacy && is_file($fsLegacy)) {
-        return rtrim($baseWeb, '/') . '/' . 'img/Studnet_profile/' . rawurlencode($sub);
-      }
+      if (is_file($fs)) { return rtrim($baseWeb, '/') . '/' . str_replace('\\', '/', $rel); }
     }
   }
 
@@ -172,12 +160,7 @@ function student_img_src_fs(array $row, string $baseWeb, string $baseFs): string
     ];
     foreach ($candidates as $fn) {
       $fs = rtrim($baseFs, '/\\') . DIRECTORY_SEPARATOR . $fn;
-      $fsLegacy = realpath(dirname($baseFs)) . DIRECTORY_SEPARATOR . 'Studnet_profile' . DIRECTORY_SEPARATOR . $fn;
-      if (is_file($fs)) {
-        return rtrim($baseWeb, '/') . '/' . 'img/student_profile/' . rawurlencode($fn);
-      } elseif ($fsLegacy && is_file($fsLegacy)) {
-        return rtrim($baseWeb, '/') . '/' . 'img/Studnet_profile/' . rawurlencode($fn);
-      }
+      if (is_file($fs)) { return rtrim($baseWeb, '/') . '/' . 'img/student_profile/' . rawurlencode($fn); }
     }
   }
 

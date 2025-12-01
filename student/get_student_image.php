@@ -39,7 +39,7 @@ mysqli_stmt_close($stmt);
 
 if (empty($imgData)) { send_default_image(); }
 
-// Case 1: looks like a relative path (e.g., img/Studnet_profile/ID.jpg)
+// Case 1: looks like a relative path (e.g., img/student_profile/ID.jpg)
 $val = trim((string)$imgData);
 $looksLikePath = (strpos($val, '/') !== false || strpos($val, '\\') !== false) && strlen($val) < 512 && preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $val);
 if ($looksLikePath) {
@@ -61,6 +61,24 @@ if ($looksLikePath) {
     }
     // If path invalid, fallback
     send_default_image();
+}
+
+// Case 1b: treat as filename only and look under img/student_profile
+$onlyName = basename($val);
+if ($onlyName !== '' && preg_match('/\.(jpg|jpeg|png|gif|webp)$/i', $onlyName)) {
+    $abs = realpath(__DIR__ . '/../img/student_profile/' . $onlyName);
+    if ($abs && is_file($abs)) {
+        $ext = strtolower(pathinfo($abs, PATHINFO_EXTENSION));
+        $mime = 'image/jpeg';
+        if ($ext === 'png') $mime = 'image/png';
+        elseif ($ext === 'gif') $mime = 'image/gif';
+        elseif ($ext === 'webp') $mime = 'image/webp';
+        nocache_headers();
+        header('Content-Type: ' . $mime);
+        header('Content-Length: ' . filesize($abs));
+        @readfile($abs);
+        exit;
+    }
 }
 
 // Case 2: treat as binary/blob or base64

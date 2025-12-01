@@ -178,7 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // Determine output directory and target filename (robust creation without realpath dependency)
     $baseImg = __DIR__ . '/../img';
     if (!is_dir($baseImg)) { @mkdir($baseImg, 0777, true); }
-    $dir = rtrim($baseImg, DIRECTORY_SEPARATOR . '/\\') . DIRECTORY_SEPARATOR . 'Studnet_profile';
+    $dir = rtrim($baseImg, DIRECTORY_SEPARATOR . '/\\') . DIRECTORY_SEPARATOR . 'student_profile';
     if (!is_dir($dir)) { @mkdir($dir, 0777, true); }
     // As a final guard, if directory still doesn't exist or not writable, disable compression and bail gracefully later
     $safeId = preg_replace('/[^A-Za-z0-9_.-]/', '_', $sid);
@@ -243,7 +243,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $old = rtrim($dir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR . $safeId . '.' . $e;
         if ($e !== 'jpg' && is_file($old)) { @unlink($old); }
       }
-      $rel = 'img/Studnet_profile/' . $filename;
+      $rel = 'img/student_profile/' . $filename;
       $qs = "UPDATE `student` SET `student_profile_img`='" . mysqli_real_escape_string($con, $rel) . "' WHERE `student_id`='" . mysqli_real_escape_string($con, $sid) . "'";
       if (!mysqli_query($con, $qs)) {
         $errors[] = 'Image path save failed: ' . mysqli_error($con);
