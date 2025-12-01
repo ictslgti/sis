@@ -1023,6 +1023,9 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
                   <li>
                     <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/DatabaseExport.php?download=1&simple=1">Database Export</a>
                   </li>
+                  <li>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/StudentImageBackup.php">Student Image Backup</a>
+                  </li>
                 </ul>
               </div>
             </li>
