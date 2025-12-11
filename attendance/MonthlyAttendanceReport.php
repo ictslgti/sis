@@ -356,6 +356,7 @@ if ($isExport) {
     }
     $html .= "<th>Present</th><th>Considered Days</th><th>%</th><th>Allowance</th></tr>";
     if (!empty($results)) {
+      $sumAllowDet = 0;
       foreach ($results as $row) {
         $sid = $row['student_id'];
         $html .= "<tr>";
@@ -370,10 +371,12 @@ if ($isExport) {
         $html .= "<td>".(int)$row['present_days']."</td>";
         $html .= "<td>".(int)$row['total_days']."</td>";
         $html .= "<td>".number_format($row['percentage'], 2)."%</td>";
-        $allow = ($row['percentage']>=90?5000:($row['percentage']>=70?4000:0));
-        $html .= "<td>LKR ".number_format($allow,0)."</td>";
+        $allow = ($row['percentage']>90?5000:($row['percentage']>80?4000:0));
+        $sumAllowDet += (int)$allow;
+        $html .= "<td>".number_format($allow,0)."</td>";
         $html .= "</tr>";
       }
+      $html .= "<tr><td colspan='".(4 + count($workDayDates) + 3)."' style='text-align:right'><strong>Total Allowance</strong></td><td><strong>".number_format($sumAllowDet,0)."</strong></td></tr>";
     } else {
       $html .= "<tr><td colspan='".(4 + count($workDayDates) + 4)."'>No data available</td></tr>";
     }
@@ -400,6 +403,7 @@ if ($isExport) {
     </tr>";
     // Summary rows
     if (!empty($results)) {
+      $sumAllowSum = 0;
       foreach ($results as $row) {
         $html .= "<tr>";
         $html .= "<td>" . htmlspecialchars($row['student_id']) . "</td>";
@@ -408,10 +412,12 @@ if ($isExport) {
         $html .= "<td>" . (int)$row['present_days'] . "</td>";
         $html .= "<td>" . (int)$row['total_days'] . "</td>";
         $html .= "<td>" . number_format($row['percentage'], 2) . "%</td>";
-        $allow = ($row['percentage']>=90?5000:($row['percentage']>=70?4000:0));
-        $html .= "<td>LKR ".number_format($allow,0)."</td>";
+        $allow = ($row['percentage']>=90?5000:($row['percentage']>=80?4000:0));
+        $sumAllowSum += (int)$allow;
+        $html .= "<td>".number_format($allow,0)."</td>";
         $html .= "</tr>";
       }
+      $html .= "<tr><td colspan='6' style='text-align:right'><strong>Total Allowance</strong></td><td><strong>".number_format($sumAllowSum,0)."</strong></td></tr>";
     } else {
       $html .= "<tr><td colspan='7'>No data available</td></tr>";
     }
@@ -603,7 +609,7 @@ if ($isExport) {
                 </tr>
               </thead>
               <tbody>
-                <?php if (!empty($results)): $__rowspan = count($results); $__printedFor = []; ?>
+                <?php if (!empty($results)): $__rowspan = count($results); $__printedFor = []; $__sumAllowDetPage = 0; ?>
                   <?php foreach ($results as $r): $sid=$r['student_id']; ?>
                     <tr>
                       <td class="id-col"><?php echo htmlspecialchars($sid); ?></td>
@@ -631,10 +637,15 @@ if ($isExport) {
                       <td class="num-col"><?php echo (int)$r['present_days']; ?></td>
                       <td class="num-col"><?php echo (int)$r['total_days']; ?></td>
                       <td class="num-col"><?php echo number_format($r['percentage'], 2); ?></td>
-                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=75?4000:0)); ?>
-                      <td class="num-col">LKR <?php echo number_format($allow,0); ?></td>
+                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=80?4000:0)); $__sumAllowDetPage += (int)$allow; ?>
+                      <td class="num-col"><?php echo number_format($allow,0); ?></td>
                     </tr>
                   <?php endforeach; ?>
+                  <?php $totalCols = 3 + count($visibleDates) + 4; $labelSpan = $totalCols - 1; ?>
+                  <tr>
+                    <td colspan="<?php echo (int)$labelSpan; ?>" class="text-right font-weight-bold">Total Allowance</td>
+                    <td class="num-col font-weight-bold"><?php echo number_format($__sumAllowDetPage, 0); ?></td>
+                  </tr>
                 <?php else: ?>
                   <tr><td colspan="<?php echo 1 + count($visibleDates) + 4; ?>" class="text-center text-muted">No data</td></tr>
                 <?php endif; ?>
@@ -652,17 +663,21 @@ if ($isExport) {
                 </tr>
               </thead>
               <tbody>
-                <?php if (!empty($results)): ?>
+                <?php if (!empty($results)): $__sumAllowSumPage = 0; ?>
                   <?php foreach ($results as $r): ?>
                     <tr>
                       <td class="id-col"><?php echo htmlspecialchars($r['student_id']); ?></td>
                       <td class="num-col"><?php echo (int)$r['present_days']; ?></td>
                       <td class="num-col"><?php echo (int)$r['total_days']; ?></td>
                       <td class="num-col"><?php echo number_format($r['percentage'], 2); ?></td>
-                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=70?4000:0)); ?>
-                      <td class="num-col">LKR <?php echo number_format($allow,0); ?></td>
+                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=80?4000:0)); $__sumAllowSumPage += (int)$allow; ?>
+                      <td class="num-col"><?php echo number_format($allow,0); ?></td>
                     </tr>
                   <?php endforeach; ?>
+                  <tr>
+                    <td colspan="4" class="text-right font-weight-bold">Total Allowance</td>
+                    <td class="num-col font-weight-bold"><?php echo number_format($__sumAllowSumPage, 0); ?></td>
+                  </tr>
                 <?php else: ?>
                   <tr><td colspan="5" class="text-center text-muted">No data</td></tr>
                 <?php endif; ?>

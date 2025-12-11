@@ -403,9 +403,7 @@ if ($showTopNav && (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_
   <?php return; endif; ?>
 
 
-<!---BLOCK 02--->
-<!---START YOUR CODER HERE----->
-<!-----END YOUR CODE----->
+
 <?php
 // Show flash messages after redirects (PRG pattern)
 if (isset($_GET['updated']) && $_GET['updated'] === '1' && !isset($_GET['Sid'])) {
@@ -1032,6 +1030,101 @@ $profileCompletion = $__total > 0 ? (int)round($__filled * 100 / $__total) : 0;
   </div>
 </div>
 
+<!---BLOCK 02--->
+<!---START YOUR CODER HERE----->
+<div class="container mt-3">
+  <?php
+    $targetId = isset($_GET['Sid']) ? trim($_GET['Sid']) : ($__loggedStudentId ?? null);
+    $payments = [];
+    $totAmount = 0.0; $totCount = 0; $lastDate = null;
+    if ($targetId) {
+      if ($st = mysqli_prepare($con, "SELECT pays_id, payment_type, payment_reason, COALESCE(payment_method,'') AS payment_method, COALESCE(pays_note,'') AS pays_note, COALESCE(pays_amount,0) AS pays_amount, COALESCE(pays_qty,1) AS pays_qty, COALESCE(reference_no,'') AS reference_no, COALESCE(pays_date,'') AS pays_date, COALESCE(pays_department,'') AS pays_department FROM pays WHERE student_id=? ORDER BY pays_date DESC, pays_id DESC")) {
+        mysqli_stmt_bind_param($st, 's', $targetId);
+        mysqli_stmt_execute($st);
+        $rs = mysqli_stmt_get_result($st);
+        if ($rs) {
+          while ($row = mysqli_fetch_assoc($rs)) {
+            $payments[] = $row;
+            $amt = (float)($row['pays_amount'] ?? 0);
+            $qty = (int)($row['pays_qty'] ?? 1);
+            $totAmount += ($amt * max(1, $qty));
+            $totCount++;
+            if (!empty($row['pays_date'])) { if ($lastDate === null || $row['pays_date'] > $lastDate) { $lastDate = $row['pays_date']; } }
+          }
+        }
+        mysqli_stmt_close($st);
+      }
+    }
+  ?>
+  <div class="card shadow-sm">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <span><i class="fas fa-receipt text-primary mr-2"></i>Payments</span>
+      <div class="d-flex align-items-center">
+        <span class="small text-muted">ID: <?php echo htmlspecialchars((string)($targetId ?? '-')); ?></span>
+        <button type="button" class="btn btn-sm btn-outline-secondary ml-2" data-toggle="collapse" data-target="#paymentsCollapse" aria-expanded="true" aria-controls="paymentsCollapse">
+          Show/Hide
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div id="paymentsCollapse" class="collapse show">
+      <?php if (!$targetId): ?>
+        <div class="alert alert-info mb-0">No student selected. Please open your profile as a student or provide <code>Sid</code> to view payments.</div>
+      <?php else: ?>
+        <div class="mb-3">
+          <span class="badge badge-primary mr-2">Records: <?php echo (int)$totCount; ?></span>
+          <span class="badge badge-success mr-2">Total Paid: <?php echo number_format((float)$totAmount, 2); ?></span>
+          <?php if ($lastDate): ?><span class="badge badge-secondary">Last Payment: <?php echo htmlspecialchars($lastDate); ?></span><?php endif; ?>
+        </div>
+        <?php if (empty($payments)): ?>
+          <div class="alert alert-light border">No payments found for this student.</div>
+        <?php else: ?>
+          <div class="table-responsive">
+            <table class="table table-sm table-striped table-hover">
+              <thead class="thead-light">
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Reason</th>
+                  <th>Method</th>
+                  <th class="text-right">Qty</th>
+                  <th class="text-right">Amount</th>
+                  <th class="text-right">Total</th>
+                  <th>Ref</th>
+                  <th>Dept</th>
+                  <th>Note</th>
+                </tr>
+              </thead>
+              <tbody>
+                <?php foreach ($payments as $p):
+                  $amt = (float)($p['pays_amount'] ?? 0);
+                  $qty = (int)($p['pays_qty'] ?? 1);
+                  $rowTot = $amt * max(1, $qty);
+                ?>
+                <tr>
+                  <td><?php echo htmlspecialchars((string)($p['pays_date'] ?? '')); ?></td>
+                  <td><?php echo htmlspecialchars((string)($p['payment_type'] ?? '')); ?></td>
+                  <td><?php echo htmlspecialchars((string)($p['payment_reason'] ?? '')); ?></td>
+                  <td><?php echo htmlspecialchars((string)($p['payment_method'] ?? '')); ?></td>
+                  <td class="text-right"><?php echo number_format((int)$qty); ?></td>
+                  <td class="text-right"><?php echo number_format((float)$amt, 2); ?></td>
+                  <td class="text-right font-weight-bold"><?php echo number_format((float)$rowTot, 2); ?></td>
+                  <td><?php echo htmlspecialchars((string)($p['reference_no'] ?? '')); ?></td>
+                  <td><?php echo htmlspecialchars((string)($p['pays_department'] ?? '')); ?></td>
+                  <td class="text-truncate" style="max-width:180px;" title="<?php echo htmlspecialchars((string)($p['pays_note'] ?? '')); ?>"><?php echo htmlspecialchars((string)($p['pays_note'] ?? '')); ?></td>
+                </tr>
+                <?php endforeach; ?>
+              </tbody>
+            </table>
+          </div>
+        <?php endif; ?>
+      <?php endif; ?>
+      </div>
+    </div>
+  </div>
+</div>
+<!-----END YOUR CODE----->
+<br>
 <!-- <div class="form-row shadow p-2 mb-4 bg-white rounded"> -->
 
   <div class="tab-content shadow p-2 mb-4 bg-white rounded" id="nav-tabContent">

@@ -20,6 +20,28 @@ $can_mutate = ($is_admin || $is_sao); // IN3 cannot mutate hostel
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
+// Lightweight API: next student id suggestion for a course + academic year
+if (isset($_GET['action']) && $_GET['action']==='next_sid') {
+  header('Content-Type: application/json');
+  if (!is_any(['ADM','SAO','IN3'])) { echo json_encode(['ok'=>false,'error'=>'forbidden']); exit; }
+  $courseQ = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
+  $ayQ = isset($_GET['academic_year']) ? trim($_GET['academic_year']) : '';
+  if ($courseQ==='' || $ayQ==='') { echo json_encode(['ok'=>false,'error'=>'missing_params']); exit; }
+  $courseEsc = mysqli_real_escape_string($con, $courseQ);
+  $ayEsc = mysqli_real_escape_string($con, $ayQ);
+  $sql = "SELECT se.student_id FROM student_enroll se WHERE se.course_id='${courseEsc}' AND se.academic_year='${ayEsc}' AND se.student_id IS NOT NULL AND se.student_id<>'' ORDER BY se.student_id DESC LIMIT 1";
+  $last = null;
+  if ($rs = mysqli_query($con, $sql)) { $row = mysqli_fetch_assoc($rs); if ($row) { $last = $row['student_id']; } mysqli_free_result($rs); }
+  if (!$last) { echo json_encode(['ok'=>true,'next_id'=>'','note'=>'no_existing_ids_for_course_year']); exit; }
+  // Extract trailing digits and preserve prefix and zero padding
+  $prefix = $last; $num = '';
+  if (preg_match('/^(.*?)(\d+)$/', (string)$last, $m)) { $prefix = $m[1]; $num = $m[2]; }
+  if ($num==='') { echo json_encode(['ok'=>true,'next_id'=>'','note'=>'last_id_has_no_trailing_number','last'=>$last]); exit; }
+  $len = strlen($num); $n = (int)$num + 1; $next = $prefix . str_pad((string)$n, $len, '0', STR_PAD_LEFT);
+  echo json_encode(['ok'=>true,'next_id'=>$next,'last_id'=>$last]);
+  exit;
+}
+
 // Ensure profile image column exists (path-based)
 @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `student_profile_img` VARCHAR(255) NULL");
 
@@ -76,6 +98,13 @@ if ($r = mysqli_query($con, "SELECT department_id, department_name FROM departme
 }
 if ($r = mysqli_query($con, "SELECT course_id, course_name, department_id FROM course ORDER BY course_name")) {
   while ($row = mysqli_fetch_assoc($r)) { $courses[] = $row; }
+  mysqli_free_result($r);
+}
+
+// Academic years for selection
+$academicYears = [];
+if ($r = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+  while ($row = mysqli_fetch_assoc($r)) { $academicYears[] = $row['academic_year']; }
   mysqli_free_result($r);
 }
 
@@ -322,6 +351,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!mysqli_query($con, $ins)) { $errors[] = 'Failed to save enrollment: '.mysqli_error($con); }
     else {
       $messages[] = 'Enrollment saved successfully';
+
+      // Optional: assign next student ID from modal
+      if (($is_admin || $is_sao) && isset($_POST['assign_next_sid']) && $_POST['assign_next_sid'] === '1') {
+        $proposed = isset($_POST['new_student_id']) ? trim($_POST['new_student_id']) : '';
+        if ($proposed !== '' && $proposed !== $sid) {
+          // Ensure proposed SID not already in use
+          $exists = false;
+          if ($stC = mysqli_prepare($con, "SELECT 1 FROM student WHERE student_id=? LIMIT 1")) {
+            mysqli_stmt_bind_param($stC, 's', $proposed);
+            mysqli_stmt_execute($stC);
+            mysqli_stmt_store_result($stC);
+            $exists = mysqli_stmt_num_rows($stC) > 0;
+            mysqli_stmt_close($stC);
+          }
+          if ($exists) {
+            $errors[] = 'Cannot assign next ID; it already exists.';
+          } else {
+            // Best-effort transactional rename across key tables
+            $ok = true; $err = '';
+            mysqli_begin_transaction($con);
+            // student
+            if ($ok) { $ok = (bool)mysqli_query($con, "UPDATE student SET student_id='".mysqli_real_escape_string($con,$proposed)."' WHERE student_id='".mysqli_real_escape_string($con,$sid)."' LIMIT 1"); if(!$ok){$err=mysqli_error($con);} }
+            // student_enroll
+            if ($ok) { $ok = (bool)mysqli_query($con, "UPDATE student_enroll SET student_id='".mysqli_real_escape_string($con,$proposed)."' WHERE student_id='".mysqli_real_escape_string($con,$sid)."'"); if(!$ok){$err=mysqli_error($con);} }
+            // user table username
+            if ($ok) { $ok = (bool)mysqli_query($con, "UPDATE `user` SET user_name='".mysqli_real_escape_string($con,$proposed)."' WHERE user_name='".mysqli_real_escape_string($con,$sid)."'"); if(!$ok){$err=mysqli_error($con);} }
+            // attendance (if exists)
+            @mysqli_query($con, "UPDATE attendance SET student_id='".mysqli_real_escape_string($con,$proposed)."' WHERE student_id='".mysqli_real_escape_string($con,$sid)."'");
+            // pays (if exists)
+            @mysqli_query($con, "UPDATE pays SET student_id='".mysqli_real_escape_string($con,$proposed)."' WHERE student_id='".mysqli_real_escape_string($con,$sid)."'");
+
+            if ($ok) {
+              mysqli_commit($con);
+              $messages[] = 'Student ID updated to '.$proposed;
+              $sid = $proposed; // update redirect target
+            } else {
+              mysqli_rollback($con);
+              $errors[] = 'Failed to assign next ID. '.$err;
+            }
+          }
+        }
+      }
       // If set to Dropout, inactivate student and disable login
       if (strcasecmp($student_enroll_status, 'Dropout') === 0) {
         // Update student status to Inactive (string schema)
@@ -337,6 +408,66 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           mysqli_stmt_close($us);
         }
       }
+    }
+  }
+
+  // Handle Bank details update (SAO/ADM)
+  if ($form === 'bank') {
+    if (!($is_admin || $is_sao)) { http_response_code(403); echo 'Forbidden: cannot edit bank details'; exit; }
+    // Ensure columns exist (best-effort)
+    @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `bank_name` VARCHAR(128) NULL");
+    @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `bank_account_no` VARCHAR(32) NULL");
+    @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `bank_branch` VARCHAR(128) NULL");
+    @mysqli_query($con, "ALTER TABLE `student` ADD COLUMN `bank_frontsheet_path` VARCHAR(255) NULL");
+
+    $acc = trim($_POST['bank_account_no'] ?? '');
+    $br  = trim($_POST['bank_branch'] ?? '');
+    $bankName = "People's Bank";
+    $frontRelPath = null;
+
+    // Optional front page upload
+    if (isset($_FILES['bank_front']) && $_FILES['bank_front']['error'] !== UPLOAD_ERR_NO_FILE) {
+      if ($_FILES['bank_front']['error'] === UPLOAD_ERR_OK) {
+        $tmp  = $_FILES['bank_front']['tmp_name'];
+        $size = (int)$_FILES['bank_front']['size'];
+        $type = function_exists('mime_content_type') ? mime_content_type($tmp) : '';
+        if ($size > 0 && $size <= 50*1024*1024) {
+          $ok = false; $ext = 'dat';
+          if (stripos((string)$type, 'pdf') !== false) { $ok = true; $ext = 'pdf'; }
+          if (stripos((string)$type, 'jpeg') !== false || stripos((string)$type, 'jpg') !== false) { $ok = true; $ext = 'jpg'; }
+          if (stripos((string)$type, 'png') !== false) { $ok = true; $ext = 'png'; }
+          if ($ok) {
+            $destDir = __DIR__ . '/documentation';
+            if (!is_dir($destDir)) { @mkdir($destDir, 0775, true); }
+            $safeId = preg_replace('/[^A-Za-z0-9_-]/', '_', $sid);
+            $destPath = $destDir . '/' . $safeId . '_bankfront.' . $ext;
+            if (!@move_uploaded_file($tmp, $destPath)) {
+              $data = @file_get_contents($tmp);
+              if ($data !== false) { @file_put_contents($destPath, $data); }
+            }
+            if (is_file($destPath)) { $frontRelPath = 'student/documentation/' . $safeId . '_bankfront.' . $ext; }
+          }
+        }
+      }
+    }
+
+    // Update only if there is data to change
+    if ($acc !== '' || $br !== '' || $frontRelPath) {
+      $sql = 'UPDATE student SET bank_name=?, bank_account_no=?, bank_branch=?' . ($frontRelPath ? ', bank_frontsheet_path=?' : '') . ' WHERE student_id=? LIMIT 1';
+      if ($st = mysqli_prepare($con, $sql)) {
+        if ($frontRelPath) { mysqli_stmt_bind_param($st, 'sssss', $bankName, $acc, $br, $frontRelPath, $sid); }
+        else { mysqli_stmt_bind_param($st, 'ssss', $bankName, $acc, $br, $sid); }
+        if (mysqli_stmt_execute($st)) {
+          $messages[] = 'Bank details updated.';
+          // refresh student row
+          if ($r = mysqli_query($con, "SELECT * FROM `student` WHERE `student_id`='".mysqli_real_escape_string($con,$sid)."' LIMIT 1")) {
+            $student = mysqli_fetch_assoc($r) ?: $student; mysqli_free_result($r);
+          }
+        } else { $errors[] = 'Failed to update bank details: '.h(mysqli_error($con)); }
+        mysqli_stmt_close($st);
+      } else { $errors[] = 'Failed to prepare bank update.'; }
+    } else {
+      $errors[] = 'Provide Account Number or Branch or a file to update.';
     }
   }
 
@@ -404,10 +535,10 @@ include_once __DIR__ . '/../menu.php';
     <ol class="breadcrumb bg-white shadow-sm mb-2">
       <li class="breadcrumb-item"><a href="<?php echo $base; ?>/dashboard/index.php">Dashboard</a></li>
       <li class="breadcrumb-item"><a href="<?php echo $base; ?>/student/ManageStudents.php">Students</a></li>
-      <li class="breadcrumb-item active" aria-current="page">Unified Edit</li>
+      <li class="breadcrumb-item active" aria-current="page">Student Edit</li>
     </ol>
   </nav>
-  <h4 class="d-flex align-items-center mb-3"><i class="fas fa-user-cog text-primary mr-2"></i> Unified Edit: <?php echo h($sid); ?></h4>
+  <h4 class="d-flex align-items-center mb-3"><i class="fas fa-user-cog text-primary mr-2"></i> Student Edit: <?php echo h($sid); ?></h4>
 
   <?php foreach ($messages as $m): ?><div class="alert alert-success"><?php echo h($m); ?></div><?php endforeach; ?>
   <?php foreach ($errors as $e): ?><div class="alert alert-danger"><?php echo h($e); ?></div><?php endforeach; ?>
@@ -819,12 +950,19 @@ include_once __DIR__ . '/../menu.php';
 
     <!-- Enrollment Tab -->
     <div class="tab-pane fade" id="enroll" role="tabpanel">
-      <form method="post">
+      <div class="d-flex justify-content-end mb-2">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-toggle="modal" data-target="#nextSidModal">
+          <i class="fas fa-exchange-alt mr-1"></i> Change Enrollment / Get Next ID
+        </button>
+      </div>
+      <form method="post" id="enrollForm">
         <input type="hidden" name="form" value="enroll">
+        <input type="hidden" name="assign_next_sid" id="assign_next_sid" value="0">
+        <input type="hidden" name="new_student_id" id="new_student_id" value="">
         <div class="form-row">
           <div class="form-group col-md-6">
             <label>Course</label>
-            <select class="form-control" name="course_id" <?php echo $can_change_enroll?'':'disabled'; ?>>
+            <select class="form-control" id="enroll_course_id" name="course_id" <?php echo $can_change_enroll?'':'disabled'; ?>>
               <?php $enrollDeptId = $enroll['department_id'] ?? null; foreach ($courses as $c): ?>
                 <?php if ($is_in3 && $enrollDeptId && (string)$c['department_id'] !== (string)$enrollDeptId) continue; ?>
                 <option value="<?php echo h($c['course_id']); ?>" <?php echo (($enroll['course_id'] ?? '')===$c['course_id']?'selected':''); ?>><?php echo h($c['course_name']); ?></option>
@@ -841,7 +979,7 @@ include_once __DIR__ . '/../menu.php';
           </div>
           <div class="form-group col-md-2">
             <label>Academic Year</label>
-            <input type="text" class="form-control" name="academic_year" value="<?php echo h($enroll['academic_year'] ?? ''); ?>" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
+            <input type="text" class="form-control" id="enroll_academic_year" name="academic_year" value="<?php echo h($enroll['academic_year'] ?? ''); ?>" <?php echo ($can_change_enroll && !$is_in3)?'':'disabled'; ?>>
           </div>
           <div class="form-group col-md-2">
             <label>Status</label>
@@ -881,9 +1019,39 @@ include_once __DIR__ . '/../menu.php';
     <!-- Bank Details Tab -->
     <div class="tab-pane fade" id="bank" role="tabpanel">
       <div class="card">
+        <div class="card-header bg-white"><strong>People's Bank Details</strong></div>
         <div class="card-body">
-          <div class="mb-2">Edit student bank details.</div>
-          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/finance/StudentBankDetails.php?Sid=<?php echo urlencode($sid); ?>">Open Bank Details</a>
+          <?php if (!empty($errors)): ?><div class="alert alert-danger py-2"><?php echo h(implode(' | ', $errors)); ?></div><?php endif; ?>
+          <?php if (!empty($messages)): ?><div class="alert alert-success py-2"><?php echo h(implode(' | ', $messages)); ?></div><?php endif; ?>
+          <form method="post" enctype="multipart/form-data" autocomplete="off">
+            <input type="hidden" name="form" value="bank">
+            <div class="form-row">
+              <div class="form-group col-md-4">
+                <label>Bank</label>
+                <input type="text" class="form-control" value="People's Bank" readonly>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Account Number</label>
+                <input type="text" class="form-control" name="bank_account_no" pattern="[0-9]{6,20}" title="Enter 6-20 digits" value="<?php echo h($student['bank_account_no'] ?? ''); ?>" <?php echo ($is_admin||$is_sao)?'':'disabled'; ?>>
+              </div>
+              <div class="form-group col-md-4">
+                <label>Branch</label>
+                <input type="text" class="form-control" name="bank_branch" value="<?php echo h($student['bank_branch'] ?? ''); ?>" <?php echo ($is_admin||$is_sao)?'':'disabled'; ?>>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Front Page (PDF/JPG/PNG) - optional</label>
+              <input type="file" class="form-control-file" name="bank_front" accept="application/pdf,image/jpeg,image/png" <?php echo ($is_admin||$is_sao)?'':'disabled'; ?>>
+              <?php if (!empty($student['bank_frontsheet_path'])): ?>
+                <small class="form-text text-muted">Existing file: <a target="_blank" href="/<?php echo h($student['bank_frontsheet_path']); ?>">View current</a></small>
+              <?php endif; ?>
+            </div>
+            <?php if ($is_admin || $is_sao): ?>
+              <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i>Save Bank Details</button>
+            <?php else: ?>
+              <div class="alert alert-info py-2">You do not have permission to change bank details.</div>
+            <?php endif; ?>
+          </form>
         </div>
       </div>
     </div>
@@ -911,7 +1079,137 @@ include_once __DIR__ . '/../menu.php';
       </div>
     </div>
     <?php endif; ?>
-523
   </div>
+</div>
+<!-- Next Student ID Modal -->
+<div class="modal fade" id="nextSidModal" tabindex="-1" role="dialog" aria-labelledby="nextSidModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="nextSidModalLabel">Next Student ID Suggestion</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-row">
+          <div class="form-group col-md-4">
+            <label>Department</label>
+            <select class="form-control" id="ns_dept">
+              <option value="">-- Select --</option>
+              <?php foreach ($departments as $d): ?>
+                <option value="<?php echo h($d['department_id']); ?>"><?php echo h($d['department_name']); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="form-group col-md-4">
+            <label>Course</label>
+            <select class="form-control" id="ns_course" disabled>
+              <option value="">-- Select --</option>
+              <?php foreach ($courses as $c): ?>
+                <option data-dept="<?php echo h($c['department_id']); ?>" value="<?php echo h($c['course_id']); ?>"><?php echo h($c['course_name']); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="form-group col-md-4">
+            <label>Academic Year</label>
+            <select class="form-control" id="ns_academic">
+              <option value="">-- Select --</option>
+              <?php foreach ($academicYears as $ay): ?>
+                <option value="<?php echo h($ay); ?>"><?php echo h($ay); ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group col-md-6">
+            <label>Last Student ID (detected)</label>
+            <input type="text" class="form-control" id="ns_last" readonly>
+          </div>
+          <div class="form-group col-md-6">
+            <label>Next Student ID</label>
+            <input type="text" class="form-control font-weight-bold" id="ns_next" readonly>
+          </div>
+        </div>
+        <div class="custom-control custom-checkbox mb-2">
+          <input type="checkbox" class="custom-control-input" id="ns_assign">
+          <label class="custom-control-label" for="ns_assign">Assign this next ID to the student</label>
+        </div>
+        <div id="ns_note" class="text-muted small"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="ns_apply_btn"><i class="fas fa-save mr-1"></i>Apply & Save</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    (function(){
+      var deptSel = document.getElementById('ns_dept');
+      var courseSel = document.getElementById('ns_course');
+      var aySel = document.getElementById('ns_academic');
+      var lastInp = document.getElementById('ns_last');
+      var nextInp = document.getElementById('ns_next');
+      var assignCb = document.getElementById('ns_assign');
+      var noteDiv = document.getElementById('ns_note');
+      var applyBtn = document.getElementById('ns_apply_btn');
+      function filterCourses(){
+        var d = deptSel.value;
+        var any=false; courseSel.disabled=false; courseSel.value='';
+        Array.prototype.forEach.call(courseSel.options, function(opt, idx){
+          if (idx===0) return; // keep placeholder
+          var show = (d==='') || (opt.getAttribute('data-dept')===d);
+          opt.style.display = show ? '' : 'none';
+          if (show) any=true;
+        });
+        if (!any) { courseSel.disabled=true; }
+      }
+      function updateNext(){
+        lastInp.value=''; nextInp.value=''; noteDiv.textContent='';
+        var cid = courseSel.value; var ay = aySel.value;
+        if (!cid || !ay) return;
+        var url = '<?php echo $base; ?>/student/StudentUnifiedEdit.php?action=next_sid&course_id=' + encodeURIComponent(cid) + '&academic_year=' + encodeURIComponent(ay);
+        fetch(url, {credentials:'same-origin'})
+          .then(function(r){ return r.json(); })
+          .then(function(j){
+            if (!j || j.ok===false) { noteDiv.textContent = 'Unable to fetch next ID'; return; }
+            lastInp.value = j.last_id || '';
+            nextInp.value = j.next_id || '';
+            if (j.note) noteDiv.textContent = j.note;
+          })
+          .catch(function(){ noteDiv.textContent = 'Network error while fetching next ID'; });
+      }
+      if (deptSel && courseSel && aySel){
+        deptSel.addEventListener('change', function(){ filterCourses(); updateNext(); });
+        courseSel.addEventListener('change', updateNext);
+        aySel.addEventListener('change', updateNext);
+        filterCourses();
+      }
+      if (applyBtn){
+        applyBtn.addEventListener('click', function(){
+          var cid = courseSel.value; var ay = aySel.value;
+          if (!cid || !ay) { noteDiv.textContent = 'Select course and academic year first'; return; }
+          var courseField = document.getElementById('enroll_course_id');
+          var ayField = document.getElementById('enroll_academic_year');
+          if (courseField) { courseField.value = cid; }
+          if (ayField) { ayField.value = ay; }
+          // Handle optional assign of next student id
+          var assignHidden = document.getElementById('assign_next_sid');
+          var newSidHidden = document.getElementById('new_student_id');
+          if (assignCb && assignCb.checked && nextInp && nextInp.value){
+            if (assignHidden) assignHidden.value = '1';
+            if (newSidHidden) newSidHidden.value = nextInp.value;
+          } else {
+            if (assignHidden) assignHidden.value = '0';
+            if (newSidHidden) newSidHidden.value = '';
+          }
+          var form = document.getElementById('enrollForm');
+          if (form) { form.submit(); }
+          // Hide modal after submit (best effort)
+          try { if (window.jQuery) { jQuery('#nextSidModal').modal('hide'); } } catch(e) {}
+        });
+      }
+    })();
+  </script>
 </div>
 <?php include_once __DIR__ . '/../footer.php'; ?>
