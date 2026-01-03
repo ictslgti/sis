@@ -356,8 +356,8 @@ if ($u_t === 'STU') {
   @media (max-width: 575.98px) {
     /* Sidebar Mobile - Blue Theme */
     .chiller-theme .sidebar-wrapper {
-      width: 100%;
-      max-width: 100%;
+      width: 260px;
+      max-width: 85vw;
     }
     
     .chiller-theme .sidebar-wrapper .sidebar-brand {
@@ -425,10 +425,28 @@ if ($u_t === 'STU') {
     #show-sidebar {
       top: 0.5rem;
       left: 0.5rem;
-      position: fixed;
-      z-index: 1030;
+      position: fixed !important;
+      z-index: 1045 !important;
       padding: 0.5rem 0.75rem;
       font-size: 0.875rem;
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%) !important;
+      color: #ffffff !important;
+      border: none !important;
+      box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3) !important;
+      border-radius: 0 8px 8px 0 !important;
+    }
+    
+    .page-wrapper.toggled #show-sidebar {
+      left: -60px;
+      transition: left 0.3s ease;
+    }
+    
+    .page-wrapper:not(.toggled) #show-sidebar {
+      left: 0.5rem;
+      transition: left 0.3s ease;
     }
     
     /* Page Content Mobile - Proper Alignment */
@@ -439,8 +457,8 @@ if ($u_t === 'STU') {
       padding-bottom: 0.5rem;
     }
     
-    /* Sidebar Toggle Animation */
-    .page-wrapper.sidebar-open .page-content {
+    /* Sidebar Toggle Animation - Mobile */
+    .page-wrapper.toggled .page-content {
       margin-left: 0;
     }
   }
@@ -493,7 +511,31 @@ if ($u_t === 'STU') {
   
   /* Mobile Sidebar Overlay - Blue Theme */
   @media (max-width: 991.98px) {
-    .page-wrapper.sidebar-open::before {
+    /* Sidebar wrapper - fixed position on mobile */
+    .chiller-theme .sidebar-wrapper {
+      position: fixed !important;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      z-index: 1040;
+      width: 260px;
+      max-width: 85vw;
+    }
+    
+    /* Sidebar hidden by default on mobile */
+    .page-wrapper:not(.toggled) .chiller-theme .sidebar-wrapper {
+      transform: translateX(-100%);
+      transition: transform 0.3s ease;
+    }
+    
+    /* Sidebar visible when toggled */
+    .page-wrapper.toggled .chiller-theme .sidebar-wrapper {
+      transform: translateX(0);
+      transition: transform 0.3s ease;
+    }
+    
+    /* Overlay when sidebar is open */
+    .page-wrapper.toggled::before {
       content: '';
       position: fixed;
       top: 0;
@@ -505,25 +547,23 @@ if ($u_t === 'STU') {
       display: block;
     }
     
-    .chiller-theme .sidebar-wrapper {
-      position: fixed;
-      top: 0;
-      left: 0;
-      height: 100vh;
-      z-index: 1040;
-      transform: translateX(-100%);
-      transition: transform 0.3s ease;
-    }
-    
-    .page-wrapper.sidebar-open .chiller-theme .sidebar-wrapper {
-      transform: translateX(0);
-    }
-    
     /* Ensure sidebar content is scrollable on mobile */
     .chiller-theme .sidebar-content {
       height: 100vh;
       overflow-y: auto;
       overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    /* Page content - no padding shift on mobile */
+    .page-wrapper .page-content {
+      padding-left: 0 !important;
+      margin-left: 0 !important;
+    }
+    
+    .page-wrapper.toggled .page-content {
+      padding-left: 0 !important;
+      margin-left: 0 !important;
     }
   }
   
