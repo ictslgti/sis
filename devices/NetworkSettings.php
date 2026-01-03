@@ -46,6 +46,213 @@ if (!empty($settings['ip'])) {
 }
 ?>
 
+<style>
+  /* ============================================
+     DEVICES MENU - BLUE THEME & PROPER ALIGNMENT
+     ============================================ */
+  
+  /* Color Theme Variables */
+  :root {
+    --blue-primary: #2563eb;
+    --blue-dark: #1e40af;
+    --blue-light: #3b82f6;
+    --white: #ffffff;
+    --text-dark: #1e293b;
+    --gray-border: #e2e8f0;
+    --gray-light: #f8fafc;
+  }
+  
+  /* Container - Proper Alignment */
+  .container-fluid {
+    max-width: 100%;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 20px;
+    padding-right: 20px;
+    box-sizing: border-box;
+  }
+  
+  @media (min-width: 1400px) {
+    .container-fluid {
+      padding-left: 30px;
+      padding-right: 30px;
+    }
+  }
+  
+  @media (min-width: 992px) and (max-width: 1399px) {
+    .container-fluid {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+  
+  @media (min-width: 768px) and (max-width: 991.98px) {
+    .container-fluid {
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+  }
+  
+  @media (max-width: 767.98px) {
+    .container-fluid {
+      padding-left: 12px;
+      padding-right: 12px;
+    }
+  }
+  
+  @media (max-width: 575.98px) {
+    .container-fluid {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+  
+  /* Card - Blue Theme */
+  .card {
+    border: 1px solid var(--gray-border);
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    background-color: var(--white);
+    color: var(--text-dark);
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    color: var(--white);
+    border: none;
+    border-radius: 12px 12px 0 0;
+    padding: 1rem 1.5rem;
+  }
+  
+  .card-header h5,
+  .card-header .text-muted {
+    color: var(--white) !important;
+  }
+  
+  .card-header .text-muted {
+    opacity: 0.9;
+  }
+  
+  .card-body {
+    color: var(--text-dark);
+    background: var(--white);
+    padding: 1.5rem;
+  }
+  
+  /* Form Controls - Blue Theme */
+  .form-control {
+    border: 1.5px solid var(--gray-border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--text-dark);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .form-control:focus {
+    border-color: var(--blue-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+    background: var(--white);
+    color: var(--text-dark);
+  }
+  
+  label,
+  .form-label {
+    color: var(--text-dark);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-text {
+    color: #64748b;
+  }
+  
+  /* Buttons - Blue Theme */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    border: none;
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    color: var(--white);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+  }
+  
+  .btn-outline-secondary,
+  .btn-outline-info,
+  .btn-outline-primary {
+    border: 1.5px solid var(--gray-border);
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    color: var(--text-dark);
+    background: var(--white);
+  }
+  
+  .btn-outline-secondary:hover,
+  .btn-outline-info:hover,
+  .btn-outline-primary:hover {
+    border-color: var(--blue-primary);
+    background: var(--blue-primary);
+    color: var(--white);
+  }
+  
+  .btn-outline-secondary.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  /* Alert - Blue Theme */
+  .alert-success {
+    background-color: #d1fae5;
+    border-color: #10b981;
+    color: #065f46;
+    border-radius: 8px;
+  }
+  
+  .alert-warning {
+    background-color: #fef3c7;
+    border-color: #f59e0b;
+    color: #92400e;
+    border-radius: 8px;
+  }
+  
+  /* Form Row Alignment */
+  .form-row {
+    margin-left: -7.5px;
+    margin-right: -7.5px;
+  }
+  
+  .form-row > [class*="col-"] {
+    padding-left: 7.5px;
+    padding-right: 7.5px;
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 767.98px) {
+    .form-row {
+      margin-left: -5px;
+      margin-right: -5px;
+    }
+    
+    .form-row > [class*="col-"] {
+      padding-left: 5px;
+      padding-right: 5px;
+    }
+  }
+  
+  /* Gap utility for buttons */
+  .gap-2 {
+    gap: 0.5rem;
+  }
+  
+  /* Iframe container */
+  .border.rounded {
+    border-color: var(--gray-border) !important;
+  }
+</style>
+
 <div class="container-fluid mt-4">
   <div class="card">
     <div class="card-header d-flex align-items-center justify-content-between">
@@ -123,9 +330,9 @@ if (!empty($settings['ip'])) {
         </div>
       </div>
 
-      <hr>
-      <p class="text-muted mb-1"><strong>Notes</strong></p>
-      <ul class="text-muted mb-0">
+      <hr style="border-color: var(--gray-border);">
+      <p class="mb-1" style="color: var(--text-dark);"><strong>Notes</strong></p>
+      <ul class="mb-0" style="color: var(--text-dark);">
         <li>Ensure the Access Control device is reachable from this server/network.</li>
         <li>If using HTTPS on the device, make sure its certificate is trusted by your browser.</li>
         <li>Hik‑Connect requires a vendor account login and the device to be bound to that account.</li>
