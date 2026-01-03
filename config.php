@@ -44,7 +44,7 @@ if (mysqli_connect_errno()) {
         @mysqli_set_charset($con, 'utf8mb4');
         @mysqli_query($con, "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci");
     } else {
-        die("Error: Database does not exist. Please create it first.");
+        die("Error: Database 'mis' does not exist. Please create it first.");
     }
 }
 
