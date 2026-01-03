@@ -258,7 +258,13 @@ if ($deptId !== '') {
 if ($deptId !== '') {
   $tblCheck = mysqli_query($con, "SHOW TABLES LIKE 'hostel_requests'");
   if ($tblCheck && mysqli_num_rows($tblCheck) > 0) {
-    $sqlHostel = "SELECT COUNT(*) AS c FROM hostel_requests WHERE department_id='" . mysqli_real_escape_string($con, $deptId) . "' AND TRIM(LOWER(status)) LIKE 'pending%'";
+    $sqlHostel = "SELECT COUNT(*) AS c 
+                  FROM hostel_requests hr
+                  INNER JOIN student s ON s.student_id = hr.student_id
+                  INNER JOIN student_enroll se ON se.student_id = s.student_id AND se.student_enroll_status IN ('Following','Active')
+                  INNER JOIN course c ON c.course_id = se.course_id
+                  WHERE c.department_id='" . mysqli_real_escape_string($con, $deptId) . "' 
+                    AND TRIM(LOWER(hr.status)) LIKE 'pending%'";
     if ($r = mysqli_query($con, $sqlHostel)) {
       $row = mysqli_fetch_assoc($r);
       $counts['hostel_pending'] = (int)($row['c'] ?? 0);

@@ -7,8 +7,6 @@ include_once("../menu.php");
 ?>
 <!--END DON'T CHANGE THE ORDER-->
 
-
-
 <?php
 // Legacy student survey notification block removed to prevent syntax and path errors.
 ?>
@@ -57,29 +55,30 @@ if ($selectedYear === '') {
     }
 ?>
 
-
 <!-- Academic Year filter -->
 <div class="row mt-3">
   <div class="col-12">
     <form method="get" action="" class="form-inline mb-2">
-      <label class="mr-2 small text-muted">Academic Year</label>
-      <select name="academic_year" class="form-control form-control-sm mr-2" style="min-width:200px;">
-        <option value="">-- Latest Active --</option>
-        <?php
-        $years = [];
-        if ($rs = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
-          while ($r = mysqli_fetch_assoc($rs)) { $years[] = $r['academic_year']; }
-          mysqli_free_result($rs);
-        }
-        foreach ($years as $y) {
-          $sel = ($selectedYear === $y) ? 'selected' : '';
-          echo '<option value="'.htmlspecialchars($y).'" '.$sel.'>'.htmlspecialchars($y).'</option>';
-        }
-        ?>
-      </select>
+      <div class="form-group">
+        <label class="small text-muted">Academic Year</label>
+        <select name="academic_year" class="form-control form-control-sm">
+          <option value="">-- Latest Active --</option>
+          <?php
+          $years = [];
+          if ($rs = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+            while ($r = mysqli_fetch_assoc($rs)) { $years[] = $r['academic_year']; }
+            mysqli_free_result($rs);
+          }
+          foreach ($years as $y) {
+            $sel = ($selectedYear === $y) ? 'selected' : '';
+            echo '<option value="'.htmlspecialchars($y).'" '.$sel.'>'.htmlspecialchars($y).'</option>';
+          }
+          ?>
+        </select>
+      </div>
       <button type="submit" class="btn btn-primary btn-sm">Apply</button>
       <?php if (!empty($_GET['academic_year'])): ?>
-        <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-link btn-sm ml-2">Clear</a>
+        <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-outline-secondary btn-sm">Clear</a>
       <?php endif; ?>
     </form>
   </div>
@@ -153,7 +152,6 @@ if ($rs = mysqli_query($con, "SELECT COUNT(academic_year) AS cnt FROM academic")
   mysqli_free_result($rs);
 }
 // Students (current Following) in the selected academic year
-// Definition: enrollment in selected year with status = 'Following', and student status not 'Inactive'
 $yearCond = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
 $sqlStu = "SELECT COUNT(DISTINCT s.student_id) AS cnt
            FROM student s
@@ -164,7 +162,7 @@ if ($rs = mysqli_query($con, $sqlStu)) {
   mysqli_free_result($rs);
 }
 
-// Active students in the selected academic year (status = 'Active')
+// Active students in the selected academic year
 $activeCount = 0;
 $sqlActive = "SELECT COUNT(DISTINCT s.student_id) AS cnt
               FROM student s
@@ -175,7 +173,7 @@ if ($rs = mysqli_query($con, $sqlActive)) {
   mysqli_free_result($rs);
 }
 
-// Internship count in selected academic year (students with OJT record linked to enrollments of the year)
+// Internship count in selected academic year
 $internCount = 0;
 $sqlIntern = "SELECT COUNT(DISTINCT o.student_id) AS cnt
               FROM ojt o
@@ -187,7 +185,7 @@ if ($rs = mysqli_query($con, $sqlIntern)) {
   mysqli_free_result($rs);
 }
 
-// NVQ Level 4 & 5 student totals (Following)
+// NVQ Level 4 & 5 student totals
 $nvq4Count = 0; $nvq5Count = 0;
 $sqlNvq4 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
             FROM student s
@@ -205,42 +203,65 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 ?>
 
 <style>
-  /* Cool Color Theme Variables - Matching Index.php */
+  /* ============================================
+     DASHBOARD - SIMPLE BLUE/WHITE THEME
+     NO HOVER EFFECTS - PROFESSIONAL & CLEAN
+     ============================================ */
+  
+  /* Blue/White Theme Variables */
   :root {
-    --theme-primary: #6366f1;
-    --theme-primary-dark: #4f46e5;
-    --theme-primary-light: #818cf8;
-    --theme-secondary: #06b6d4;
-    --theme-accent: #f472b6;
-    --theme-success: #22d3ee;
-    --theme-indigo: #6366f1;
-    --theme-cyan: #06b6d4;
-    --theme-pink: #f472b6;
+    --blue-primary: #2563eb;
+    --blue-dark: #1e40af;
+    --blue-light: #3b82f6;
+    --white: #ffffff;
+    --gray-light: #f8fafc;
+    --gray-border: #e2e8f0;
+    --text-dark: #1e293b;
+    --text-muted: #64748b;
   }
   
-  /* Admin Dashboard Container - Full Width */
+  /* Dashboard Container */
+  .page-content {
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  
   .page-content .container-fluid {
-    max-width: 100% !important;
-    width: 100% !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    max-width: 100%;
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
     padding-left: 15px;
     padding-right: 15px;
     box-sizing: border-box;
   }
 
-  /* Responsive adjustments */
-  @media (min-width: 992px) {
+  @media (min-width: 1400px) {
+    .page-content .container-fluid {
+      padding-left: 30px;
+      padding-right: 30px;
+    }
+  }
+
+  @media (min-width: 992px) and (max-width: 1399px) {
     .page-content .container-fluid {
       padding-left: 20px;
       padding-right: 20px;
     }
   }
 
-  @media (max-width: 991.98px) {
+  @media (min-width: 768px) and (max-width: 991.98px) {
     .page-content .container-fluid {
       padding-left: 15px;
       padding-right: 15px;
+    }
+  }
+
+  @media (max-width: 767.98px) {
+    .page-content .container-fluid {
+      padding-left: 12px;
+      padding-right: 12px;
     }
   }
 
@@ -251,51 +272,191 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     }
   }
   
-  /* Enhanced Form Controls - Cool Colors */
-  .form-control {
-    border: 1.5px solid #c7d2fe;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-  }
-  .form-control:focus {
-    border-color: var(--theme-primary);
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-    outline: none;
+  /* Row Alignment */
+  .row {
+    margin-left: -15px;
+    margin-right: -15px;
   }
   
-  /* Enhanced Buttons - Cool Gradient */
-  .btn-primary {
-    background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%);
-    border: none;
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-    transition: all 0.3s ease;
+  .row > [class*="col-"] {
+    padding-left: 15px;
+    padding-right: 15px;
   }
-  .btn-primary:hover {
-    background: linear-gradient(135deg, var(--theme-primary-light) 0%, var(--theme-primary) 50%, var(--theme-success) 100%);
-    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
-    transform: translateY(-2px);
+  
+  @media (max-width: 575.98px) {
+    .row {
+      margin-left: -10px;
+      margin-right: -10px;
+    }
+    
+    .row > [class*="col-"] {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+  
+  /* Form Controls - Blue/White Theme */
+  .form-control {
+    border: 1.5px solid var(--gray-border);
+    border-radius: 8px;
+    background: var(--white);
+    color: var(--text-dark);
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    height: auto;
+  }
+  
+  .form-control:focus {
+    border-color: var(--blue-primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    outline: none;
+    background: var(--white);
+    color: var(--text-dark);
+  }
+  
+  /* Select Box - Proper Size & Alignment */
+  select.form-control,
+  select.form-control-sm {
+    min-width: 200px;
+    max-width: 100%;
+    width: auto;
+    padding: 0.5rem 2rem 0.5rem 0.75rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232563eb' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 12px;
+    cursor: pointer;
+    vertical-align: middle;
+  }
+  
+  select.form-control-sm {
+    padding: 0.375rem 1.75rem 0.375rem 0.625rem;
+    font-size: 0.875rem;
+    min-width: 180px;
+    height: auto;
+  }
+  
+  /* Form Inline Alignment */
+  .form-inline {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  
+  .form-inline .form-group {
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: nowrap;
+  }
+  
+  .form-inline label {
+    margin-bottom: 0;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  
+  .form-inline select {
+    flex-shrink: 0;
+  }
+  
+  .form-inline .btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  
+  /* Responsive Select Box */
+  @media (max-width: 767.98px) {
+    .form-inline {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.5rem;
+    }
+    
+    .form-inline .form-group {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.25rem;
+    }
+    
+    .form-inline label {
+      width: 100%;
+    }
+    
+    select.form-control,
+    select.form-control-sm {
+      width: 100% !important;
+      min-width: 100% !important;
+      max-width: 100% !important;
+    }
+    
+    .form-inline .btn {
+      width: 100%;
+    }
+  }
+  
+  /* Dashboard Header Form Alignment */
+  .dashboard-header-card .form-inline {
+    align-items: center;
+  }
+  
+  .dashboard-header-card .form-group {
+    margin-right: 0.5rem;
+  }
+  
+  @media (max-width: 991.98px) {
+    .dashboard-header-card .form-inline {
+      flex-direction: column;
+      align-items: stretch;
+    }
+    
+    .dashboard-header-card .form-group {
+      margin-right: 0;
+      margin-bottom: 0.5rem;
+    }
+    
+    .dashboard-header-card select {
+      width: 100% !important;
+    }
+  }
+  
+  /* Buttons - Blue Theme */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    border: none;
+    color: var(--white);
+    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    border-radius: 8px;
+  }
+  
+  .btn-outline-primary {
+    border: 2px solid var(--blue-primary);
+    color: var(--blue-primary);
+    background: transparent;
+    border-radius: 8px;
+  }
+  
+  .btn-outline-secondary {
+    border: 2px solid var(--gray-border);
+    color: var(--text-dark);
+    background: transparent;
+    border-radius: 8px;
   }
 
-  /* Enhanced stat cards with modern design */
+  /* Stat Cards - Blue/White Theme */
   .stat-card { 
     border: 0; 
-    color: #fff; 
+    color: var(--white); 
     border-radius: 12px;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
   }
-  .stat-card:hover {
-    transform: translateY(-5px) scale(1.02);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.25) !important;
-  }
-  /* Cool Color Palette - Matching Index.php */
-  .bg-red    { background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%); }
-  .bg-black  { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
-  .bg-yellow { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; }
-  .bg-blue   { background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); }
-  .bg-green  { background: linear-gradient(135deg, var(--theme-secondary) 0%, #0891b2 100%); }
-  .bg-purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+  
   .stat-card .icon { 
     width: 56px; 
     height: 56px; 
@@ -303,105 +464,193 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     align-items: center; 
     justify-content: center; 
     border-radius: 12px; 
-    background: rgba(255,255,255,0.25);
+    background: rgba(255, 255, 255, 0.2);
     font-size: 1.5rem;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    transition: all 0.3s ease;
   }
-  .stat-card:hover .icon {
-    transform: scale(1.1);
-    background: rgba(255,255,255,0.35);
-  }
-  .bg-yellow .icon { background: rgba(255,255,255,0.25); }
+  
   .stat-label { 
-    opacity: .95; 
-    font-size: .75rem; 
+    opacity: 0.95; 
+    font-size: 0.75rem; 
     text-transform: uppercase; 
     letter-spacing: 1px; 
     font-weight: 600;
     margin-bottom: 0.25rem;
+    color: rgba(255, 255, 255, 0.9);
   }
+  
   .stat-value { 
     font-size: 2.25rem; 
     font-weight: 800; 
     line-height: 1; 
-    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    color: var(--white);
   }
 
-  /* Mobile-only: remove outer side space on dashboard */
-  @media (max-width: 575.98px) {
-    .page-wrapper .page-content > .container-fluid { padding-left: .25rem !important; padding-right: .25rem !important; }
-    .mobile-tight > [class^="col-"],
-    .mobile-tight > [class*=" col-"] { padding-left: 0 !important; padding-right: 0 !important; }
-    .mobile-tight { margin-left: 0 !important; margin-right: 0 !important; }
-    /* Increase height a bit for the line chart on small screens */
-    .dept-line-body { height: clamp(300px, 50vh, 520px) !important; }
+  /* Mobile Spacing */
+  .mobile-tight {
+    margin-left: -15px;
+    margin-right: -15px;
   }
-  /* Chips list under line chart to show district names currently plotted */
-  .chip-list-wrap { margin-top: .5rem; }
-  .chip-list-label { font-size: 12px; color: #6c757d; margin-bottom: .25rem; }
+  
+  .mobile-tight > [class^="col-"],
+  .mobile-tight > [class*=" col-"] {
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+  
+  @media (max-width: 575.98px) {
+    .mobile-tight {
+      margin-left: -10px;
+      margin-right: -10px;
+    }
+    
+    .mobile-tight > [class^="col-"],
+    .mobile-tight > [class*=" col-"] {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+    
+    .dept-line-body { 
+      height: clamp(300px, 50vh, 520px) !important; 
+    }
+  }
+  
+  /* Chip List Styles */
+  .chip-list-wrap { 
+    margin-top: 0.5rem; 
+  }
+  
+  .chip-list-label { 
+    font-size: 12px; 
+    color: var(--text-muted); 
+    margin-bottom: 0.25rem; 
+  }
+  
   .chip-list { 
-    padding-top: .5rem; 
-    border-top: 1px solid #f1f3f5; 
+    padding-top: 0.5rem; 
+    border-top: 1px solid var(--gray-border); 
     display: flex; 
     flex-wrap: wrap; 
     gap: 6px 8px;
     width: 100%;
   }
+  
   .chip { 
     display: inline-flex; 
     align-items: center; 
-    background: #f8f9fa; 
-    border: 1px solid #e9ecef; 
-    color: #495057; 
+    background: var(--gray-light); 
+    border: 1px solid var(--gray-border); 
+    color: var(--text-dark); 
     border-radius: 999px; 
     padding: 2px 10px; 
     font-size: 12px; 
     line-height: 1.6; 
     white-space: nowrap; 
-    box-shadow: 0 1px 0 rgba(0,0,0,0.02);
   }
+  
   .chip .count { 
     display: inline-flex; 
     align-items: center; 
     justify-content: center; 
-    min-width: 18px; height: 18px; 
+    min-width: 18px; 
+    height: 18px; 
     margin-left: 6px; 
     border-radius: 999px; 
-    background: #e9ecef; 
-    color: #495057; 
+    background: var(--gray-border); 
+    color: var(--text-dark); 
     font-size: 11px; 
     padding: 0 6px; 
   }
-  /* Ensure department titles in accordion headers are left-aligned and can wrap - Bootstrap 5 */
-  .accordion .accordion-header .accordion-button { text-align: left; white-space: normal; }
-  @media (max-width: 575.98px) {
-    .accordion .accordion-header h6 { justify-content: space-between; }
-    .accordion .accordion-header .accordion-button { text-align: left; }
-  }
-  /* Footer-specific tweaks: remove divider inside card-footer */
-  .card-footer .chip-list { border-top: 0; padding-top: 0; }
-  .card-footer .chip-list-label { margin-bottom: .25rem; }
-  @media (max-width: 575.98px) {
-    .chip { font-size: 11px; padding: 2px 8px; }
-    .chip .count { min-width: 16px; height: 16px; font-size: 10px; }
+  
+  .card-footer .chip-list { 
+    border-top: 0; 
+    padding-top: 0; 
   }
   
-  /* Disable table hover effects */
-  .table tbody tr:hover {
-    background-color: transparent !important;
+  .card-footer .chip-list-label { 
+    margin-bottom: 0.25rem; 
   }
-  .table-striped tbody tr:hover {
-    background-color: rgba(0, 0, 0, 0.05) !important;
+  
+  @media (max-width: 575.98px) {
+    .chip { 
+      font-size: 11px; 
+      padding: 2px 8px; 
+    }
+    
+    .chip .count { 
+      min-width: 16px; 
+      height: 16px; 
+      font-size: 10px; 
+    }
   }
-  .table tbody tr:hover td {
-    background-color: transparent !important;
+  
+  /* Accordion Styles */
+  .accordion .accordion-header .accordion-button { 
+    text-align: left; 
+    white-space: normal; 
+  }
+  
+  @media (max-width: 575.98px) {
+    .accordion .accordion-header h6 { 
+      justify-content: space-between; 
+    }
+    
+    .accordion .accordion-header .accordion-button { 
+      text-align: left; 
+    }
+  }
+  
+  /* Table Styles - Blue/White Theme */
+  .table {
+    color: var(--text-dark);
+    background: var(--white);
+  }
+  
+  .table thead th {
+    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-primary) 100%);
+    color: var(--white);
+    font-weight: 600;
+    border: none;
+  }
+  
+  .table tbody {
+    background: var(--white);
+    color: var(--text-dark);
+  }
+  
+  .table tbody td {
+    color: var(--text-dark);
+    border-color: var(--gray-border);
+  }
+  
+  .table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--gray-light);
+  }
+  
+  /* Cards - Blue/White Theme */
+  .card {
+    background: var(--white);
+    border: 1px solid var(--gray-border);
+    border-radius: 12px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    color: var(--white);
+    border: none;
+    border-radius: 12px 12px 0 0;
+  }
+  
+  .card-body {
+    color: var(--text-dark);
+    background: var(--white);
   }
 </style>
+
 <!-- Admin Dashboard Header -->
 <div class="row mt-2 mb-3">
   <div class="col-12">
-    <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); border-radius: 12px; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4) !important;">
+    <div class="card shadow-sm border-0 dashboard-header-card">
       <div class="card-body p-4">
         <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
           <div class="mb-3 mb-md-0 text-white">
@@ -414,11 +663,11 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
           </div>
           <div class="ml-md-auto">
             <form method="get" action="" class="form-inline">
-              <div class="form-group mb-0 mr-2">
-                <label class="mr-2 text-white small font-weight-bold">
+              <div class="form-group">
+                <label class="text-white small font-weight-bold">
                   <i class="fas fa-calendar-alt mr-1"></i>Academic Year
                 </label>
-                <select name="academic_year" class="form-control form-control-sm" style="min-width:200px; border-radius: 6px;">
+                <select name="academic_year" class="form-control form-control-sm">
                   <option value="">-- Latest Active --</option>
                   <?php
                   $years = [];
@@ -433,11 +682,11 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
                   ?>
                 </select>
               </div>
-              <button type="submit" class="btn btn-light btn-sm mr-2" style="border-radius: 6px;">
+              <button type="submit" class="btn btn-light btn-sm">
                 <i class="fas fa-filter mr-1"></i>Apply
               </button>
               <?php if (!empty($_GET['academic_year'])): ?>
-                <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-outline-light btn-sm" style="border-radius: 6px;">
+                <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-outline-light btn-sm">
                   <i class="fas fa-times mr-1"></i>Clear
                 </a>
               <?php endif; ?>
@@ -449,81 +698,93 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   </div>
 </div>
 
+<style>
+  .dashboard-header-card {
+    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+  }
+</style>
+
+<!-- Stat Cards Row -->
 <div class="row mt-2 mobile-tight">
-  <div class="col-md-4 col-sm-6 col-12 mb-2">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);">
-      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #818cf8; font-size: 2rem;"><i class="fas fa-building fa-lg"></i></div>
-        <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Departments</div>
-          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $deptCount; ?></div>
-        </div>
-      </div>
-    </div>
-  </div>
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--theme-pink) 0%, #ec4899 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-primary) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #fbcfe8; font-size: 2rem;"><i class="fas fa-book-open fa-lg"></i></div>
+        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-building fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Courses</div>
-          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $courseCount; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Departments</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $deptCount; ?></div>
         </div>
       </div>
     </div>
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-light) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe; font-size: 2rem;"><i class="fas fa-users fa-lg"></i></div>
+        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-book-open fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Following Students</div>
-          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $studentCount; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Courses</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $courseCount; ?></div>
         </div>
       </div>
     </div>
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #fde68a; font-size: 2rem;"><i class="fas fa-briefcase fa-lg"></i></div>
+        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-users fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Internships</div>
-          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $internCount; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Following Students</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $studentCount; ?></div>
         </div>
       </div>
     </div>
   </div>
+  
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--theme-secondary) 0%, #0891b2 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue-primary) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #a5f3fc; font-size: 2rem;"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-briefcase fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">NVQ Level 4</div>
-          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $nvq4Count; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Internships</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $internCount; ?></div>
         </div>
       </div>
     </div>
   </div>
+  
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #ddd6fe; font-size: 2rem;"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-level-up-alt fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">NVQ Level 5</div>
-          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $nvq5Count; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">NVQ Level 4</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $nvq4Count; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-primary) 100%);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9);">NVQ Level 5</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $nvq5Count; ?></div>
         </div>
       </div>
     </div>
   </div>
 </div>
-<hr>
 
-<!-- Course-wise Students Table (excludes courses with zero students) -->
+<hr class="my-4">
+
+<!-- Course-wise Students Table -->
 <?php
-  // Build course-wise list for the selected academic year
   $yearCondCourse = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
   $courseRows = [];
   $sqlCourses = "
@@ -547,9 +808,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     while ($r = mysqli_fetch_assoc($rs)) { $courseRows[] = $r; }
     mysqli_free_result($rs);
   }
-?>
 
-<?php
   // Group courses under their departments
   $byDept = [];
   $deptTotals = [];
@@ -559,7 +818,8 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     $byDept[$dn][] = $row;
     $deptTotals[$dn] += (int)($row['total'] ?? 0);
   }
-  // Compute gender counts per department (Male/Female)
+  
+  // Compute gender counts per department
   $genderByDept = [];
   $yearCondG = $selectedYear !== '' ? (" AND e.academic_year='" . mysqli_real_escape_string($con, $selectedYear) . "'") : '';
   $sqlG = "
@@ -582,6 +842,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     mysqli_free_result($rsG);
   }
 ?>
+
 <div class="row mt-1 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
@@ -602,7 +863,6 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
             <p class="mb-0">No data available<?php echo $selectedYear ? ' for the selected year' : ''; ?>.</p>
           </div>
         <?php else: ?>
-          <!-- Department Accordion - Full Width -->
           <div class="accordion" id="deptCourseAcc" style="width: 100%;">
             <?php $i=0; foreach ($byDept as $deptName => $rows): $i++; $collapseId = 'dcoll'.$i; 
               $g = $genderByDept[$deptName] ?? ['male'=>0,'female'=>0];
@@ -667,6 +927,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   </div>
 </div>
 
+<!-- Religion Distribution -->
 <div class="row mt-3 mobile-tight align-items-center rel-filter">
   <div class="col-md-6 col-sm-12">
     <h5 class="mb-0"><i class="fas fa-praying-hands mr-2 text-primary"></i>Religion-wise Students</h5>
@@ -675,7 +936,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   <div class="col-md-6 col-sm-12 text-md-right mt-2 mt-md-0">
     <form class="form-inline justify-content-md-end" id="relFilterForm" style="display: none !important;">
       <label class="mr-2 small text-muted">Department</label>
-      <select class="form-control form-control-sm" id="relDept">
+      <select class="form-control form-control-sm" id="relDept" style="min-width: 200px;">
         <option value="">All</option>
         <?php
           $dres = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
@@ -689,91 +950,36 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 
 <div class="row" id="religionCards"></div>
 
-<script>
-  (function(){
-    function fetchReligion(dept){
-      var base = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>";
-      var url = base + '/dashboard/religion_distribution_api.php' + (dept ? ('?department_id=' + encodeURIComponent(dept)) : '');
-      return fetch(url).then(function(r){ return r.json(); });
-    }
-    function renderReligion(json){
-      var wrap = document.getElementById('religionCards');
-      if (!wrap) return;
-      wrap.innerHTML = '';
-      if (!json || json.ok!==true || !json.data || !json.data.length){
-        wrap.innerHTML = '<div class="col-12"><div class="card rel-empty"><div class="card-body text-center">No religion data available.</div></div></div>';
-        return;
-      }
-      var total = Number(json.total||0) || 0;
-      json.data.forEach(function(r, idx){
-        var name = String(r.religion||'Unknown');
-        var cnt = Number(r.cnt||0) || 0;
-        var pct = total>0 ? Math.round((cnt/total)*1000)/10 : 0; // 0.1 precision
-        var grad = 'rel-grad-' + (idx % 8);
-        var icon = '<i class="fas fa-praying-hands"></i>';
-        var col = document.createElement('div');
-        col.className = 'col-lg-3 col-md-4 col-sm-6 col-12 mb-3';
-        col.innerHTML = '<div class="card rel-card '+grad+' shadow-sm">\
-            <div class="card-body rel-body">\
-              <div>\
-                <div class="rel-name">'+name.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>\
-                <div class="rel-percent">'+pct+'% of students</div>\
-              </div>\
-              <div class="text-right">\
-                <div class="rel-icon mb-2">'+icon+'</div>\
-                <div class="rel-count">'+cnt+'</div>\
-              </div>\
-            </div>\
-          </div>';
-        wrap.appendChild(col);
-      });
-    }
-    function load(){
-      var dept = document.getElementById('relDept').value;
-      fetchReligion(dept).then(renderReligion).catch(function(){ renderReligion(null); });
-    }
-    document.addEventListener('DOMContentLoaded', function(){
-      var sel = document.getElementById('relDept');
-      if (sel) sel.addEventListener('change', load);
-      load();
-    });
-  })();
-  </script>
-
-
+<!-- Gender Widgets -->
 <div class="row mt-4 mobile-tight">
-    <div class="col-12">
-        <?php
-        // Pass selected year into widget
-        $gw_academic_year = $selectedYear;
-        // Embed gender charts widget directly on dashboard
-        $genderWidget = __DIR__ . '/partials/gender_widget.php';
-        if (file_exists($genderWidget)) {
-            include $genderWidget;
-        } else {
-            echo '<div class="alert alert-warning">Gender widget not found.</div>';
-        }
-        ?>
-    </div>
+  <div class="col-12">
+    <?php
+    $gw_academic_year = $selectedYear;
+    $genderWidget = __DIR__ . '/partials/gender_widget.php';
+    if (file_exists($genderWidget)) {
+      include $genderWidget;
+    } else {
+      echo '<div class="alert alert-warning">Gender widget not found.</div>';
+    }
+    ?>
+  </div>
 </div>
 
 <div class="row mt-4 mobile-tight">
-    <div class="col-12">
-        <?php
-        // Province & District-wise gender widget
-        $ggw_academic_year = $selectedYear;
-        $geoWidget = __DIR__ . '/partials/geo_gender_widget.php';
-        if (file_exists($geoWidget)) {
-            include $geoWidget;
-        } else {
-            echo '<div class="alert alert-warning">Geo gender widget not found.</div>';
-        }
-        ?>
-    </div>
-    
+  <div class="col-12">
+    <?php
+    $ggw_academic_year = $selectedYear;
+    $geoWidget = __DIR__ . '/partials/geo_gender_widget.php';
+    if (file_exists($geoWidget)) {
+      include $geoWidget;
+    } else {
+      echo '<div class="alert alert-warning">Geo gender widget not found.</div>';
+    }
+    ?>
+  </div>
 </div>
 
-<!-- Department-wise District Count (Line Chart) -->
+<!-- Department-wise District Count Chart -->
 <div class="row mt-4 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
@@ -794,268 +1000,88 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
       </div>
     </div>
   </div>
-  <script>
-    window.addEventListener('load', function(){
-      var ctx = document.getElementById('deptDistrictLine');
-      if (!ctx || !window.Chart) return;
-      var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
-      var limit = isMobile ? 5 : 0; // 0 => all districts (API omits LIMIT)
-      var url = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/dashboard/department_district_api.php?academic_year=<?php echo urlencode($selectedYear); ?>&limit=" + encodeURIComponent(limit);
-      fetch(url)
-        .then(function(r){ return r.json(); })
-        .then(function(json){
-          if (!json || json.status !== 'success') { throw new Error('API error'); }
-          var labels = json.data.labels || [];
-          var series = json.data.datasets || [];
-          // If no data, render a small notice in the card and abort
-          if (!labels.length || !series.length) {
-            var container = ctx.parentNode;
-            if (container) {
-              var div = document.createElement('div');
-              div.className = 'text-center text-muted small';
-              div.textContent = 'No department-wise district data available for the selected academic year.';
-              container.appendChild(div);
-              ctx.style.display = 'none';
-              // Clear district list if exists
-              var listEl0 = document.getElementById('deptDistrictList');
-              if (listEl0) listEl0.innerHTML = '';
-            }
-            return;
-          }
-          // Populate district names shown in the line chart (chips) with per-district totals
-          try {
-            var listEl = document.getElementById('deptDistrictList');
-            if (listEl) {
-              // compute totals per district across all departments (series)
-              var totalsByLabel = labels.map(function(_, idx){
-                var sum = 0; 
-                for (var k=0; k<series.length; k++) { sum += Number(series[k].data[idx] || 0); }
-                return sum;
-              });
-              // Determine top 3 ranks by total (ties keep earlier rank order)
-              var idxs = labels.map(function(_,i){return i;});
-              idxs.sort(function(a,b){ return (totalsByLabel[b]-totalsByLabel[a]) || (a-b); });
-              var rankByIdx = {};
-              for (var r=0; r<idxs.length; r++) { rankByIdx[idxs[r]] = r+1; }
-              listEl.innerHTML = labels.map(function(name, idx){
-                var safe = String(name).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                var count = totalsByLabel[idx] || 0;
-                var rank = rankByIdx[idx] || 999;
-                var rankCls = rank===1? ' top1' : (rank===2? ' top2' : (rank===3? ' top3' : ''));
-                var medal = rank<=3 ? '<span class="medal" aria-hidden="true"></span>' : '';
-                var title = 'title="' + safe + ': ' + count + ' students' + (rank<=3? (' (Rank '+rank+')') : '') + '"';
-                return '<span class="chip'+ rankCls +'" '+ title +'>' + medal + safe + '<span class="count">'+ count +'</span></span>';
-              }).join('');
-            }
-          } catch(e) { /* no-op */ }
-          var palette = [
-            '#4e73df','#e74a3b','#1cc88a','#f6c23e','#36b9cc','#6f42c1','#fd7e14','#20c997'
-          ];
-          var datasets = series.map(function(s, i){
-            var color = palette[i % palette.length];
-            return {
-              label: s.label,
-              data: s.data,
-              fill: false,
-              borderColor: color,
-              backgroundColor: color,
-              borderWidth: isMobile ? 1.5 : 2,
-              pointRadius: isMobile ? 0 : 3,
-              pointHoverRadius: isMobile ? 6 : 5,
-              pointHitRadius: 10,
-              lineTension: 0.25,
-              cubicInterpolationMode: 'monotone',
-              spanGaps: true
-            };
-          });
-          var chart = new Chart(ctx.getContext('2d'), {
-            type: 'line',
-            data: { labels: labels, datasets: datasets },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              legend: { display: !isMobile, position: isMobile ? 'bottom' : 'top', labels: { boxWidth: 10, fontSize: isMobile ? 10 : 12 } },
-              tooltips: { mode: 'index', intersect: false, bodyFontSize: isMobile ? 11 : 12 },
-              layout: { padding: { left: 6, right: 6, top: 6, bottom: isMobile ? 12 : 8 } },
-              hover: { mode: 'nearest', intersect: true },
-              scales: {
-                xAxes: [{
-                  ticks: {
-                    autoSkip: isMobile ? true : false,
-                    maxRotation: isMobile ? 35 : 60,
-                    minRotation: 0,
-                    fontSize: isMobile ? 10 : 12,
-                    callback: function(value, index){
-                      if (!isMobile) return value;
-                      // On mobile, show every 2nd label only
-                      if (index % 2 !== 0) return '';
-                      var v = String(value || '');
-                      return v.length > 10 ? (v.substr(0, 10) + '…') : v;
-                    }
-                  },
-                  gridLines: { display: false }
-                }],
-                yAxes: [{
-                  ticks: { beginAtZero: true, precision: 0, fontSize: isMobile ? 10 : 12 },
-                  gridLines: { color: 'rgba(0,0,0,0.05)' }
-                }]
-              }
-            }
-          });
-        })
-        .catch(function(e){
-          console && console.warn && console.warn('deptDistrictLine error', e);
-          var container = ctx && ctx.parentNode;
-          if (container) {
-            var div = document.createElement('div');
-            div.className = 'text-center text-muted small';
-            div.textContent = 'Unable to load chart at this time.';
-            container.appendChild(div);
-            if (ctx) ctx.style.display = 'none';
-          }
-        });
-    });
-  </script>
 </div>
 
-<!-- Removed progress bar cards row (Completion & Dropout) as requested -->
-
-
-
-
-<!-- 
-<div class="row m-2">
-    <div class="col-md-12  ">
-        <canvas id="myChart"></canvas>
-    </div>
-</div> -->
-
-
-<!-- 
-<script>
-function showCouese(val) {
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("Course").innerHTML = this.responseText;
-        }
-    };
-    xmlhttp.open("POST", "controller/getCourse", true);
-    xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xmlhttp.send("department=" + val);
-}
-
-function showModule(val) {
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("Module").innerHTML = this.responseText;
-        }
-    };
-    xmlhttp.open("POST", "controller/getModule", true);
-    xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xmlhttp.send("course=" + val);
-}
-
-function showTeacher() {
-    var did = document.getElementById("Departmentx").value;
-    var cid = document.getElementById("Course").value;
-    var mid = document.getElementById("Module").value;
-    var aid = null;
-    var tid = null;
-
-    var xmlhttp = new XMLHttpRequest();
-    xmlhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            document.getElementById("Teacher").innerHTML = this.responseText;
-        }
-    };
-    xmlhttp.open("POST", "controller/getTeacher", true);
-    xmlhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-    xmlhttp.send("StaffModuleEnrollment=1&staff_id=" + tid + "&course_id=" + cid + "&module_id=" + mid +
-        "&academic_year=" + aid);
-}
-</script>
-
- -->
-
-
-<!-- Chart and script removed -->
- 
- 
-<!-- Admin Dashboard Alignment Script -->
+<!-- JavaScript Section -->
 <script>
   (function() {
     'use strict';
     
+    // ============================================
+    // DASHBOARD ALIGNMENT SCRIPT
+    // ============================================
     var resizeTimer = null;
     var sidebarToggleTimer = null;
     
-    // Ensure proper alignment for admin dashboard - Full Width
     function ensureDashboardAlignment() {
       try {
         var containerFluid = document.querySelector('.page-content .container-fluid');
         if (!containerFluid) return;
         
-        // Full width - no centering
+        var windowWidth = window.innerWidth || document.documentElement.clientWidth;
+        
         containerFluid.style.maxWidth = '100%';
         containerFluid.style.width = '100%';
-        containerFluid.style.marginLeft = '0';
-        containerFluid.style.marginRight = '0';
+        containerFluid.style.marginLeft = 'auto';
+        containerFluid.style.marginRight = 'auto';
+        containerFluid.style.boxSizing = 'border-box';
         
-        // Ensure proper padding based on screen size
-        var windowWidth = window.innerWidth || document.documentElement.clientWidth;
-        if (windowWidth >= 992) {
+        // Responsive padding
+        if (windowWidth >= 1400) {
+          containerFluid.style.paddingLeft = '30px';
+          containerFluid.style.paddingRight = '30px';
+        } else if (windowWidth >= 992) {
           containerFluid.style.paddingLeft = '20px';
           containerFluid.style.paddingRight = '20px';
-        } else if (windowWidth >= 576) {
+        } else if (windowWidth >= 768) {
           containerFluid.style.paddingLeft = '15px';
           containerFluid.style.paddingRight = '15px';
+        } else if (windowWidth >= 576) {
+          containerFluid.style.paddingLeft = '12px';
+          containerFluid.style.paddingRight = '12px';
         } else {
           containerFluid.style.paddingLeft = '10px';
           containerFluid.style.paddingRight = '10px';
         }
         
-        // Ensure box-sizing
-        containerFluid.style.boxSizing = 'border-box';
+        // Row margins
+        var rows = containerFluid.querySelectorAll('.row');
+        rows.forEach(function(row) {
+          if (windowWidth >= 576) {
+            row.style.marginLeft = '-15px';
+            row.style.marginRight = '-15px';
+          } else {
+            row.style.marginLeft = '-10px';
+            row.style.marginRight = '-10px';
+          }
+        });
+        
       } catch(e) {
-        console.warn('Error ensuring dashboard alignment:', e);
+        if (console && console.warn) {
+          console.warn('Error ensuring dashboard alignment:', e);
+        }
       }
     }
     
-    // Handle window resize with debouncing
     function handleResize() {
-      if (resizeTimer) {
-        clearTimeout(resizeTimer);
-      }
-      resizeTimer = setTimeout(function() {
-        ensureDashboardAlignment();
-      }, 150);
+      if (resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(ensureDashboardAlignment, 150);
     }
     
-    // Handle sidebar toggle
     function handleSidebarToggle() {
-      if (sidebarToggleTimer) {
-        clearTimeout(sidebarToggleTimer);
-      }
-      sidebarToggleTimer = setTimeout(function() {
-        ensureDashboardAlignment();
-      }, 300);
+      if (sidebarToggleTimer) clearTimeout(sidebarToggleTimer);
+      sidebarToggleTimer = setTimeout(ensureDashboardAlignment, 300);
     }
     
-    // Initialize on DOM ready
     function initDashboardAlignment() {
       ensureDashboardAlignment();
-      
-      // Setup resize handler
       window.removeEventListener('resize', handleResize);
       window.addEventListener('resize', handleResize, { passive: true });
       
-      // Setup sidebar toggle handlers (if jQuery is available)
       if (window.jQuery) {
-        jQuery(document).off('click', '#show-sidebar, #close-sidebar').on('click', '#show-sidebar, #close-sidebar', handleSidebarToggle);
+        jQuery(document).off('click', '#show-sidebar, #close-sidebar, .sidebar-toggle')
+          .on('click', '#show-sidebar, #close-sidebar, .sidebar-toggle', handleSidebarToggle);
         
-        // Also listen for sidebar state changes
         var observer = new MutationObserver(function(mutations) {
           mutations.forEach(function(mutation) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
@@ -1074,15 +1100,194 @@ function showTeacher() {
       }
     }
     
-    // Run initialization
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', initDashboardAlignment);
     } else {
       initDashboardAlignment();
     }
     
-    // Also run after a short delay to ensure all styles are applied
     setTimeout(ensureDashboardAlignment, 100);
+    setTimeout(ensureDashboardAlignment, 500);
+    
+    // ============================================
+    // RELIGION DISTRIBUTION SCRIPT
+    // ============================================
+    function fetchReligion(dept) {
+      var base = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>";
+      var url = base + '/dashboard/religion_distribution_api.php' + (dept ? ('?department_id=' + encodeURIComponent(dept)) : '');
+      return fetch(url).then(function(r) { return r.json(); });
+    }
+    
+    function renderReligion(json) {
+      var wrap = document.getElementById('religionCards');
+      if (!wrap) return;
+      wrap.innerHTML = '';
+      
+      if (!json || json.ok !== true || !json.data || !json.data.length) {
+        wrap.innerHTML = '<div class="col-12"><div class="card rel-empty"><div class="card-body text-center">No religion data available.</div></div></div>';
+        return;
+      }
+      
+      var total = Number(json.total || 0) || 0;
+      json.data.forEach(function(r, idx) {
+        var name = String(r.religion || 'Unknown');
+        var cnt = Number(r.cnt || 0) || 0;
+        var pct = total > 0 ? Math.round((cnt / total) * 1000) / 10 : 0;
+        var grad = 'rel-grad-' + (idx % 8);
+        var icon = '<i class="fas fa-praying-hands"></i>';
+        var col = document.createElement('div');
+        col.className = 'col-lg-3 col-md-4 col-sm-6 col-12 mb-3';
+        col.innerHTML = '<div class="card rel-card ' + grad + ' shadow-sm">' +
+          '<div class="card-body rel-body">' +
+          '<div><div class="rel-name">' + name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</div>' +
+          '<div class="rel-percent">' + pct + '% of students</div></div>' +
+          '<div class="text-right"><div class="rel-icon mb-2">' + icon + '</div>' +
+          '<div class="rel-count">' + cnt + '</div></div></div></div>';
+        wrap.appendChild(col);
+      });
+    }
+    
+    function loadReligion() {
+      var dept = document.getElementById('relDept');
+      var deptValue = dept ? dept.value : '';
+      fetchReligion(deptValue).then(renderReligion).catch(function() { renderReligion(null); });
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+      var sel = document.getElementById('relDept');
+      if (sel) sel.addEventListener('change', loadReligion);
+      loadReligion();
+    });
+    
+    // ============================================
+    // DEPARTMENT DISTRICT LINE CHART
+    // ============================================
+    window.addEventListener('load', function() {
+      var ctx = document.getElementById('deptDistrictLine');
+      if (!ctx || !window.Chart) return;
+      
+      var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
+      var limit = isMobile ? 5 : 0;
+      var url = "<?php echo (defined('APP_BASE') ? APP_BASE : ''); ?>/dashboard/department_district_api.php?academic_year=<?php echo urlencode($selectedYear); ?>&limit=" + encodeURIComponent(limit);
+      
+      fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(json) {
+          if (!json || json.status !== 'success') { throw new Error('API error'); }
+          
+          var labels = json.data.labels || [];
+          var series = json.data.datasets || [];
+          
+          if (!labels.length || !series.length) {
+            var container = ctx.parentNode;
+            if (container) {
+              var div = document.createElement('div');
+              div.className = 'text-center text-muted small';
+              div.textContent = 'No department-wise district data available for the selected academic year.';
+              container.appendChild(div);
+              ctx.style.display = 'none';
+              var listEl0 = document.getElementById('deptDistrictList');
+              if (listEl0) listEl0.innerHTML = '';
+            }
+            return;
+          }
+          
+          // Populate district chips
+          try {
+            var listEl = document.getElementById('deptDistrictList');
+            if (listEl) {
+              var totalsByLabel = labels.map(function(_, idx) {
+                var sum = 0;
+                for (var k = 0; k < series.length; k++) {
+                  sum += Number(series[k].data[idx] || 0);
+                }
+                return sum;
+              });
+              
+              var idxs = labels.map(function(_, i) { return i; });
+              idxs.sort(function(a, b) { return (totalsByLabel[b] - totalsByLabel[a]) || (a - b); });
+              
+              var rankByIdx = {};
+              for (var r = 0; r < idxs.length; r++) {
+                rankByIdx[idxs[r]] = r + 1;
+              }
+              
+              listEl.innerHTML = labels.map(function(name, idx) {
+                var safe = String(name).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var count = totalsByLabel[idx] || 0;
+                var rank = rankByIdx[idx] || 999;
+                var rankCls = rank === 1 ? ' top1' : (rank === 2 ? ' top2' : (rank === 3 ? ' top3' : ''));
+                var medal = rank <= 3 ? '<span class="medal" aria-hidden="true"></span>' : '';
+                var title = 'title="' + safe + ': ' + count + ' students' + (rank <= 3 ? (' (Rank ' + rank + ')') : '') + '"';
+                return '<span class="chip' + rankCls + '" ' + title + '>' + medal + safe + '<span class="count">' + count + '</span></span>';
+              }).join('');
+            }
+          } catch(e) { /* no-op */ }
+          
+          var palette = ['#4e73df', '#e74a3b', '#1cc88a', '#f6c23e', '#36b9cc', '#6f42c1', '#fd7e14', '#20c997'];
+          var datasets = series.map(function(s, i) {
+            var color = palette[i % palette.length];
+            return {
+              label: s.label,
+              data: s.data,
+              fill: false,
+              borderColor: color,
+              backgroundColor: color,
+              borderWidth: isMobile ? 1.5 : 2,
+              pointRadius: isMobile ? 0 : 3,
+              pointRadius: isMobile ? 4 : 3,
+              pointHitRadius: 10,
+              lineTension: 0.25,
+              cubicInterpolationMode: 'monotone',
+              spanGaps: true
+            };
+          });
+          
+          var chart = new Chart(ctx.getContext('2d'), {
+            type: 'line',
+            data: { labels: labels, datasets: datasets },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              legend: { display: !isMobile, position: isMobile ? 'bottom' : 'top', labels: { boxWidth: 10, fontSize: isMobile ? 10 : 12 } },
+              tooltips: { mode: 'index', intersect: false, bodyFontSize: isMobile ? 11 : 12 },
+              layout: { padding: { left: 6, right: 6, top: 6, bottom: isMobile ? 12 : 8 } },
+              scales: {
+                xAxes: [{
+                  ticks: {
+                    autoSkip: isMobile ? true : false,
+                    maxRotation: isMobile ? 35 : 60,
+                    minRotation: 0,
+                    fontSize: isMobile ? 10 : 12,
+                    callback: function(value, index) {
+                      if (!isMobile) return value;
+                      if (index % 2 !== 0) return '';
+                      var v = String(value || '');
+                      return v.length > 10 ? (v.substr(0, 10) + '…') : v;
+                    }
+                  },
+                  gridLines: { display: false }
+                }],
+                yAxes: [{
+                  ticks: { beginAtZero: true, precision: 0, fontSize: isMobile ? 10 : 12 },
+                  gridLines: { color: 'rgba(0,0,0,0.05)' }
+                }]
+              }
+            }
+          });
+        })
+        .catch(function(e) {
+          if (console && console.warn) console.warn('deptDistrictLine error', e);
+          var container = ctx && ctx.parentNode;
+          if (container) {
+            var div = document.createElement('div');
+            div.className = 'text-center text-muted small';
+            div.textContent = 'Unable to load chart at this time.';
+            container.appendChild(div);
+            if (ctx) ctx.style.display = 'none';
+          }
+        });
+    });
   })();
 </script>
 
