@@ -8,7 +8,7 @@ $base = defined('APP_BASE') ? APP_BASE : '';
 @mysqli_query($con, "ALTER TABLE `attendance` ADD COLUMN `approved_status` VARCHAR(64) NULL");
 
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
-if (!in_array($role, ['HOD','IN3'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
+if (!in_array($role, ['HOD','IN3','ADM','DIR'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
 
 function back($params){ global $base; header('Location: '.$base.'/attendance/BulkMonthlyMark.php?'.http_build_query($params)); exit; }
 
@@ -52,7 +52,7 @@ if (!empty($__students)) {
   $idList = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $__students));
   $qLock = "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1";
   $rsLock = @mysqli_query($con, $qLock);
-  if ($rsLock && mysqli_fetch_row($rsLock)) { if ($rsLock) mysqli_free_result($rsLock); back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'academic_year'=>$academicYear,'err'=>'locked']); }
+  if ($rsLock && mysqli_fetch_row($rsLock) && !in_array($role, ['ADM','DIR'], true)) { if ($rsLock) mysqli_free_result($rsLock); back(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'academic_year'=>$academicYear,'err'=>'locked']); }
   if ($rsLock) mysqli_free_result($rsLock);
 }
 

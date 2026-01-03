@@ -439,6 +439,7 @@ if (file_exists($topNav)) {
             <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>"><i class="fas fa-calendar mr-2"></i>Timetable</a>
             <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>/student/Student_profile.php?Sid=<?php echo urlencode($studentId); ?>"><i class="fas fa-id-card mr-2"></i>My Profile</a>
             <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>onpeak/RequestOnPeak.php"><i class="far fa-calendar-check mr-2"></i>OnPeak Calendar</a>
+            <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>/student/RequestBusSeason.php"><i class="fas fa-bus mr-2"></i>Bus Season Request</a>
           </div>
         </div>
       </div>

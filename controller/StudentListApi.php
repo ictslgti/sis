@@ -39,6 +39,9 @@ $where = [];
 $params = [];
 $types  = '';
 
+// Exclude inactive students
+$where[] = '(s.student_status IS NULL OR (s.student_status != \'Inactive\' AND s.student_status != 0))';
+
 if ($dept !== '') { $where[] = 'd.department_id = ?'; $params[] = $dept; $types .= 's'; }
 if ($q !== '') { $where[] = '(s.student_id LIKE ? OR s.student_fullname LIKE ?)'; $params[] = "%$q%"; $params[] = "%$q%"; $types .= 'ss'; }
 // Apply gender filter based on hostel if specified and gender is strict

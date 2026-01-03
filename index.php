@@ -259,29 +259,111 @@ if (isset($_GET['signout'])) {
     <?php $__base = (defined('APP_BASE') ? APP_BASE : ''); if ($__base !== '' && substr($__base,-1) !== '/') { $__base .= '/'; } ?>
     <base href="<?php echo $__base === '' ? '/' : $__base; ?>">
     <link rel="shortcut icon" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/favicon.ico" type="image/x-icon">
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 4 CSS -->
     <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/bootstrap.min.css">
     <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/signin.css">
     <link href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/all.min.css" rel="stylesheet">
-    <link rel="stylesheet"
-        href="https://cdn.jsdelivr.net/npm/bootstrap-select@1.13.9/dist/css/bootstrap-select.min.css">
-    <link href="https://use.fontawesome.com/releases/v5.0.6/css/all.css" rel="stylesheet">
+    <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/bootstrap-select.min.css">
     <title><?php echo $title; ?></title>
     <style>
+      /* Cool Modern Theme Colors - Fresh Palette */
+      :root {
+        --theme-primary: #6366f1;
+        --theme-primary-dark: #4f46e5;
+        --theme-primary-light: #818cf8;
+        --theme-secondary: #06b6d4;
+        --theme-accent: #f472b6;
+        --theme-success: #22d3ee;
+        --nvq-primary: #6366f1;
+        --nvq-primary-soft: rgba(99, 102, 241, 0.15);
+        --nvq-deep: #1e1b4b;
+      }
+      
+      /* Enhanced Form Controls - Cool Colors */
+      .form-control {
+        border: 1.5px solid #c7d2fe;
+        border-radius: 12px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        color: #1e1b4b !important;
+        background-color: #ffffff;
+        box-shadow: 0 2px 4px rgba(99, 102, 241, 0.08);
+      }
+      .form-control:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(99, 102, 241, 0.15);
+        outline: none;
+        color: #1e1b4b !important;
+        background-color: #ffffff;
+        transform: translateY(-1px);
+      }
+      .form-control::placeholder {
+        color: #a5b4fc !important;
+      }
+      
+      /* Enhanced Buttons - Cool Gradient */
+      .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%);
+        border: none;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+      .btn-primary::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+        transition: left 0.5s;
+      }
+      .btn-primary:hover::before {
+        left: 100%;
+      }
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #818cf8 0%, #6366f1 50%, #22d3ee 100%);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+        transform: translateY(-2px);
+      }
+      .btn-outline-primary {
+        border: 2px solid #6366f1;
+        color: #6366f1;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        background: transparent;
+      }
+      .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%);
+        border-color: #6366f1;
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+      }
+      
+      /* Alert Styling - Cool Colors */
+      .alert-danger {
+        background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%);
+        color: #ffffff;
+        border: none;
+        font-weight: 500;
+        box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);
+      }
+      
       /* Desktop-only left side visual */
       @media (min-width: 768px) {
-        :root{
-          --nvq-primary:#0d6efd;        /* brand blue */
-          --nvq-primary-soft:rgba(13,110,253,.15);
-          --nvq-deep:#0b2740;
-        }
         .bg-image {
           position: relative;
           overflow: hidden;
-          /* Animated gradient background */
-          background: linear-gradient(135deg, #e9f2ff, #cfe0ff, #d7fff1, #fff3d6);
-          background-size: 300% 300%;
-          animation: bgGradient 18s ease infinite;
+          /* Animated gradient background - Cool Indigo-Cyan-Pink */
+          background: linear-gradient(135deg, #e0e7ff, #c7d2fe, #cffafe, #fce7f3, #f0e7ff);
+          background-size: 400% 400%;
+          animation: bgGradient 20s ease infinite;
         }
         /* Optional looping background video */
         .bg-image .bg-video{
@@ -304,7 +386,7 @@ if (isset($_GET['signout'])) {
         /* soft floating particles */
         .bg-image:after {
           content: ""; position: absolute; inset: 0; pointer-events: none;
-          background-image: radial-gradient(rgba(13,110,253,.08) 2px, transparent 2px), radial-gradient(rgba(25,135,84,.06) 2px, transparent 2px);
+          background-image: radial-gradient(rgba(37,99,235,.08) 2px, transparent 2px), radial-gradient(rgba(16,185,129,.06) 2px, transparent 2px);
           background-size: 36px 36px, 48px 48px;
           background-position: 0 0, 18px 18px;
           animation: floatDots 20s linear infinite;
@@ -325,23 +407,23 @@ if (isset($_GET['signout'])) {
           display: flex; flex-direction: column; justify-content: space-between;
           pointer-events: none;
         }
-        /* Flowing vertical line */
+        /* Flowing vertical line - Cool Indigo */
         .nvq-line {
           position: absolute; left: calc(10% + 7px); top: 25%; bottom: 10%; width: 3px;
-          background: linear-gradient(180deg, rgba(13,110,253,0.9), rgba(13,110,253,0.3), rgba(13,110,253,0.9));
+          background: linear-gradient(180deg, rgba(99,102,241,0.9), rgba(6,182,212,0.5), rgba(99,102,241,0.9));
           background-size: 100% 200%;
           animation: flowLine 5s linear infinite;
-          filter: drop-shadow(0 0 6px rgba(13,110,253,.25));
+          filter: drop-shadow(0 0 8px rgba(99,102,241,.4));
         }
         @keyframes flowLine {
           0% { background-position: 0 0; }
           100% { background-position: 0 200%; }
         }
-        /* Moving indicator */
+        /* Moving indicator - Cool Colors */
         .nvq-indicator {
-          position: absolute; left: calc(10% - 1px); top: 25%; width: 18px; height: 18px; border-radius: 50%;
-          border: 2px solid var(--nvq-primary); background: #fff;
-          box-shadow: 0 0 0 6px var(--nvq-primary-soft), 0 2px 6px rgba(0,0,0,.08);
+          position: absolute; left: calc(10% - 1px); top: 25%; width: 20px; height: 20px; border-radius: 50%;
+          border: 3px solid var(--nvq-primary); background: linear-gradient(135deg, #ffffff, #e0e7ff);
+          box-shadow: 0 0 0 8px var(--nvq-primary-soft), 0 4px 12px rgba(99,102,241,.3), inset 0 2px 4px rgba(255,255,255,0.8);
           animation: nvqRun 9s cubic-bezier(.65,.01,.24,1) infinite;
         }
         @keyframes nvqRun {
@@ -353,19 +435,21 @@ if (isset($_GET['signout'])) {
           83.33%  { transform: translate(0, 83.33%); }
           100% { transform: translate(0, 100%); }
         }
-        /* Steps */
+        /* Steps - Cool Color Scheme */
         .nvq-step { display: flex; align-items: center; color: var(--nvq-deep); opacity: 0; transform: translateX(-10px); }
         .nvq-step .dot {
-          width: 15px; height: 15px; border-radius: 50%; background: var(--nvq-primary); margin-right: 12px; position: relative;
-          box-shadow: 0 0 0 0 rgba(13,110,253,.35);
+          width: 16px; height: 16px; border-radius: 50%; 
+          background: linear-gradient(135deg, var(--nvq-primary), var(--theme-secondary)); 
+          margin-right: 12px; position: relative;
+          box-shadow: 0 0 0 0 rgba(99,102,241,.4);
           animation: pulseDot 2.4s ease-out infinite;
         }
         .nvq-step .dot:after {
           content: ""; position: absolute; inset: -6px; border-radius: 50%;
-          box-shadow: 0 0 0 0 rgba(13,110,253,.25);
+          box-shadow: 0 0 0 0 rgba(6,182,212,.3);
           animation: ripple 2.4s ease-out infinite;
         }
-        .nvq-step .label { font-weight: 700; letter-spacing: .2px; text-shadow: 0 1px 0 rgba(255,255,255,.4); }
+        .nvq-step .label { font-weight: 700; letter-spacing: .3px; text-shadow: 0 2px 4px rgba(255,255,255,.5); }
         /* Sequential highlight per step for a continuous feel */
         .nvq-step .label, .nvq-step .dot { transition: transform .4s ease, color .4s ease, background .4s ease; }
         .nvq-step:nth-child(1) .label { animation: labelGlow 9s ease-in-out infinite; }
@@ -374,23 +458,151 @@ if (isset($_GET['signout'])) {
         .nvq-step:nth-child(1) .dot   { animation: pulseDot 2.4s ease-out 0s infinite, dotGlow 9s ease-in-out 0s infinite; }
         .nvq-step:nth-child(2) .dot   { animation: pulseDot 2.4s ease-out .2s infinite, dotGlow 9s ease-in-out 3s infinite; }
         .nvq-step:nth-child(3) .dot   { animation: pulseDot 2.4s ease-out .4s infinite, dotGlow 9s ease-in-out 6s infinite; }
-        @keyframes labelGlow { 0%,80%,100%{opacity:.75; transform:none;} 10%,30%{opacity:1; transform:translateX(2px);} }
-        @keyframes dotGlow { 0%,80%,100%{filter:none;} 10%,30%{filter: drop-shadow(0 0 8px rgba(13,110,253,.45));} }
-        @keyframes pulseDot { 0%{box-shadow:0 0 0 0 rgba(13,110,253,.35);} 70%{box-shadow:0 0 0 10px rgba(13,110,253,0);} 100%{box-shadow:0 0 0 0 rgba(13,110,253,0);} }
-        @keyframes ripple   { 0%{box-shadow:0 0 0 0 rgba(13,110,253,.25);} 70%{box-shadow:0 0 0 14px rgba(13,110,253,0);} 100%{box-shadow:0 0 0 0 rgba(13,110,253,0);} }
+        @keyframes labelGlow { 0%,80%,100%{opacity:.75; transform:none;} 10%,30%{opacity:1; transform:translateX(3px);} }
+        @keyframes dotGlow { 0%,80%,100%{filter:none;} 10%,30%{filter: drop-shadow(0 0 12px rgba(99,102,241,.6));} }
+        @keyframes pulseDot { 0%{box-shadow:0 0 0 0 rgba(99,102,241,.4);} 70%{box-shadow:0 0 0 12px rgba(99,102,241,0);} 100%{box-shadow:0 0 0 0 rgba(99,102,241,0);} }
+        @keyframes ripple   { 0%{box-shadow:0 0 0 0 rgba(6,182,212,.3);} 70%{box-shadow:0 0 0 16px rgba(6,182,212,0);} 100%{box-shadow:0 0 0 0 rgba(6,182,212,0);} }
         .nvq-step:nth-child(1){ animation: stepIn .8s ease .2s forwards; }
         .nvq-step:nth-child(2){ animation: stepIn .8s ease .6s forwards; }
         .nvq-step:nth-child(3){ animation: stepIn .8s ease 1.0s forwards; }
         @keyframes stepIn { to { opacity: 1; transform: translateX(0); } }
 
-        /* SLGTI animated badge */
-        .slgti-badge { position: absolute; right: 7%; top: 8%; color: var(--nvq-deep); font-weight: 700; letter-spacing: .8px; opacity: .9; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
-        .slgti-badge .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--nvq-primary); box-shadow:0 0 0 0 rgba(13,110,253,.4); animation: pulseDot 2.4s ease-out infinite; vertical-align: middle; margin-right: 6px; }
+        /* SLGTI animated badge - Cool Colors */
+        .slgti-badge { position: absolute; right: 7%; top: 8%; color: var(--nvq-deep); font-weight: 700; letter-spacing: .8px; opacity: .95; text-shadow: 0 2px 4px rgba(255,255,255,.6); }
+        .slgti-badge .dot { display:inline-block; width:10px; height:10px; border-radius:50%; background:linear-gradient(135deg, var(--nvq-primary), var(--theme-secondary)); box-shadow:0 0 0 0 rgba(99,102,241,.5); animation: pulseDot 2.4s ease-out infinite; vertical-align: middle; margin-right: 8px; }
+      }
+      
+      /* Responsive adjustments */
+      @media (max-width: 767.98px) {
+        .login {
+          padding: 2rem 1rem;
+        }
+        .form-control {
+          font-size: 16px; /* Prevent zoom on iOS */
+        }
+      }
+      
+      /* Top Navbar Styles */
+      .navbar-nav .nav-link:hover {
+        color: #ffffff !important;
+        transform: translateY(-2px);
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+      }
+      .navbar-brand:hover {
+        transform: scale(1.05);
+        transition: transform 0.3s ease;
+      }
+      .navbar-nav .dropdown-menu {
+        min-width: 220px;
+        padding: 8px 0;
+      }
+      .navbar-nav .dropdown-item {
+        padding: 10px 20px;
+        transition: all 0.3s ease;
+        color: #1e293b;
+        font-weight: 500;
+      }
+      .navbar-nav .dropdown-item:hover {
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+        color: var(--theme-primary);
+        transform: translateX(5px);
+      }
+      .navbar-nav .dropdown-item i {
+        width: 20px;
+        text-align: center;
+      }
+      @media (max-width: 991.98px) {
+        .navbar-collapse {
+          background: rgba(30, 27, 75, 0.95);
+          border-radius: 8px;
+          margin-top: 10px;
+          padding: 10px;
+        }
+        .navbar-nav .dropdown-menu {
+          background: rgba(255, 255, 255, 0.1) !important;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .navbar-nav .dropdown-item {
+          color: rgba(255, 255, 255, 0.9) !important;
+        }
+        .navbar-nav .dropdown-item:hover {
+          background: rgba(255, 255, 255, 0.2) !important;
+          color: #ffffff !important;
+        }
       }
     </style>
 </head>
 
 <body>
+
+    <!-- Top Navigation Menu -->
+    <nav class="navbar navbar-expand-lg navbar-dark shadow-lg" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); border-bottom: 2px solid rgba(99, 102, 241, 0.3); min-height: 60px;">
+      <div class="container-fluid">
+        <a class="navbar-brand font-weight-bold d-flex align-items-center" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php" style="font-size: 1.2rem; letter-spacing: 0.5px; color: #ffffff !important;">
+          <i class="fas fa-tachometer-alt mr-2" style="color: #c7d2fe;"></i>
+          <span>Dashboard</span>
+        </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#indexTopNav" aria-controls="indexTopNav" aria-expanded="false" aria-label="Toggle navigation" style="border-color: rgba(255, 255, 255, 0.3);">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="indexTopNav">
+          <ul class="navbar-nav mr-auto align-items-center">
+            <li class="nav-item">
+              <a class="nav-link" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500; transition: all 0.3s ease;">
+                <i class="fas fa-tachometer-alt mr-1"></i>Dashboard
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/index.php" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500; transition: all 0.3s ease;">
+                <i class="fas fa-home mr-1"></i>Index
+              </a>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navDepartments" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500;">
+                <i class="fas fa-university mr-1"></i>Departments & Academic
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navDepartments" style="background: #ffffff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; margin-top: 8px;">
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/Department.php"><i class="fas fa-building mr-2"></i>Departments</a>
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php"><i class="fas fa-book mr-2"></i>Courses</a>
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/Academic.php"><i class="fas fa-calendar-alt mr-2"></i>Academic Years</a>
+              </div>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navStudents" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500;">
+                <i class="fas fa-user-graduate mr-1"></i>Students
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navStudents" style="background: #ffffff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; margin-top: 8px;">
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php"><i class="fas fa-users mr-2"></i>Manage Students</a>
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ExportStudents.php"><i class="fas fa-file-export mr-2"></i>Export Students</a>
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php"><i class="fas fa-user-plus mr-2"></i>Add a Student</a>
+              </div>
+            </li>
+            <li class="nav-item dropdown">
+              <a class="nav-link dropdown-toggle" href="#" id="navStaff" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500;">
+                <i class="fas fa-chalkboard-teacher mr-1"></i>Staff
+              </a>
+              <div class="dropdown-menu" aria-labelledby="navStaff" style="background: #ffffff; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); border-radius: 8px; margin-top: 8px;">
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/Staff.php"><i class="fas fa-users-cog mr-2"></i>Manage Staff</a>
+                <a class="dropdown-item" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/AddStaff.php"><i class="fas fa-user-plus mr-2"></i>Add Staff</a>
+              </div>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/search_student.php" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500; transition: all 0.3s ease;">
+                <i class="fas fa-search mr-1"></i>Search Student
+              </a>
+            </li>
+          </ul>
+          <ul class="navbar-nav ml-auto align-items-center">
+            <li class="nav-item">
+              <a class="nav-link" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/index.php" style="color: rgba(255, 255, 255, 0.9) !important; font-weight: 500; transition: all 0.3s ease;">
+                <i class="fas fa-sign-in-alt mr-1"></i>Login
+              </a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
 
     <div class="container-fluid">
         <div class="row no-gutter">
@@ -421,7 +633,7 @@ if (isset($_GET['signout'])) {
 
 
             <!-- The content half -->
-            <div class="col-md-6 bg-light">
+            <div class="col-md-6 bg-light" style="background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%) !important;">
                 <div class="login d-flex align-items-center py-5">
 
                     <!-- Demo content-->
@@ -436,18 +648,18 @@ if (isset($_GET['signout'])) {
                                     ?>
                                     <div class="form-group mb-3">
                                         <input id="inputEmail" type="text" name="username" placeholder="Username" required=""
-                                            autofocus="" class="form-control rounded-pill border-0 shadow-sm px-4">
+                                            autofocus="" class="form-control rounded-pill border-0 shadow-sm px-4" style="border: 1.5px solid #c7d2fe !important;">
                                     </div>
                                     <div class="form-group mb-3">
                                         <input id="inputPassword" type="password" name="password" placeholder="Password" required=""
-                                            class="form-control rounded-pill border-0 shadow-sm px-4 text-primary">
+                                            class="form-control rounded-pill border-0 shadow-sm px-4" style="border: 1.5px solid #c7d2fe !important;">
                                     </div>
                                     <div class="custom-control custom-checkbox mb-3">
                                         <input id="customCheck1" name="rememberme" value="yes" type="checkbox" checked class="custom-control-input">
                                         <label for="customCheck1" class="custom-control-label">Remember password</label>
                                     </div>
                                     <button type="submit" name="SignIn"
-                                        class="btn btn-primary btn-block text-uppercase mb-2 rounded-pill shadow-sm">Sign
+                                        class="btn btn-primary btn-block text-uppercase mb-2 rounded-pill shadow-sm" style="font-weight: 600; letter-spacing: 0.5px;">Sign
                                         in</button>
 
                                     <div class="mt-4">
@@ -533,6 +745,38 @@ if (isset($_GET['signout'])) {
       </div>
     </div>
     <?php endif; ?>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Bootstrap JS -->
+    <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/jquery.min.js"></script>
+    <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/bootstrap.bundle.min.js"></script>
+    <script src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/js/bootstrap-select.min.js"></script>
+    
+    <script>
+      // Enhanced form validation and UX
+      (function() {
+        'use strict';
+        
+        // Auto-focus username field on load
+        document.addEventListener('DOMContentLoaded', function() {
+          var usernameField = document.getElementById('inputEmail');
+          if (usernameField) {
+            usernameField.focus();
+          }
+          
+          // Add smooth transitions to form inputs
+          var inputs = document.querySelectorAll('.form-control');
+          inputs.forEach(function(input) {
+            input.addEventListener('focus', function() {
+              this.style.transform = 'scale(1.02)';
+            });
+            input.addEventListener('blur', function() {
+              this.style.transform = 'scale(1)';
+            });
+          });
+        });
+      })();
+    </script>
 
 </body>
 

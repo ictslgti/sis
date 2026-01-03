@@ -287,8 +287,8 @@ $whereSql = $where ? (' WHERE ' . implode(' AND ', $where)) : '';
 $sqlWhereFinal = $whereSql; // No Academic Year constraint
 
 // Base ORDER/GROUP for list and export (no pagination)
-// Prioritize Dropout enrollments and Inactive students first (handle string or numeric status)
-$groupOrder = " ORDER BY (e.student_enroll_status='Dropout') DESC, ((s.student_status='Inactive') OR (s.student_status=0)) DESC, s.`student_id` ASC";
+// Prioritize Active students first, then Inactive students
+$groupOrder = " ORDER BY CASE WHEN s.student_status='Active' THEN 1 WHEN s.student_status='Inactive' THEN 2 ELSE 3 END ASC, s.`student_id` ASC";
 
 // List and export SQL (full result set)
 $sqlList = $baseSql . $sqlWhereFinal . $groupOrder;
@@ -408,44 +408,43 @@ include_once __DIR__ . '/../menu.php';
 // Desktop-only offset on non-ADM
 $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
 ?>
-<div class="container-fluid px-0 px-sm-1 px-md-4<?php echo $__isADM ? '' : ' hod-desktop-offset'; ?>">
-  <div class="row align-items-center mt-2 mb-2 mt-sm-1 mb-sm-3">
-    <div class="col">
-      <nav aria-label="breadcrumb">
-        <ol class="breadcrumb bg-white shadow-sm mb-1">
-          <li class="breadcrumb-item"><a href="../dashboard/index.php">Dashboard</a></li>
-          <li class="breadcrumb-item"><a href="../student/ImportStudentEnroll.php">Import & Enroll</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Students</a></li>
-
-        </ol>
-      </nav>
-      <h4 class="d-flex align-items-center page-title">
-        <i class="fas fa-users text-primary mr-2"></i>
-        Manage Students
-      </h4>
+<div class="page-content">
+  <div class="container-fluid" style="max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; padding-left: 15px; padding-right: 15px;">
+    <div class="row align-items-center mt-3 mb-3">
+      <div class="col">
+        <?php if (!$is_hod): ?>
+        <nav aria-label="breadcrumb">
+          <ol class="breadcrumb bg-white shadow-sm mb-2">
+            <li class="breadcrumb-item"><a href="../dashboard/index.php">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="../student/ImportStudentEnroll.php">Import & Enroll</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Students</a></li>
+          </ol>
+        </nav>
+        <h4 class="d-flex align-items-center page-title mb-0">
+          <i class="fas fa-users text-primary mr-2"></i>
+          Manage Students
+        </h4>
+        <?php endif; ?>
+      </div>
     </div>
   </div>
-
-  <!-- Flash messages rendered below -->
-</div>
-<div class="container-fluid px-0 px-sm-2 px-md-4<?php echo $__isADM ? '' : ' hod-desktop-offset'; ?>">
-  <div class="row">
-    <div class="col-12">
-
-
-      <?php foreach ($messages as $m): ?>
-        <div class="alert alert-success"><?php echo h($m); ?></div>
-      <?php endforeach; ?>
-      <?php foreach ($errors as $e): ?>
-        <div class="alert alert-danger"><?php echo h($e); ?></div>
-      <?php endforeach; ?>
+  
+  <div class="container-fluid" style="max-width: 100% !important; width: 100% !important; margin-left: 0 !important; margin-right: 0 !important; padding-left: 15px; padding-right: 15px;">
+    <div class="row">
+      <div class="col-12">
+        <?php foreach ($messages as $m): ?>
+          <div class="alert alert-success mb-3"><?php echo h($m); ?></div>
+        <?php endforeach; ?>
+        <?php foreach ($errors as $e): ?>
+          <div class="alert alert-danger mb-3"><?php echo h($e); ?></div>
+        <?php endforeach; ?>
 
       <!-- Filters: Modern card layout with responsive grid -->
-      <div class="card shadow-sm border-0 mb-3 first-section-card">
-        <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center">
-          <div class="font-weight-semibold"><i class="fa fa-sliders-h mr-1"></i> Filters</div>
-          <div class="d-flex align-items-center w-100 w-md-auto mt-2 mt-md-0 ml-md-auto justify-content-between justify-content-md-end">
-            <div class="d-none d-md-block mr-2" style="width: 260px;">
+      <div class="card shadow-sm border-0 mb-4 first-section-card">
+        <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%); color: #ffffff; padding: 1rem 1.25rem;">
+          <div class="font-weight-semibold mb-2 mb-md-0" style="color: #ffffff !important;"><i class="fa fa-sliders-h mr-1"></i> Filters</div>
+          <div class="d-flex align-items-center w-100 w-md-auto justify-content-between justify-content-md-end">
+            <div class="d-none d-md-block mr-3" style="width: 260px;">
               <div class="input-group input-group-sm">
                 <div class="input-group-prepend">
                   <span class="input-group-text"><i class="fa fa-search"></i></span>
@@ -453,18 +452,20 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                 <input type="text" id="quickSearch" class="form-control" placeholder="Quick search... (ID, name, email, phone, NIC)">
               </div>
             </div>
-            <button class="btn btn-sm btn-outline-secondary d-md-none ml-auto" type="button" data-toggle="collapse" data-target="#filtersBox" aria-expanded="false" aria-controls="filtersBox">
+            <button class="btn btn-sm btn-outline-light d-md-none ml-auto" type="button" data-toggle="collapse" data-target="#filtersBox" aria-expanded="false" aria-controls="filtersBox">
               Show/Hide
             </button>
           </div>
         </div>
         <div id="filtersBox" class="collapse show">
-          <div class="card-body">
+          <div class="card-body" style="padding: 1.25rem;">
             <form class="mb-0" method="get" action="">
               <div class="form-row">
-                <div class="form-group col-12 col-md-4">
-                  <label for="fdept" class="small text-muted mb-1">Department</label>
-                  <select id="fdept" name="department_id" class="form-control" <?php echo ($is_hod || $is_in3) ? 'disabled' : ''; ?>>
+                <div class="form-group col-12 col-md-4 mb-3">
+                  <label for="fdept" class="form-label">
+                    <i class="fas fa-building mr-1"></i>Department
+                  </label>
+                  <select id="fdept" name="department_id" class="form-control custom-select" <?php echo ($is_hod || $is_in3) ? 'disabled' : ''; ?>>
                     <option value="">-- Any --</option>
                     <?php foreach ($departments as $d): ?>
                       <option value="<?php echo h($d['department_id']); ?>" <?php echo ($fdept === $d['department_id'] ? 'selected' : ''); ?>><?php echo h($d['department_name']); ?></option>
@@ -472,48 +473,60 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                   </select>
                   <?php if ($is_hod || $is_in3): ?>
                     <input type="hidden" name="department_id" value="<?php echo h($fdept); ?>">
-                    <small class="form-text text-muted">Showing students for your department only.</small>
+                    <small class="form-text text-muted mt-1">
+                      <i class="fas fa-info-circle mr-1"></i>Showing students for your department only.
+                    </small>
                   <?php endif; ?>
                 </div>
-                <div class="form-group col-12 col-md-4">
-                  <label for="fcourse" class="small text-muted mb-1">Course</label>
-                  <select id="fcourse" name="course_id" class="form-control">
+                <div class="form-group col-12 col-md-4 mb-3">
+                  <label for="fcourse" class="form-label">
+                    <i class="fas fa-graduation-cap mr-1"></i>Course
+                  </label>
+                  <select id="fcourse" name="course_id" class="form-control custom-select">
                     <option value="">-- Any --</option>
                     <?php foreach ($courses as $c): ?>
                       <option value="<?php echo h($c['course_id']); ?>" data-dept="<?php echo h($c['department_id']); ?>" <?php echo ($fcourse === $c['course_id'] ? 'selected' : ''); ?>><?php echo h($c['course_name']); ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
-                <div class="form-group col-12 col-md-4">
-                  <label for="fyear" class="small text-muted mb-1">Academic Year</label>
-                  <select id="fyear" name="academic_year" class="form-control">
+                <div class="form-group col-12 col-md-4 mb-3">
+                  <label for="fyear" class="form-label">
+                    <i class="fas fa-calendar-alt mr-1"></i>Academic Year
+                  </label>
+                  <select id="fyear" name="academic_year" class="form-control custom-select">
                     <option value="">-- Any --</option>
                     <?php foreach ($years as $y): ?>
                       <option value="<?php echo h($y); ?>" <?php echo ($fyear === $y ? 'selected' : ''); ?>><?php echo h($y); ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
-                <div class="form-group col-12 col-md-4">
-                  <label for="fgroup" class="small text-muted mb-1">Group</label>
-                  <select id="fgroup" name="group_id" class="form-control">
+                <div class="form-group col-12 col-md-4 mb-3">
+                  <label for="fgroup" class="form-label">
+                    <i class="fas fa-users mr-1"></i>Group
+                  </label>
+                  <select id="fgroup" name="group_id" class="form-control custom-select">
                     <option value="">-- Any --</option>
                     <?php foreach ($groups as $g): ?>
                       <option value="<?php echo (int)$g['id']; ?>" data-dept="<?php echo h($g['department_id']); ?>" data-course="<?php echo h($g['course_id']); ?>" data-year="<?php echo h($g['academic_year']); ?>" <?php echo ($fgroup !== '' && (int)$fgroup === (int)$g['id'] ? 'selected' : ''); ?>><?php echo h($g['name']); ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
-                <div class="form-group col-12 col-md-3">
-                  <label for="fgender" class="small text-muted mb-1">Gender</label>
-                  <select id="fgender" name="gender" class="form-control">
+                <div class="form-group col-12 col-md-3 mb-3">
+                  <label for="fgender" class="form-label">
+                    <i class="fas fa-venus-mars mr-1"></i>Gender
+                  </label>
+                  <select id="fgender" name="gender" class="form-control custom-select">
                     <option value="">-- Any --</option>
                     <?php foreach (["Male", "Female", "Other"] as $g): ?>
                       <option value="<?php echo h($g); ?>" <?php echo ($fgender === $g ? 'selected' : ''); ?>><?php echo h($g); ?></option>
                     <?php endforeach; ?>
                   </select>
                 </div>
-                <div class="form-group col-12 col-md-3">
-                  <label for="fstatus" class="small text-muted mb-1">Status</label>
-                  <select id="fstatus" name="status" class="form-control" <?php echo $is_dir ? 'disabled' : ''; ?>>
+                <div class="form-group col-12 col-md-3 mb-3">
+                  <label for="fstatus" class="form-label">
+                    <i class="fas fa-check-circle mr-1"></i>Status
+                  </label>
+                  <select id="fstatus" name="status" class="form-control custom-select" <?php echo $is_dir ? 'disabled' : ''; ?>>
                     <option value="">-- Any --</option>
                     <?php foreach (["Active", "Inactive", "Following", "Completed", "Suspended", "Dropout"] as $st): ?>
                       <?php if (!$is_dir || $st === 'Active'): ?>
@@ -525,16 +538,20 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                     <input type="hidden" name="status" value="Active">
                   <?php endif; ?>
                 </div>
-                <div class="form-group col-12 col-md-3">
-                  <label for="fconduct" class="small text-muted mb-1">Conduct</label>
-                  <select id="fconduct" name="conduct" class="form-control">
+                <div class="form-group col-12 col-md-3 mb-3">
+                  <label for="fconduct" class="form-label">
+                    <i class="fas fa-clipboard-check mr-1"></i>Conduct
+                  </label>
+                  <select id="fconduct" name="conduct" class="form-control custom-select">
                     <option value="">-- Any --</option>
                     <option value="accepted" <?php echo ($fconduct === 'accepted' ? 'selected' : ''); ?>>Accepted</option>
                     <option value="pending" <?php echo ($fconduct === 'pending' ? 'selected' : ''); ?>>Pending</option>
                   </select>
                 </div>
-                <div class="form-group col-12 col-md-3 d-flex align-items-end">
-                  <button type="submit" class="btn btn-primary btn-block">Apply Filters</button>
+                <div class="form-group col-12 col-md-3 mb-3 d-flex align-items-end">
+                  <button type="submit" class="btn btn-primary btn-block btn-lg">
+                    <i class="fas fa-filter mr-2"></i>Apply Filters
+                  </button>
                 </div>
               </div>
             </form>
@@ -543,22 +560,222 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
       </div>
 
       <style>
+        /* Full width container with balanced padding */
+        .page-content .container-fluid {
+          max-width: 100% !important;
+          width: 100% !important;
+          margin-left: 0 !important;
+          margin-right: 0 !important;
+        }
+        
+        @media (min-width: 576px) {
+          .page-content .container-fluid {
+            padding-left: 20px;
+            padding-right: 20px;
+          }
+        }
+        
+        @media (min-width: 992px) {
+          .page-content .container-fluid {
+            padding-left: 30px;
+            padding-right: 30px;
+          }
+        }
+        
+        /* Card header white text */
+        .card-header {
+          color: #ffffff !important;
+        }
+        .card-header * {
+          color: #ffffff !important;
+        }
+        .card-header .badge {
+          background: rgba(255, 255, 255, 0.3) !important;
+          color: #ffffff !important;
+        }
+        
+        /* Balanced card spacing */
+        .card {
+          margin-bottom: 1.5rem;
+        }
+        
         /* Compact table spacing */
         .table.table-sm td,
         .table.table-sm th {
-          padding: .4rem .5rem;
+          padding: .5rem .75rem;
+        }
+        
+        /* Disable table hover effects */
+        .table tbody tr:hover {
+          background-color: transparent !important;
+        }
+        .table-striped tbody tr:hover {
+          background-color: rgba(0, 0, 0, 0.05) !important;
+        }
+        .table tbody tr:hover td {
+          background-color: transparent !important;
+        }
+        
+        /* Balanced form spacing */
+        .form-group {
+          margin-bottom: 1rem;
+        }
+        
+        /* Form Label Styling */
+        .form-label {
+          display: block;
+          font-weight: 600;
+          font-size: 0.875rem;
+          color: #374151;
+          margin-bottom: 0.5rem;
+          line-height: 1.5;
+        }
+        
+        .form-label i {
+          color: #6366f1;
+          margin-right: 0.25rem;
+        }
+        
+        /* Proper sizing for select dropdowns */
+        .form-control.custom-select,
+        select.form-control {
+          display: block;
+          width: 100%;
+          height: calc(2.5rem + 2px);
+          padding: 0.625rem 2.5rem 0.625rem 0.875rem;
+          font-size: 0.9375rem;
+          font-weight: 400;
+          line-height: 1.5;
+          color: #374151;
+          background-color: #ffffff;
+          background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236366f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+          background-repeat: no-repeat;
+          background-position: right 0.875rem center;
+          background-size: 16px 12px;
+          border: 1.5px solid #d1d5db;
+          border-radius: 0.5rem;
+          transition: all 0.2s ease-in-out;
+          appearance: none;
+          -webkit-appearance: none;
+          -moz-appearance: none;
+          cursor: pointer;
+        }
+        
+        .form-control.custom-select:hover,
+        select.form-control:hover {
+          border-color: #6366f1;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+        
+        .form-control.custom-select:focus,
+        select.form-control:focus {
+          border-color: #6366f1;
+          outline: 0;
+          box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+          background-color: #ffffff;
+        }
+        
+        .form-control.custom-select:disabled,
+        select.form-control:disabled {
+          background-color: #f3f4f6;
+          color: #6b7280;
+          cursor: not-allowed;
+          opacity: 0.7;
+        }
+        
+        /* Proper sizing for select options */
+        .form-control.custom-select option,
+        select.form-control option {
+          padding: 0.75rem 1rem;
+          font-size: 0.9375rem;
+          line-height: 1.6;
+          min-height: 2.5rem;
+          color: #374151;
+          background-color: #ffffff;
+        }
+        
+        .form-control.custom-select option:checked,
+        select.form-control option:checked {
+          background-color: #6366f1;
+          color: #ffffff;
+          font-weight: 500;
+        }
+        
+        .form-control.custom-select option:hover,
+        select.form-control option:hover {
+          background-color: #e0e7ff;
+        }
+        
+        /* Select wrapper for better control */
+        .form-group {
+          position: relative;
+        }
+        
+        /* Custom select arrow styling */
+        .form-control.custom-select::-ms-expand,
+        select.form-control::-ms-expand {
+          display: none;
+        }
+        
+        /* Balanced button spacing */
+        .btn-group .btn {
+          margin-right: 0.25rem;
+        }
+        .btn-group .btn:last-child {
+          margin-right: 0;
         }
 
         /* On very small screens, avoid horizontal overflow on key columns */
         @media (max-width: 575.98px) {
-          .breadcrumb { margin-bottom: .35rem; padding: .25rem .5rem; }
-          .page-title { font-size: 1.15rem; line-height: 1.25; }
-          .page-title i { margin-right: .35rem !important; font-size: 1rem; }
-          .first-section-card { margin-top: .5rem !important; }
+          .breadcrumb { 
+            margin-bottom: 0.75rem; 
+            padding: 0.5rem 0.75rem; 
+          }
+          .page-title { 
+            font-size: 1.15rem; 
+            line-height: 1.25; 
+            margin-bottom: 1rem;
+          }
+          .page-title i { 
+            margin-right: 0.5rem !important; 
+            font-size: 1rem; 
+          }
+          .first-section-card { 
+            margin-top: 0.5rem !important; 
+          }
+          .card-header {
+            padding: 0.75rem 1rem !important;
+          }
+          .card-body {
+            padding: 1rem !important;
+          }
 
           .table td,
           .table th {
             white-space: nowrap;
+            padding: 0.4rem 0.5rem;
+          }
+          
+          /* Smaller select on mobile */
+          .form-label {
+            font-size: 0.8125rem;
+            margin-bottom: 0.375rem;
+          }
+          
+          .form-control.custom-select,
+          select.form-control {
+            height: calc(2.25rem + 2px);
+            padding: 0.5rem 2rem 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            background-position: right 0.625rem center;
+            background-size: 14px 10px;
+          }
+          
+          .form-control.custom-select option,
+          select.form-control option {
+            padding: 0.625rem 0.875rem;
+            font-size: 0.875rem;
+            min-height: 2rem;
           }
         }
 
@@ -568,6 +785,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
           top: 0;
           background: #f8f9fa;
           z-index: 2;
+          color: #1e293b;
         }
 
         /* Scroll container to enable sticky header */
@@ -594,6 +812,15 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
           .details-row {
             display: none !important;
           }
+        }
+        
+        /* Proper text color balance */
+        .table td {
+          color: #1e293b !important;
+        }
+        .table th {
+          color: #1e293b !important;
+          font-weight: 600;
         }
       </style>
       <script>
@@ -677,23 +904,23 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
       </script>
 
       <form method="post" <?php echo $is_admin ? "onsubmit=\"return confirm('Inactivate selected students?');\"" : 'onsubmit="return false;"'; ?>>
-        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-2">
+        <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between mb-3">
           <div class="mb-2 mb-md-0">
             <?php if ($is_admin): ?>
               <button type="submit" name="bulk_action" value="bulk_inactivate" class="btn btn-danger btn-sm"><i class="fa fa-user-times mr-1"></i> Bulk Inactivate</button>
             <?php endif; ?>
           </div>
           <div class="mb-2 mb-md-0">
-            <a href="<?php echo $base; ?>/student/ManageStudents.php" class="btn btn-outline-secondary btn-sm"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
+            <a href="<?php echo $base; ?>/student/ManageStudents.php" class="btn btn-outline-secondary btn-sm mr-2"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
             <?php $qs = $_GET; $qs['export'] = 'excel'; $exportUrl = $base . '/student/ManageStudents.php?' . http_build_query($qs); ?>
-            <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm ml-2"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
+            <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
           </div>
         </div>
 
         <!-- Results card -->
         <div class="card shadow-sm border-0">
-          <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-md-between">
-            <div class="font-weight-semibold mb-2 mb-md-0"><i class="fa fa-users mr-1"></i> Students <span class="badge badge-secondary ml-2"><?php echo (int)$total_count; ?></span></div>
+          <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-md-between" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%); color: #ffffff; padding: 1rem 1.25rem;">
+            <div class="font-weight-semibold mb-2 mb-md-0" style="color: #ffffff !important;"><i class="fa fa-users mr-1"></i> Students <span class="badge badge-light ml-2" style="background: rgba(255, 255, 255, 0.3); color: #ffffff;"><?php echo (int)$total_count; ?></span></div>
             <div class="d-md-none w-100">
               <div class="input-group input-group-sm">
                 <div class="input-group-prepend">
@@ -705,7 +932,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
           </div>
           <div class="card-body p-0">
             <div class="table-responsive table-scroll" style="border-top-left-radius:.25rem;border-top-right-radius:.25rem;">
-              <table id="studentsTable" class="table table-striped table-bordered table-hover table-sm table-sticky mb-0">
+              <table id="studentsTable" class="table table-striped table-bordered table-sm table-sticky mb-0">
                 <thead>
                   <tr>
                     <?php if ($is_admin): ?>
@@ -857,7 +1084,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
                 </tbody>
               </table>
             </div>
-            <div class="p-2 small text-muted">Total: <?php echo (int)$total_count; ?></div>
+            <div class="p-3 small text-muted border-top">Total: <?php echo (int)$total_count; ?></div>
           </div>
         </div>
       </form>

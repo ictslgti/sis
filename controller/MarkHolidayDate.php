@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
-if (!in_array($role, ['HOD','IN3'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
+if (!in_array($role, ['HOD','IN3','ADM','DIR'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
 
 function back_to_grid($params){ global $base; header('Location: '.$base.'/attendance/BulkMonthlyMark.php?'.http_build_query($params)); exit; }
 

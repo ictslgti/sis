@@ -281,16 +281,33 @@ if ($qpos) {
   mysqli_free_result($qpos);
 }
 ?>
-<div class="container mt-3 hod-container hod-desktop-offset">
+<div class="container mt-4 hod-container hod-desktop-offset">
   <?php echo $_op_msg; ?>
   <?php echo $_staff_msg; ?>
-  <div class="row mb-2 align-items-center">
-    <div class="col">
-      <h4 class="mb-0">HOD Dashboard</h4>
-      <small class="text-muted">Department: <?php echo htmlspecialchars($deptName ?: $deptId ?: 'Unknown'); ?></small>
-    </div>
-    <div class="col-auto">
-      <a class="btn btn-sm btn-outline-secondary" href="<?php echo $base; ?>/logout.php"><i class="fas fa-sign-out-alt mr-1"></i> Logout</a>
+  
+  <!-- Professional Header Section -->
+  <div class="dashboard-header mb-4">
+    <div class="row align-items-center">
+      <div class="col">
+        <div class="d-flex align-items-center">
+          <div class="header-icon-wrapper mr-3">
+            <i class="fas fa-tachometer-alt"></i>
+          </div>
+          <div>
+            <h2 class="dashboard-title mb-1">HOD Dashboard</h2>
+            <p class="dashboard-subtitle mb-0">
+              <i class="fas fa-building mr-1"></i>
+              <span class="text-muted">Department:</span> 
+              <strong><?php echo htmlspecialchars($deptName ?: $deptId ?: 'Unknown'); ?></strong>
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="col-auto">
+        <a class="btn btn-outline-light btn-logout" href="<?php echo $base; ?>/logout.php">
+          <i class="fas fa-sign-out-alt mr-2"></i> Logout
+        </a>
+      </div>
     </div>
   </div>
 
@@ -309,55 +326,76 @@ if ($qpos) {
     </div>
   </div>
 
-  <div class="row">
+  <!-- Enhanced Metric Cards -->
+  <div class="row mb-4">
     <div class="col-6 col-lg-3 mb-3">
-      <div class="card metric-card shadow-sm">
+      <div class="metric-card card border-0 shadow-sm metric-card-primary">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="metric-icon bg-primary text-white mr-2"><i class="fas fa-user-graduate"></i></div>
-            <div>
-              <div class="text-muted small">Students</div>
-              <div class="h5 mb-0"><?php echo (int)$counts['students']; ?></div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="metric-content">
+              <div class="metric-label">Students</div>
+              <div class="metric-value"><?php echo number_format((int)$counts['students']); ?></div>
             </div>
+            <div class="metric-icon-wrapper metric-icon-primary">
+              <i class="fas fa-user-graduate"></i>
+            </div>
+          </div>
+          <div class="metric-trend mt-2">
+            <small class="text-muted"><i class="fas fa-users mr-1"></i>Active Enrollments</small>
           </div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg-3 mb-3">
-      <div class="card metric-card shadow-sm">
+      <div class="metric-card card border-0 shadow-sm metric-card-info">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="metric-icon bg-info text-white mr-2"><i class="fas fa-chalkboard-teacher"></i></div>
-            <div>
-              <div class="text-muted small">Staff</div>
-              <div class="h5 mb-0"><?php echo (int)$counts['staff']; ?></div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="metric-content">
+              <div class="metric-label">Staff</div>
+              <div class="metric-value"><?php echo number_format((int)$counts['staff']); ?></div>
             </div>
+            <div class="metric-icon-wrapper metric-icon-info">
+              <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+          </div>
+          <div class="metric-trend mt-2">
+            <small class="text-muted"><i class="fas fa-user-tie mr-1"></i>Department Staff</small>
           </div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg-3 mb-3">
-      <div class="card metric-card shadow-sm">
+      <div class="metric-card card border-0 shadow-sm metric-card-success">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="metric-icon bg-success text-white mr-2"><i class="fas fa-book"></i></div>
-            <div>
-              <div class="text-muted small">Courses</div>
-              <div class="h5 mb-0"><?php echo (int)$counts['courses']; ?></div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="metric-content">
+              <div class="metric-label">Courses</div>
+              <div class="metric-value"><?php echo number_format((int)$counts['courses']); ?></div>
             </div>
+            <div class="metric-icon-wrapper metric-icon-success">
+              <i class="fas fa-book"></i>
+            </div>
+          </div>
+          <div class="metric-trend mt-2">
+            <small class="text-muted"><i class="fas fa-graduation-cap mr-1"></i>Active Courses</small>
           </div>
         </div>
       </div>
     </div>
     <div class="col-6 col-lg-3 mb-3">
-      <div class="card metric-card shadow-sm">
+      <div class="metric-card card border-0 shadow-sm metric-card-warning">
         <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="metric-icon bg-warning text-dark mr-2"><i class="far fa-clock"></i></div>
-            <div>
-              <div class="text-muted small">OnPeak Pending</div>
-              <div class="h5 mb-0"><?php echo (int)$counts['onpeak_pending']; ?></div>
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="metric-content">
+              <div class="metric-label">OnPeak Pending</div>
+              <div class="metric-value"><?php echo number_format((int)$counts['onpeak_pending']); ?></div>
             </div>
+            <div class="metric-icon-wrapper metric-icon-warning">
+              <i class="far fa-clock"></i>
+            </div>
+          </div>
+          <div class="metric-trend mt-2">
+            <small class="text-muted"><i class="fas fa-exclamation-circle mr-1"></i>Requires Action</small>
           </div>
         </div>
       </div>
@@ -367,22 +405,24 @@ if ($qpos) {
   <div class="row">
     <!-- Left: Staff Management -->
     <div class="col-12 col-lg-8 mb-3">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong><i class="fas fa-user-tie mr-1"></i> Staff Management</strong>
-          <div>
-            <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/staff/StaffManage.php?department_id=<?php echo urlencode($deptId); ?>">Manage</a>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header-modern card-header-primary d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-user-tie mr-2"></i>
+            <strong>Staff Management</strong>
           </div>
+          <a class="btn btn-sm btn-modern btn-manage" href="<?php echo $base; ?>/staff/StaffManage.php?department_id=<?php echo urlencode($deptId); ?>">
+            <i class="fas fa-cog mr-1"></i> Manage
+          </a>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
-            <table class="table table-sm mb-0">
-              <thead class="thead-light">
+            <table class="table table-hover table-modern mb-0">
+              <thead class="thead-modern">
                 <tr>
-                  <th>ID</th>
-                  <th>Name</th>
-                  <th>Position</th>
-
+                  <th><i class="fas fa-id-card mr-1"></i> ID</th>
+                  <th><i class="fas fa-user mr-1"></i> Name</th>
+                  <th><i class="fas fa-briefcase mr-1"></i> Position</th>
                 </tr>
               </thead>
               <tbody>
@@ -428,19 +468,23 @@ if ($qpos) {
     </div>
     <!-- Right: Latest OnPeak Requests (compact, max 8 with scroll) -->
     <div class="col-12 col-lg-4 mb-3">
-      <div class="card shadow-sm h-100 small">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong><i class="far fa-calendar-check mr-1"></i> Latest OnPeak Requests</strong>
-          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/hod/OnPeakQueue.php">Open</a>
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header-modern card-header-info d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <i class="far fa-calendar-check mr-2"></i>
+            <strong>Latest OnPeak Requests</strong>
+          </div>
+          <a class="btn btn-sm btn-modern btn-open" href="<?php echo $base; ?>/hod/OnPeakQueue.php">
+            <i class="fas fa-external-link-alt mr-1"></i> Open
+          </a>
         </div>
         <div class="card-body p-0" style="max-height: 360px; overflow-y: auto;">
-          <table class="table table-sm table-hover mb-0">
-            <thead>
+          <table class="table table-sm table-hover table-modern mb-0">
+            <thead class="thead-modern">
               <tr>
-                <th>Student</th>
-                <th>Exit</th>
-                <th>Return</th>
-                
+                <th><i class="fas fa-user-graduate mr-1"></i> Student</th>
+                <th><i class="fas fa-sign-out-alt mr-1"></i> Exit</th>
+                <th><i class="fas fa-sign-in-alt mr-1"></i> Return</th>
               </tr>
             </thead>
             <tbody>
@@ -485,22 +529,27 @@ if ($qpos) {
   <!-- Department Courses List -->
   <div class="row">
     <div class="col-12 mb-3">
-      <div class="card shadow-sm">
-        <div class="card-header d-flex justify-content-between align-items-center">
-          <strong><i class="fas fa-graduation-cap mr-1"></i> Courses (Department)</strong>
-          <a class="btn btn-sm btn-outline-primary" href="<?php echo $base; ?>/course/Course.php?department_id=<?php echo urlencode($deptId); ?>">View All</a>
+      <div class="card border-0 shadow-sm">
+        <div class="card-header-modern card-header-success d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-graduation-cap mr-2"></i>
+            <strong>Courses (Department)</strong>
+          </div>
+          <a class="btn btn-sm btn-modern btn-view-all" href="<?php echo $base; ?>/course/Course.php?department_id=<?php echo urlencode($deptId); ?>">
+            <i class="fas fa-eye mr-1"></i> View All
+          </a>
         </div>
         <div class="card-body p-0">
           <div class="table-responsive">
-            <table class="table table-sm mb-0">
-              <thead class="thead-light">
+            <table class="table table-hover table-modern mb-0">
+              <thead class="thead-modern">
                 <tr>
-                  <th>Course ID</th>
-                  <th>Course Name</th>
-                  <th class="text-center">NVQ Level</th>
-                  <th class="text-center">Active Groups</th>
-                  <th class="text-center">Enrolled Students</th>
-                  <th class="text-right">Actions</th>
+                  <th><i class="fas fa-hashtag mr-1"></i> Course ID</th>
+                  <th><i class="fas fa-book mr-1"></i> Course Name</th>
+                  <th class="text-center"><i class="fas fa-layer-group mr-1"></i> NVQ Level</th>
+                  <th class="text-center"><i class="fas fa-users mr-1"></i> Active Groups</th>
+                  <th class="text-center"><i class="fas fa-user-graduate mr-1"></i> Enrolled Students</th>
+                  <th class="text-right"><i class="fas fa-cog mr-1"></i> Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -589,8 +638,8 @@ if ($qpos) {
                       . '<td class="text-center">' . (int)$r['students_count'] . '</td>'
                       . '<td class="text-right">'
                       . '<div class="btn-group btn-group-sm" role="group">'
-                      . '<a class="btn btn-light border btn-icon" href="' . $base . '/module/Module.php?course_id=' . urlencode($cid) . '" title="Modules"><i class="fas fa-th-list"></i></a>'
-                      . '<a class="btn btn-light border btn-icon" href="' . $base . '/group/Groups.php?course_id=' . urlencode($cid) . '" title="Groups"><i class="fas fa-users"></i></a>'
+                      . '<a class="btn btn-sm btn-outline-primary btn-action" href="' . $base . '/module/Module.php?course_id=' . urlencode($cid) . '" title="Modules"><i class="fas fa-th-list"></i></a>'
+                      . '<a class="btn btn-sm btn-outline-info btn-action" href="' . $base . '/group/Groups.php?course_id=' . urlencode($cid) . '" title="Groups"><i class="fas fa-users"></i></a>'
                       . '</div>'
                       . '</td>'
                       . '</tr>';
@@ -819,63 +868,437 @@ if ($qpos) {
   })();
 </script>
 <style>
+  /* HOD Dashboard Container - Proper Alignment */
   .hod-container {
-    max-width: 1200px;
-    margin: 0 auto;
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px;
+    padding-right: 15px;
+    width: 100%;
   }
 
-  .metric-card .metric-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: .5rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  /* Override any conflicting styles from head.php */
+  .hod-desktop-offset {
+    margin-left: auto !important;
+    margin-right: auto !important;
   }
 
-  /* Apply negative left margin only on desktop */
+  /* Responsive adjustments */
   @media (min-width: 992px) {
-
-    /* lg and up */
-    .hod-desktop-offset {
-      margin-left: -100px;
+    .hod-container {
+      padding-left: 20px;
+      padding-right: 20px;
     }
   }
 
   @media (max-width: 991.98px) {
-
-    /* below lg */
-    .hod-desktop-offset {
-      margin-left: 0 !important;
+    .hod-container {
+      padding-left: 15px;
+      padding-right: 15px;
     }
   }
 
-  /* Icon buttons: compact square, centered icons */
-  .btn-icon {
-    width: 30px;
-    height: 30px;
-    padding: 0;
-    display: inline-flex;
+  @media (max-width: 575.98px) {
+    .hod-container {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+
+  /* Professional Dashboard Header */
+  .dashboard-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 12px;
+    padding: 2rem;
+    color: white;
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    margin-bottom: 2rem;
+  }
+
+  .header-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 12px;
+    display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.8rem;
+    backdrop-filter: blur(10px);
   }
 
-  .btn-group-sm .btn-icon {
-    width: 28px;
-    height: 28px;
+  .dashboard-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin: 0;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
-  .btn-icon i {
-    font-size: 0.9rem;
-    line-height: 1;
+  .dashboard-subtitle {
+    font-size: 0.95rem;
+    color: white !important;
+    margin: 0;
   }
 
-  .table .btn-group.btn-group-sm .btn {
-    margin-right: 4px;
+  .dashboard-subtitle * {
+    color: white !important;
   }
 
-  .table .btn-group.btn-group-sm .btn:last-child {
-    margin-right: 0;
+  .dashboard-subtitle .text-muted {
+    color: rgba(255, 255, 255, 0.85) !important;
+  }
+
+  .dashboard-subtitle strong {
+    color: white !important;
+    font-weight: 600;
+  }
+
+  .btn-logout {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    padding: 0.5rem 1.25rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+  }
+
+  .btn-logout:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Enhanced Metric Cards */
+  .metric-card {
+    border-radius: 12px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .metric-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, currentColor, transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+  }
+
+  .metric-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15) !important;
+  }
+
+  .metric-card:hover::before {
+    opacity: 1;
+  }
+
+  .metric-card-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+  }
+
+  .metric-card-primary * {
+    color: white !important;
+  }
+
+  .metric-card-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    color: white !important;
+  }
+
+  .metric-card-info * {
+    color: white !important;
+  }
+
+  .metric-card-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white !important;
+  }
+
+  .metric-card-success * {
+    color: white !important;
+  }
+
+  .metric-card-warning {
+    background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    color: white !important;
+  }
+
+  .metric-card-warning * {
+    color: white !important;
+  }
+
+  .metric-content {
+    flex: 1;
+  }
+
+  .metric-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white !important;
+    opacity: 0.95;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .metric-value {
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: white !important;
+  }
+
+  .metric-icon-wrapper {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    opacity: 0.95;
+    color: white !important;
+  }
+
+  .metric-icon-wrapper i {
+    color: white !important;
+  }
+
+  .metric-icon-primary {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .metric-icon-info {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .metric-icon-success {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .metric-icon-warning {
+    background: rgba(255, 255, 255, 0.2);
+  }
+
+  .metric-trend {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 0.75rem;
+    margin-top: 0.75rem;
+  }
+
+  .metric-trend small {
+    color: white !important;
+    opacity: 0.9;
+  }
+
+  .metric-card .card-body {
+    color: white !important;
+  }
+
+  .metric-card .card-body * {
+    color: white !important;
+  }
+
+  /* Modern Card Headers */
+  .card-header-modern {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.05);
+    font-weight: 600;
+    border-radius: 12px 12px 0 0 !important;
+  }
+
+  .card-header-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white !important;
+  }
+
+  .card-header-primary * {
+    color: white !important;
+  }
+
+  .card-header-info {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+    color: white !important;
+  }
+
+  .card-header-info * {
+    color: white !important;
+  }
+
+  .card-header-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white !important;
+  }
+
+  .card-header-success * {
+    color: white !important;
+  }
+
+  .btn-modern {
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+    border: none;
+    color: white !important;
+  }
+
+  .btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+    color: white !important;
+  }
+
+  /* Manage Button - Purple/Blue gradient */
+  .btn-manage {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%) !important;
+    color: white !important;
+    border: none;
+  }
+
+  .btn-manage:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
+    color: white !important;
+    box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
+  }
+
+  /* Open Button - Cyan/Blue gradient */
+  .btn-open {
+    background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%) !important;
+    color: white !important;
+    border: none;
+  }
+
+  .btn-open:hover {
+    background: linear-gradient(135deg, #0891b2 0%, #2563eb 100%) !important;
+    color: white !important;
+    box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+  }
+
+  /* View All Button - Green gradient */
+  .btn-view-all {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+    color: white !important;
+    border: none;
+  }
+
+  .btn-view-all:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+    color: white !important;
+    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+  }
+
+  /* Enhanced Tables */
+  .table-modern {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .table-modern thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    padding: 1rem;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .table-modern tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  .table-modern tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+    transform: scale(1.01);
+    transition: all 0.2s ease;
+  }
+
+  .thead-modern {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  }
+
+  .card-header-modern .thead-modern {
+    background: transparent;
+    color: white;
+  }
+
+  .card-header-primary .thead-modern th,
+  .card-header-info .thead-modern th,
+  .card-header-success .thead-modern th {
+    color: white;
+    border-bottom-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Action Buttons */
+  .btn-action {
+    border-radius: 6px;
+    padding: 0.375rem 0.75rem;
+    transition: all 0.3s ease;
+    border-width: 1.5px;
+  }
+
+  .btn-action:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  /* Ensure cards are properly spaced */
+  .hod-container .card {
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+  }
+
+  /* Responsive adjustments for metric cards */
+  @media (max-width: 991.98px) {
+    .dashboard-header {
+      padding: 1.5rem;
+    }
+
+    .dashboard-title {
+      font-size: 1.5rem;
+    }
+
+    .header-icon-wrapper {
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem;
+    }
+
+    .metric-value {
+      font-size: 1.75rem;
+    }
+
+    .metric-icon-wrapper {
+      width: 50px;
+      height: 50px;
+      font-size: 1.5rem;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .dashboard-header {
+      padding: 1rem;
+    }
+
+    .dashboard-title {
+      font-size: 1.25rem;
+    }
+
+    .metric-value {
+      font-size: 1.5rem;
+    }
   }
 </style>
 <?php include_once __DIR__ . '/../footer.php'; ?>

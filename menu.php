@@ -44,33 +44,121 @@ if ($u_ta == 'student' && isset($con) && ($con instanceof mysqli)) {
   }
 }
 
-// For student users, do not render the sidebar at all
+// For student users, render top navbar only (no sidebar)
 if ($u_t === 'STU') {
-  return; // stop including this file silently for students
-}
-
-// IN roles (IN1, IN2, IN3) will use the unified top navbar in menu2.php
-
-// MA4: use minimal top navbar (menu3.php) with no sidebar
-if ($u_t === 'MA4') {
-  $menu3 = __DIR__ . '/menu3.php';
-  if (file_exists($menu3)) {
-    include $menu3;
+  $student_top_nav = __DIR__ . '/student/top_nav.php';
+  if (file_exists($student_top_nav)) {
+    include $student_top_nav;
   }
-  return; // stop sidebar rendering for MA4
+  return; // stop sidebar rendering for students
 }
 
-// For SAO, HOD, DIR, ACC, FIN, EXAM and instructor roles (IN1, IN2, IN3), render the dedicated top navbar from menu2.php and do not render the sidebar
-if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN3'], true)) {
-  $menu2 = __DIR__ . '/menu2.php';
-  if (file_exists($menu2)) {
-    include $menu2;
-  }
-  return; // stop sidebar rendering for SAO/HOD/DIR/ACC
-}
+// All non-student roles will use the sidebar navbar (like admin)
+// Permissions remain unchanged - sidebar menu items are role-based
 
 ?>
 <style>
+  /* Professional Menu Styling - Only Background Change on Hover */
+  
+  /* Base menu item styling - no borders, no transforms */
+  .sidebar-wrapper .sidebar-menu ul li,
+  .sidebar-wrapper .sidebar-menu ul li a,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown > a,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown .sidebar-submenu li,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown .sidebar-submenu li a {
+    border-left: none !important;
+    border: none !important;
+    transform: none !important;
+    transition: background-color 0.2s ease !important;
+  }
+  
+  /* Prevent text movement - fixed padding */
+  .sidebar-wrapper .sidebar-menu ul li a {
+    padding-left: 1.5rem !important;
+    padding-right: 1.25rem !important;
+  }
+  
+  .sidebar-wrapper .sidebar-menu ul li:hover > a,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown:hover > a,
+  .sidebar-wrapper .sidebar-menu ul li.active > a,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown.active > a {
+    padding-left: 1.5rem !important;
+    padding-right: 1.25rem !important;
+  }
+  
+  /* Only background color change on hover - no other changes */
+  .sidebar-wrapper .sidebar-menu ul li:hover > a {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+    color: inherit !important;
+    border-left: none !important;
+    transform: none !important;
+    padding-left: 1.5rem !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+  
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown:hover > a {
+    background-color: rgba(99, 102, 241, 0.1) !important;
+    color: inherit !important;
+    border-left: none !important;
+    transform: none !important;
+    padding-left: 1.5rem !important;
+  }
+  
+  /* Submenu hover - only background */
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown .sidebar-submenu li:hover > a {
+    background-color: rgba(99, 102, 241, 0.08) !important;
+    color: inherit !important;
+    padding-left: inherit !important;
+    transform: none !important;
+    border-left: none !important;
+  }
+  
+  /* Active state - subtle background, no border */
+  .sidebar-wrapper .sidebar-menu ul li.active > a,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown.active > a {
+    background-color: rgba(99, 102, 241, 0.15) !important;
+    border-left: none !important;
+    color: inherit !important;
+    font-weight: 500 !important;
+  }
+  
+  /* Icons - no changes on hover, only background follows parent */
+  .sidebar-wrapper .sidebar-menu ul li a i,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown > a i {
+    transition: none !important;
+    transform: none !important;
+    color: inherit !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  .sidebar-wrapper .sidebar-menu ul li:hover a i,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown:hover a i {
+    color: inherit !important;
+    transform: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  /* Submenu indicators - no changes */
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown .sidebar-submenu li a:hover:before {
+    background: inherit !important;
+    width: inherit !important;
+    height: inherit !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+  
+  /* Remove any border colors from active states */
+  .sidebar-wrapper .sidebar-menu ul li.active,
+  .sidebar-wrapper .sidebar-menu .sidebar-dropdown.active {
+    border-left: none !important;
+  }
+  
   /* Mobile spacing and alignment improvements */
   @media (max-width: 575.98px) {
     .page-content .container-fluid {
@@ -108,32 +196,55 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
   .page-wrapper .page-content {
     padding-top: 0.5rem;
   }
+
+  /* Admin Dashboard and general page content alignment */
+  .page-content .container-fluid {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px;
+    padding-right: 15px;
+  }
+
+  @media (min-width: 992px) {
+    .page-content .container-fluid {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
 </style>
 <nav id="sidebar" class="sidebar-wrapper">
   <div class="sidebar-content">
     <div class="sidebar-brand">
-      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?><?php echo ($_SESSION['user_type'] == 'STU') ? '/home/home.php' : '/dashboard/index.php'; ?>">MIS@SLGTI</a>
-      <div id="close-sidebar">
+      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?><?php echo ($_SESSION['user_type'] == 'STU') ? '/home/home.php' : '/dashboard/index.php'; ?>" style="display: flex; align-items: center; gap: 0.75rem;">
+        <i class="fas fa-university" style="font-size: 1.5rem; color: #2563eb; text-shadow: 0 0 10px rgba(37, 99, 235, 0.5);"></i>
+        <span style="font-weight: 700; letter-spacing: 1px;">MIS@SLGTI</span>
+      </a>
+      <div id="close-sidebar" style="cursor: pointer; padding: 0.5rem; border-radius: 6px; transition: all 0.3s ease;">
         <i class="fas fa-times"></i>
       </div>
     </div>
-    <div class="sidebar-header">
-      <div class="user-pic">
+    <div class="sidebar-header" style="background: transparent !important;">
+      <div class="user-pic" style="border: 2px solid rgba(37, 99, 235, 0.3); box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);">
         <img class="img-responsive img-rounded" src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/user.jpg" alt="<?php echo $u_n; ?> picture">
       </div>
       <div class="user-info">
-        <span class="user-name">
-          <strong><?php echo $u_n; ?></strong>
+        <span class="user-name" style="display: block; font-size: 0.95rem; font-weight: 700; color: #ffffff; margin-bottom: 0.25rem;">
+          <?php echo htmlspecialchars($u_n); ?>
         </span>
-        <span class="user-role"><?php echo htmlspecialchars($u_t ?: ''); ?> | <?php echo htmlspecialchars($d_c ?: ''); ?> </span>
-        <span class="user-status">
-          <i class="fa fa-user"></i>
-          <span>
-            <a href="<?php echo (defined('APP_BASE') ? APP_BASE : '');
-                      echo ($_SESSION['user_type'] == 'STU') ? '/student/Student_profile.php' : '/Profile.php'; ?>">Profile</a>
-            &nbsp;|&nbsp;
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/logout.php">Logout</a>
-          </span>
+        <span class="user-role" style="display: block; font-size: 0.75rem; color: #94a3b8; margin-bottom: 0.5rem; letter-spacing: 0.5px;">
+         <?php echo htmlspecialchars($u_t ?: ''); ?> | <?php echo htmlspecialchars($d_c ?: ''); ?>
+        </span>
+        <span class="user-status" style="display: flex; gap: 0.75rem; font-size: 0.8rem;">
+          <a href="<?php echo (defined('APP_BASE') ? APP_BASE : '');
+                    echo ($_SESSION['user_type'] == 'STU') ? '/student/Student_profile.php' : '/Profile.php'; ?>" 
+             style="color: #cbd5e1; text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 6px; background: transparent; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <i class="fas fa-user-circle"></i> Profile
+          </a>
+          <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/logout.php" 
+             style="color: #fca5a5; text-decoration: none; padding: 0.4rem 0.8rem; border-radius: 6px; background: transparent; transition: all 0.3s ease; display: inline-flex; align-items: center; gap: 0.4rem;">
+            <i class="fas fa-sign-out-alt"></i> Logout
+          </a>
         </span>
       </div>
     </div>
@@ -155,6 +266,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
       <?php if ($u_t === 'WAR') { ?>
         <ul>
           <li class="header-menu"><span>General</span></li>
+          <!-- Dashboard - First Menu Item -->
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
               <i class="fa fa-home"></i>
@@ -178,7 +290,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Payments.php">Hostel Payments</a>
                 </li>
                 <li>
-                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Allocated Students (Room-wise)</a>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">Hostel Info</a>
                 </li>
                 <li>
                   <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManualAllocate.php">Manual Allocate</a>
@@ -193,6 +305,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
       <?php } elseif ($u_t === 'MA2') { ?>
         <ul>
           <li class="header-menu"><span>General</span></li>
+          <!-- Dashboard - First Menu Item -->
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
               <i class="fa fa-home"></i>
@@ -247,6 +360,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
       <?php } elseif (in_array($u_t, ['DIR', 'ACC'], true)) { ?>
         <ul>
           <li class="header-menu"><span>Director</span></li>
+          <!-- Dashboard - First Menu Item -->
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
               <i class="fa fa-home"></i>
@@ -288,42 +402,55 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
       <?php } elseif ($u_t === 'FIN') { ?>
         <ul>
           <li class="header-menu"><span>Finance</span></li>
+          <!-- Dashboard - First Menu Item -->
           <li>
             <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
               <i class="fa fa-home"></i>
               <span>Dashboard</span>
             </a>
           </li>
-
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fab fa-amazon-pay"></i>
+              <span>Payments</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/CollectPayment.php">Collect Payment</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/PaymentsSummary.php">Payments Summary</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/ManagePaymentTypes.php">Manage Payment Types</a></li>
+              </ul>
+            </div>
+          </li>
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/StudentBankDetails.php">
-              <i class="fas fa-university"></i>
-              <span>Student Bank Details</span>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">
+              <i class="far fa-building"></i>
+              <span>Hostel Info</span>
             </a>
           </li>
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/HostelFeeReports.php">
-              <i class="fa fa-print"></i>
-              <span>Hostel Fee Reports</span>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">
+              <i class="fas fa-users"></i>
+              <span>Manage Students</span>
             </a>
           </li>
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentReport.php">
-              <i class="fa fa-file-invoice-dollar"></i>
-              <span>Registration Payment Report</span>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
+              <i class="fas fa-calendar-check"></i>
+              <span> Attendance Report</span>
             </a>
           </li>
-          <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentApproval.php">
-              <i class="fa fa-check-circle"></i>
-              <span>Registration Payment Approval</span>
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-bus"></i>
+              <span>Season Reports</span>
             </a>
-          </li>
-          <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/NormalizeRegistrationReason.php">
-              <i class="fa fa-tools"></i>
-              <span>Normalize Registration Reason</span>
-            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport1.php">Report 1 - Student Details</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport2.php">Report 2 - Payment Details</a></li>
+              </ul>
+            </div>
           </li>
         </ul>
       <?php } elseif ($u_t === 'HOD') { ?>
@@ -337,11 +464,25 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
             </a>
           </li>
           <!-- Attendance -->
-          <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">
+          <li class="sidebar-dropdown">
+            <a href="#">
               <i class="fas fa-calendar-check"></i>
-              <span>Daily Attendance</span>
+              <span>Attendance</span>
             </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
+                    <i class="fas fa-calendar-alt mr-1"></i> Monthly Report
+                  </a>
+                </li>
+                <li>
+                  <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/BulkMonthlyMark.php">
+                    <i class="fas fa-tasks mr-1"></i> Bulk Monthly Mark
+                  </a>
+                </li>
+              </ul>
+            </div>
           </li>
 
           <!-- My Department: Department, Courses, Modules -->
@@ -352,9 +493,7 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
             </a>
             <div class="sidebar-submenu">
               <ul>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/Department.php">Department Info</a></li>
                 <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add a Course</a></li>
                 <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules</a></li>
               </ul>
             </div>
@@ -370,7 +509,6 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
               <ul>
                 <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Groups.php">Groups</a></li>
                 <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/AddGroup.php">Add Group</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/group/Reports.php">Reports</a></li>
               </ul>
             </div>
           </li>
@@ -390,70 +528,17 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
 
           <!-- My Department Students -->
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/DepartmentStudents.php">
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">
               <i class="fas fa-user-graduate"></i>
               <span>My Dept Students</span>
             </a>
           </li>
 
-          <!-- Timetable -->
-          <li class="sidebar-dropdown">
-            <a href="#">
-              <i class="fas fa-calendar-alt"></i>
-              <span>Timetable</span>
-            </a>
-            <div class="sidebar-submenu">
-              <ul>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/timetable/Timetable.php">Timetable</a></li>
-                
-              </ul>
-            </div>
-          </li>
-
-          <!-- Examinations -->
-          <li class="sidebar-dropdown">
-            <a href="#">
-              <i class="fas fa-award"></i>
-              <span>Examinations</span>
-            </a>
-            <div class="sidebar-submenu">
-              <ul>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/Assessment.php">Assessment Info</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessment.php">Add Assessment</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AddAssessmentType.php">Add Assessment Type</a></li>
-                
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/assessment/AssessmentReport.php">Assessment Report</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php">End Exams</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php#recent">End Exam Results</a></li>
-              </ul>
-            </div>
-          </li>
-
-          <!-- Attendances (hidden) -->
-          <!-- Removed per requirement: no attendance in menu -->
-
-          <!-- On-the-job Training -->
-          <li class="sidebar-dropdown">
-            <a href="#">
-              <i class="fas fa-briefcase"></i>
-              <span>On-the-job Training</span>
-            </a>
-            <div class="sidebar-submenu">
-              <ul>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/OJT.php">OJT Info</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/addojt.php">Add a Training Place</a></li>
-                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/OJTReport.php">OJT Report</a></li>
-              </ul>
-            </div>
-          </li>
-
-          <!-- Hostels section removed as per requirements -->
-
-          <!-- Payments -->
+          <!-- Season Approval -->
           <li>
-            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/payment/Payments.php">
-              <i class="fa fa-file-invoice-dollar"></i>
-              <span>Payments</span>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/ApproveSeasonRequest.php">
+              <i class="fas fa-bus"></i>
+              <span>Season Approval</span>
             </a>
           </li>
 
@@ -475,52 +560,87 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
         </ul>
       <?php } else { ?>
         <ul>
-          <li class="header-menu">
-            <span>General</span>
-          </li>
-          <?php if ($_SESSION['user_type'] != 'STU') { ?>
+          <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM') { ?>
+            <!-- Admin Header -->
+            <li class="header-menu">
+              <span><i class="fas fa-user-shield mr-2"></i>Administrator</span>
+            </li>
+            
+            <!-- Admin Dashboard -->
             <li>
               <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
-                <i class="fa fa-home"></i>
+                <i class="fas fa-tachometer-alt"></i>
                 <span>Dashboard</span>
-                <!-- <span class="badge badge-pill badge-primary">Beta</span> -->
               </a>
             </li>
-          <?php } ?>
+            
+            
+            <!-- Admin Index/Home -->
+            <li>
+              <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/index.php">
+                <i class="fas fa-home"></i>
+                <span>Index</span>
+              </a>
+            </li>
+            
+            <!-- Admin: Departments & Academic -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-university"></i>
+                <span>Departments & Academic</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/Department.php"><i class="fas fa-list mr-1"></i>Departments Info</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/department/AddDepartment.php"><i class="fas fa-plus-circle mr-1"></i>Add Department</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AcademicYear.php"><i class="fas fa-calendar-alt mr-1"></i>Academic Years</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AddAcademicYear.php"><i class="fas fa-plus-circle mr-1"></i>Add Academic Year</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php"><i class="fas fa-book mr-1"></i>Courses</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php"><i class="fas fa-plus-circle mr-1"></i>Add Course</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php"><i class="fas fa-cubes mr-1"></i>Modules</a></li>
+                </ul>
+              </div>
+            </li>
 
-          <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM') { ?>
-            <!-- Admin: Academic menu -->
+            <!-- Admin: Students Management -->
             <li class="sidebar-dropdown">
               <a href="#">
-                <i class="fas fa-graduation-cap"></i>
-                <span>Academic</span>
+                <i class="fas fa-user-graduate"></i>
+                <span>Students</span>
               </a>
               <div class="sidebar-submenu">
                 <ul>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/AcademicYear.php">Academic Years</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/academic/ ">Add Academic Year</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/Course.php">Courses</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/course/AddCourse.php">Add Course</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/module/Module.php">Modules</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php"><i class="fas fa-users mr-1"></i>Manage Students</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php"><i class="fas fa-file-upload mr-1"></i>Import Student Enrollment</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ExportStudents.php"><i class="fas fa-file-download mr-1"></i>Export Students (CSV)</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentReEnroll.php"><i class="fas fa-redo mr-1"></i>Student Re Enroll</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ChangeEnrollment.php"><i class="fas fa-exchange-alt mr-1"></i>Change Course</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/UploadDocumentation.php"><i class="fas fa-file-pdf mr-1"></i>Upload Student Documentation (PDF)</a></li>
+                  <li><a href="#" onclick="(function(){var sid=prompt('Enter Student ID for ID Card:'); if(sid){ window.open('<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentIDCard.php?id='+encodeURIComponent(sid), '_blank'); }})(); return false;"><i class="fas fa-id-card mr-1"></i>Student ID Card</a></li>
                 </ul>
               </div>
             </li>
-            <!-- Admin: Admin menu -->
+
+            <!-- Admin: Staff Management -->
             <li class="sidebar-dropdown">
               <a href="#">
-                <i class="fas fa-tools"></i>
-                <span>Admin</span>
+                <i class="fas fa-user-tie"></i>
+                <span>Staff</span>
               </a>
               <div class="sidebar-submenu">
                 <ul>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/LoginActivity.php">Login Activity</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffPositionType.php">Staff Position Types</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/Notice.php">Notice Info</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/AddNotice.php">Add Notice</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffManage.php"><i class="fas fa-users-cog mr-1"></i>Manage Staff</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/staff/StaffPositionType.php"><i class="fas fa-briefcase mr-1"></i>Staff Position Types</a></li>
                 </ul>
               </div>
             </li>
-            <!-- ADM: Examinations submenu -->
+
+            <!-- Admin: Examinations -->
             <li class="sidebar-dropdown">
               <a href="#">
                 <i class="fas fa-award"></i>
@@ -528,8 +648,160 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
               </a>
               <div class="sidebar-submenu">
                 <ul>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php">End Exams</a></li>
-                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/Transcript.php">Transcript</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/EndExams.php"><i class="fas fa-clipboard-check mr-1"></i>End Exams</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/exam/Transcript.php"><i class="fas fa-file-alt mr-1"></i>Transcript</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Attendance -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-calendar-check"></i>
+                <span>Attendance</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php"><i class="fas fa-chart-bar mr-1"></i>Monthly Attendance Report</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Season Requests -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-bus"></i>
+                <span>Season Requests</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonRequests.php"><i class="fas fa-list mr-1"></i>All Requests</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/ApproveSeasonRequest.php"><i class="fas fa-check-circle mr-1"></i>Approve Requests</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/CollectSeasonPayment.php"><i class="fas fa-money-bill-wave mr-1"></i>Collect Payment</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/IssueSeason.php"><i class="fas fa-ticket-alt mr-1"></i>Issue Season</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport1.php"><i class="fas fa-file-alt mr-1"></i>Report 1 - Student Details</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport2.php"><i class="fas fa-file-invoice mr-1"></i>Report 2 - Payment Details</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Hostels -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="far fa-building"></i>
+                <span>Hostels</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManageHostel.php"><i class="fas fa-building mr-1"></i>Manage Hostels & Blocks</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManageRooms.php"><i class="fas fa-door-open mr-1"></i>Manage Rooms</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php"><i class="fas fa-info-circle mr-1"></i>Hostels Info</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: On-the-job Training -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-briefcase"></i>
+                <span>On-the-job Training</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/OJT.php"><i class="fas fa-list mr-1"></i>On-the-job Training Info</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/addojt.php"><i class="fas fa-plus-circle mr-1"></i>Add a Training Place</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Timetable & Notices -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Timetable & Notices</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/timetable/Timetable.php"><i class="fas fa-calendar mr-1"></i>Timetable</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/Notice.php"><i class="fas fa-bullhorn mr-1"></i>Notice Info</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/notices/AddNotice.php"><i class="fas fa-plus-circle mr-1"></i>Add Notice</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Library -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-book-open"></i>
+                <span>Library</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/LibraryHome.php"><i class="fas fa-home mr-1"></i>Library Home</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/AddBook.php"><i class="fas fa-plus-circle mr-1"></i>Add a Book</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/IssueBook.php"><i class="fas fa-hand-holding mr-1"></i>Issue a Book</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/ViewBooks.php"><i class="fas fa-list mr-1"></i>All Books</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/IssuedBook.php"><i class="fas fa-book-reader mr-1"></i>Issued Books Info</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Feedbacks -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="far fa-grin"></i>
+                <span>Feedbacks</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentFeedbackinfo.php"><i class="fas fa-comments mr-1"></i>Students Feedback Info</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/AddStudentFeedback.php"><i class="fas fa-plus-circle mr-1"></i>Create a Student Feedback</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Payroll System -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-money-check-alt"></i>
+                <span>Payroll System</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/ManagePayroll.php"><i class="fas fa-calculator mr-1"></i>Payroll (Admin)</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Network Management -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-network-wired"></i>
+                <span>Network Management</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/devices/NetworkSettings.php"><i class="fas fa-cog mr-1"></i>Network Settings</a></li>
+                </ul>
+              </div>
+            </li>
+
+            <!-- Admin: Administration -->
+            <li class="sidebar-dropdown">
+              <a href="#">
+                <i class="fas fa-cogs"></i>
+                <span>Administration</span>
+              </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/Administration.php">Admin Dashboard</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/LoginActivity.php">Login Activity</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/ConductReport.php">Conduct Report</a></li>
+                  <li><hr style="margin: 0.5rem 0;"></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/DatabaseExport.php?download=1&simple=1">Database Export</a></li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/StudentImageBackup.php">Student Image Backup</a></li>
                 </ul>
               </div>
             </li>
@@ -537,6 +809,12 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
 
           <?php if (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO') { ?>
             <!-- SAO: Hostel with submenu -->
+            <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/index.php">
+              <i class="fas fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
             <li class="sidebar-dropdown">
               <a href="#">
                 <i class="far fa-building"></i>
@@ -687,45 +965,9 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
               </div>
             </li>
           <?php } ?>
-          <?php if ($_SESSION['user_type'] == 'ADM') { ?> 
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-user-graduate"></i>
-                <span>Students</span>
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-
-
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">Manage Students</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ExportStudents.php">Export Students (CSV)</a>
-                  </li>
-
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentReEnroll.php">Student Re Enroll</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ChangeEnrollment.php">Change Course</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/UploadDocumentation.php">Upload Student Documentation (PDF)</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ImportStudentEnroll.php">Import Student Enrollment</a>
-                  </li>
-                  <li>
-                    <a href="#" onclick="(function(){var sid=prompt('Enter Student ID for ID Card:'); if(sid){ window.open('<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentIDCard.php?id='+encodeURIComponent(sid), '_blank'); }})(); return false;">Student ID Card</a>
-                  </li>
-                </ul>
-              </div>
-            </li> 
-          <?php } ?>
           <?php if (can_view(['HOD'])) { ?>
             <li>
-              <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/DepartmentStudents.php">
+              <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">
                 <i class="fas fa-user-graduate"></i>
                 <span>My Dept Students</span>
               </a>
@@ -770,37 +1012,12 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
           </li>
           <?php } */ ?>
 
-          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO' && !is_role('IN2')) { ?>
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-briefcase"></i>
-                <span>On-the-job Training</span>
-                <!-- <span class="badge badge-pill badge-danger">3</span> -->
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-                  <li><?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/OJT.php">On-the-job Training Info</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/ojt/addojt.php">Add a Training Place</a>
-                    <hr>
-                  </li> <?php } ?>
-                <li><?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                    <a href="#">Placement Change</a>
-                </li>
-              <?php } ?>
-                </ul>
-              </div>
-            </li>
-          <?php } ?>
 
-          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO' && !is_role('IN2')) { ?>
+          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO' && !is_role('IN2') && $_SESSION['user_type'] !== 'ADM') { ?>
             <li class="sidebar-dropdown">
               <a href="#">
                 <i class="far fa-building"></i>
                 <span>Hostels</span>
-                <!-- <span class="badge badge-pill badge-danger">3</span> -->
               </a>
               <div class="sidebar-submenu">
                 <ul>
@@ -811,81 +1028,41 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
                     <li>
                       <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">Hostels Info</a>
                     </li>
-                    
-                  <?php } elseif ($u_t === 'ADM') { ?>
-
-
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManageHostel.php">Manage Hostels &amp; Blocks</a>
-                    </li>
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/ManageRooms.php">Manage Rooms</a>
-
-                    </li>
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/Hostel.php">Hostels Info</a>
-                    </li>
-                    
-
                   <?php } ?>
                 </ul>
               </div>
             </li>
           <?php } ?>
 
-
-          <?php if ($_SESSION['user_type'] == 'ADM' && !is_role('IN2')) { ?>
+          <!-- Season Requests (Non-Admin) -->
+          <?php if (in_array($_SESSION['user_type'], ['HOD', 'WAR', 'SAO'], true)) { ?>
             <li class="sidebar-dropdown">
               <a href="#">
-                <i class="far fa-grin"></i>
-                <span>Feedbacks</span>
-                <!-- <span class="badge badge-pill badge-danger">3</span> -->
+                <i class="fas fa-bus"></i>
+                <span>Season Requests</span>
               </a>
               <div class="sidebar-submenu">
                 <ul>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/StudentFeedbackinfo.php">Students Feedback Info</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/AddStudentFeedback.php">Create a Student Feedback</a>
-                    <hr>
-                  </li>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonRequests.php">All Requests</a></li>
+                  <?php if (in_array($_SESSION['user_type'], ['HOD'], true)) { ?>
+                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/ApproveSeasonRequest.php">Approve Requests</a></li>
+                  <?php } ?>
+                  <?php if (in_array($_SESSION['user_type'], ['HOD', 'SAO'], true)) { ?>
+                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/CollectSeasonPayment.php">Collect Payment</a></li>
+                  <?php } ?>
+                  <?php if (in_array($_SESSION['user_type'], ['HOD', 'SAO'], true)) { ?>
+                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/IssueSeason.php">Issue Season</a></li>
+                  <?php } ?>
+                  <?php if (in_array($_SESSION['user_type'], ['HOD', 'SAO'], true)) { ?>
+                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport1.php">Report 1 - Student Details</a></li>
+                    <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport2.php">Report 2 - Payment Details</a></li>
+                  <?php } ?>
                 </ul>
               </div>
             </li>
           <?php } ?>
-
-          <?php if ($_SESSION['user_type'] == 'ADM' && !is_role('IN2')) { ?>
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-book-open"></i>
-                <span>Library</span>
-                <!-- <span class="badge badge-pill badge-danger">3</span> -->
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/LibraryHome.php">Library Home</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/AddBook.php">Add a Book</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/IssueBook.php">Issue a Book</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/ViewBooks.php">All Book</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/book/IssuedBook.php">Issued Books Info</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-          <?php } ?>
-
         
-          <?php if ($_SESSION['user_type'] != 'STU' && !is_role('IN2')) { ?>
+          <?php if ($_SESSION['user_type'] != 'STU' && !is_role('IN2') && $_SESSION['user_type'] != 'FIN') { ?>
             <li class="sidebar-dropdown">
               <a href="#">
                 <i class="fab fa-amazon-pay"></i>
@@ -894,14 +1071,6 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
               </a>
               <div class="sidebar-submenu">
                 <ul>
-                  <?php if ($_SESSION['user_type'] == 'FIN') { ?>
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentApproval.php">Registration Payment Approval</a>
-                    </li>
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/RegistrationPaymentReport.php">Registration Payment Report</a>
-                    </li>
-                  <?php } ?>
                 </ul>
               </div>
             </li>
@@ -937,21 +1106,26 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
             <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['WAR', 'HOD', 'ADM'])) { ?>
               <li class="sidebar-dropdown">
                 <a href="#">
-                  <i class="fas fa-tint"></i>
-                  <span>Attendance </span>
+                  <i class="fas fa-calendar-check"></i>
+                  <span>Attendance</span>
                   <!-- <span class="badge badge-pill badge-danger">3</span> -->
                 </a>
                 <div class="sidebar-submenu">
                   <ul>
-                    <li> <?php if ((($_SESSION['user_type'] == 'WAR') || ($_SESSION['user_type'] == 'HOD'))) { ?>
+                    <li> <?php if ($_SESSION['user_type'] == 'WAR') { ?>
                         <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/Attendance.php">Attendance Info</a>
                     </li> <?php } ?>
-                  <li><?php if ((($_SESSION['user_type'] == 'WAR') || ($_SESSION['user_type'] == 'HOD'))) { ?>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">Attendance </a>
-                      <hr>
+                  <li><?php if ($_SESSION['user_type'] == 'WAR') { ?>
+                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/DailyAttendance.php">Daily Attendance</a>
+                  </li> <?php } ?>
+                  <li><?php if ($_SESSION['user_type'] == 'HOD') { ?>
+                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">Monthly Report</a>
+                  </li> <?php } ?>
+                  <li><?php if ($_SESSION['user_type'] == 'HOD') { ?>
+                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/BulkMonthlyMark.php">Bulk Monthly Mark</a>
                   </li> <?php } ?>
                 <li><?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">Attendance</a>
+                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">Monthly Attendance Report</a>
                 </li> <?php } ?>
                   </ul>
                 </div>
@@ -985,55 +1159,11 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
 
 
           <?php } ?>
-          <?php if ($_SESSION['user_type'] != 'STU' && $_SESSION['user_type'] !== 'SAO') { ?>
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-network-wired"></i>
-                <span>Network Management</span>
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-                  <li>
-                    <!-- Device Discovery removed -->
-                  </li>
-                  <?php if ($_SESSION['user_type'] == 'ADM') { ?>
-                    <li>
-                      <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/devices/NetworkSettings.php">Network Settings</a>
-                    </li>
-                  <?php } ?>
-                </ul>
-              </div>
-            </li>
-          <?php } ?>
-
-          <?php if ($_SESSION['user_type'] == 'ADM' && !is_role('IN2')) { ?>
-            <li class="sidebar-dropdown">
-              <a href="#">
-                <i class="fas fa-cogs"></i>
-                <span>Administration</span>
-              </a>
-              <div class="sidebar-submenu">
-                <ul>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/Administration.php">Admin Dashboard</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/ConductReport.php">Conduct Report</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/DatabaseExport.php?download=1&simple=1">Database Export</a>
-                  </li>
-                  <li>
-                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/administration/StudentImageBackup.php">Student Image Backup</a>
-                  </li>
-                </ul>
-              </div>
-            </li>
-          <?php } ?>
 
           <li class="header-menu">
             <span>Extra</span>
           </li>
+         
           <li>
             <a href="#">
               <i class="fa fa-book"></i>
@@ -1063,6 +1193,153 @@ if (in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN
   <!-- sidebar-content  -->
   <div class="sidebar-footer" style="display:none;"></div>
 </nav>
+
+<script>
+  // Professional Sidebar Enhancements - Accordion Behavior (Bootstrap 4)
+  (function() {
+    'use strict';
+    
+    // Wait for DOM to be ready
+    function initSidebar() {
+      try {
+        var sidebar = document.getElementById('sidebar');
+        if (!sidebar) return;
+        
+        // ACCORDION: Only expand the dropdown that matches current page
+        // This will be handled by restoreActiveSubmenus in footer.php
+        
+        // Highlight active menu item based on current URL
+        highlightActiveMenuItem();
+        
+        // Smooth scroll for sidebar
+        var sidebarContent = sidebar.querySelector('.sidebar-content');
+        if (sidebarContent) {
+          sidebarContent.style.scrollBehavior = 'smooth';
+        }
+        
+        // Ensure proper container alignment for admin pages
+        ensureAdminAlignment();
+        
+        // Setup resize handler
+        setupResizeHandler();
+      } catch(e) {
+        console.error('Error initializing sidebar:', e);
+      }
+    }
+    
+    // Highlight active menu item based on current URL
+    function highlightActiveMenuItem() {
+      try {
+        var currentPath = window.location.pathname;
+        var currentFile = currentPath.split('/').pop() || '';
+        var basePath = (document.querySelector('base') || {}).href || '';
+        
+        // Find and highlight active menu items
+        var menuLinks = document.querySelectorAll('#sidebar .sidebar-menu a[href]');
+        menuLinks.forEach(function(link) {
+          try {
+            var href = link.getAttribute('href') || '';
+            if (!href || href === '#' || href === 'javascript:void(0)') return;
+            
+            // Normalize href (remove base path if present)
+            var normalizedHref = href.replace(basePath, '').replace(/^\//, '');
+            var normalizedPath = currentPath.replace(/^\//, '');
+            
+            // Check if current path matches
+            if (normalizedPath.includes(normalizedHref) || 
+                normalizedHref.includes(currentFile) ||
+                currentFile === normalizedHref.split('/').pop()) {
+              
+              var listItem = link.closest('li');
+              if (listItem) {
+                listItem.classList.add('active');
+                link.style.background = 'transparent';
+                link.style.color = '';
+                link.style.fontWeight = '';
+                link.style.borderLeft = 'none';
+                
+                // Ensure parent dropdown is expanded (only if not on dashboard)
+                // Note: currentPath is already defined above in the function
+                var isDashboard = currentPath.includes('dashboard/index') || 
+                                  currentPath.includes('dashboard/index.php') ||
+                                  currentPath === '/dashboard' ||
+                                  currentPath.endsWith('/dashboard/');
+                
+                if (!isDashboard) {
+                  var dropdown = link.closest('.sidebar-dropdown');
+                  if (dropdown) {
+                    dropdown.classList.add('active');
+                    var submenu = dropdown.querySelector('.sidebar-submenu');
+                    if (submenu) {
+                      submenu.style.display = 'block';
+                    }
+                  }
+                }
+              }
+            }
+          } catch(e) {
+            console.warn('Error highlighting menu item:', e);
+          }
+        });
+      } catch(e) {
+        console.error('Error in highlightActiveMenuItem:', e);
+      }
+    }
+    
+    // Ensure proper container alignment for admin pages
+    function ensureAdminAlignment() {
+      try {
+        var containerFluid = document.querySelector('.page-content .container-fluid');
+        if (!containerFluid) return;
+        
+        var computedStyle = window.getComputedStyle(containerFluid);
+        var maxWidth = computedStyle.maxWidth;
+        
+        // Ensure proper centering if max-width is set
+        if (maxWidth && maxWidth !== 'none' && maxWidth !== '100%') {
+          containerFluid.style.marginLeft = 'auto';
+          containerFluid.style.marginRight = 'auto';
+        }
+        
+        // Ensure proper padding based on screen size
+        var windowWidth = window.innerWidth || document.documentElement.clientWidth;
+        if (windowWidth >= 992) {
+          containerFluid.style.paddingLeft = '20px';
+          containerFluid.style.paddingRight = '20px';
+        } else if (windowWidth >= 576) {
+          containerFluid.style.paddingLeft = '15px';
+          containerFluid.style.paddingRight = '15px';
+        }
+      } catch(e) {
+        console.warn('Error ensuring admin alignment:', e);
+      }
+    }
+    
+    // Setup resize handler with debouncing
+    var resizeTimer = null;
+    function setupResizeHandler() {
+      window.removeEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize, { passive: true });
+    }
+    
+    function handleResize() {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      resizeTimer = setTimeout(function() {
+        ensureAdminAlignment();
+      }, 150);
+    }
+    
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initSidebar);
+    } else {
+      // DOM already loaded
+      initSidebar();
+    }
+  })();
+</script>
 
 <main class="page-content">
   <div class="container-fluid">

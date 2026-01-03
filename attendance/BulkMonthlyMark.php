@@ -8,7 +8,8 @@ $allowed = ['HOD','IN3'];
 if (!in_array($role, $allowed, true)) { echo '<div class="container mt-4"><div class="alert alert-danger">Forbidden</div></div>'; require_once __DIR__.'/../footer.php'; exit; }
 $base = defined('APP_BASE') ? APP_BASE : '';
 require_once __DIR__ . '/../head.php';
-require_once __DIR__ . '/../menu2.php';
+require_once __DIR__ . '/../menu.php';
+require_once __DIR__ . '/Attendancenav.php';
 
 function h($s){ return htmlspecialchars($s ?? '', ENT_QUOTES, 'UTF-8'); }
 
@@ -93,6 +94,17 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
   /* Locked (-1) cells: muted and non-interactive cue */
   .grid-scroll td.date-col.locked { background: #f5f6f7; opacity: 0.7; }
   .grid-scroll td.date-col.locked input[type="checkbox"] { cursor: not-allowed; }
+  
+  /* Ensure proper spacing with sidebar */
+  .page-content {
+    padding-left: 0;
+  }
+  
+  @media (min-width: 992px) {
+    .page-wrapper.toggled .page-content {
+      padding-left: 260px;
+    }
+  }
 </style>
 <div class="container mt-3">
   <div class="card shadow-sm">
@@ -130,13 +142,15 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           // Load scope students quickly (group or dept/course)
           $scopeStudents = [];
           if ($groupId !== '') {
-            if ($st = mysqli_prepare($con, 'SELECT s.student_id FROM group_students gs JOIN student s ON s.student_id=gs.student_id WHERE gs.group_id=? AND (gs.status=\'active\' OR gs.status IS NULL OR gs.status=\'\')')) {
+            if ($st = mysqli_prepare($con, 'SELECT s.student_id FROM group_students gs JOIN student s ON s.student_id=gs.student_id WHERE gs.group_id=? AND (gs.status=\'active\' OR gs.status IS NULL OR gs.status=\'\') AND (s.student_status = \'Active\' OR s.student_status IS NULL)')) {
               $gid = (int)$groupId; mysqli_stmt_bind_param($st,'i',$gid); mysqli_stmt_execute($st); $rs=mysqli_stmt_get_result($st); while($rs && ($r=mysqli_fetch_assoc($rs))){ $scopeStudents[]=$r['student_id']; } mysqli_stmt_close($st);
             }
           } else {
             $w = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."' AND se.student_enroll_status IN ('Following','Active')";
             if ($academicYear !== '') { $w .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'"; }
             if ($courseId !== '') { $w .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
+            // Only load active students (exclude Inactive and other non-active statuses)
+            $w .= " AND (s.student_status = 'Active' OR s.student_status IS NULL)";
             $qr = mysqli_query($con, "SELECT s.student_id FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $w");
             if ($qr) { while($row=mysqli_fetch_assoc($qr)){ $scopeStudents[]=$row['student_id']; } }
           }
@@ -290,7 +304,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             $sql = "SELECT s.student_id, s.student_fullname
                     FROM group_students gs
                     JOIN student s ON s.student_id = gs.student_id
-                    WHERE gs.group_id = ? AND (gs.status='active' OR gs.status IS NULL OR gs.status='')
+                    WHERE gs.group_id = ? AND (gs.status='active' OR gs.status IS NULL OR gs.status='') AND (s.student_status = 'Active' OR s.student_status IS NULL)
                     ORDER BY s.student_id";
             if ($st = mysqli_prepare($con, $sql)) {
               mysqli_stmt_bind_param($st, 'i', $groupId);
@@ -305,6 +319,8 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             if ($courseId !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$courseId)."'"; }
             if ($academicYear !== '') { $where .= " AND se.academic_year='".mysqli_real_escape_string($con,$academicYear)."'"; }
             $where .= " AND se.student_enroll_status IN ('Following','Active')";
+            // Only load active students (exclude Inactive and other non-active statuses)
+            $where .= " AND (s.student_status = 'Active' OR s.student_status IS NULL)";
             $sql = "SELECT s.student_id, s.student_fullname FROM student_enroll se JOIN course c ON c.course_id=se.course_id JOIN student s ON s.student_id=se.student_id $where ORDER BY s.student_id ASC";
             $res = mysqli_query($con, $sql);
             if ($res) { while($r=mysqli_fetch_assoc($res)){ $students[]=$r; } }

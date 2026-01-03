@@ -19,10 +19,12 @@ if ($q === '') {
 
 $qs = mysqli_real_escape_string($con, $q);
 // Search by ID prefix or name contains (case-insensitive)
+// Exclude inactive students
 $sql = "SELECT s.student_id, s.student_fullname
         FROM student s
-        WHERE s.student_id LIKE '$qs%'
-           OR s.student_fullname LIKE '%$qs%'
+        WHERE (s.student_id LIKE '$qs%'
+           OR s.student_fullname LIKE '%$qs%')
+        AND (s.student_status IS NULL OR (s.student_status != 'Inactive' AND s.student_status != 0))
         ORDER BY s.student_id ASC
         LIMIT $limit";
 

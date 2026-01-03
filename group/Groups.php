@@ -105,9 +105,94 @@ if ($_isADM) {
   $uid = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : '';
   $st = mysqli_prepare($con, "SELECT DISTINCT g.* FROM `groups` g INNER JOIN group_staff gs ON gs.group_id=g.id WHERE gs.staff_id=? AND gs.active=1 ORDER BY g.created_at DESC");
   if ($st) { mysqli_stmt_bind_param($st, 's', $uid); mysqli_stmt_execute($st); $rs = mysqli_stmt_get_result($st); while ($rs && ($r=mysqli_fetch_assoc($rs))) { $groups[]=$r; } mysqli_stmt_close($st); }
-}
+  }
 ?>
-<div class="container mt-4<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>">
+<style>
+  /* Groups Page - Proper Container Alignment */
+  .groups-container {
+    max-width: 1400px;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 15px;
+    padding-right: 15px;
+    width: 100%;
+  }
+
+  .hod-desktop-offset {
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+
+  @media (min-width: 992px) {
+    .groups-container {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .groups-container {
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .groups-container {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+
+  /* Card styling */
+  .groups-container .card {
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: none;
+  }
+
+  .groups-container .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0 !important;
+    padding: 1rem 1.5rem;
+  }
+
+  /* Table styling */
+  .groups-container .table {
+    margin-bottom: 0;
+  }
+
+  .groups-container .table thead th {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    padding: 1rem;
+  }
+
+  .groups-container .table tbody td {
+    padding: 1rem;
+    vertical-align: middle;
+  }
+
+  .groups-container .table tbody tr:hover {
+    background-color: rgba(102, 126, 234, 0.05);
+    transition: all 0.2s ease;
+  }
+
+  /* Button styling */
+  .groups-container .btn-group .btn {
+    border-radius: 6px;
+    margin-right: 4px;
+  }
+
+  .groups-container .btn-group .btn:last-child {
+    margin-right: 0;
+  }
+</style>
+<div class="container mt-4 groups-container<?php echo $_isADM ? '' : ' hod-desktop-offset'; ?>">
   <?php if (!empty($redirect) && $redirect === 'group_timetable'): ?>
     <div class="alert alert-info">
       <i class="fas fa-info-circle"></i> Please select a group to view its timetable.

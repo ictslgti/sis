@@ -13,9 +13,9 @@ $d_c  = isset($_SESSION['department_code']) ? $_SESSION['department_code'] : '';
 // Base path helper
 $base = defined('APP_BASE') ? APP_BASE : '';
 
-// Only render for SAO, HOD, DIR, ACC, FIN, EXAM and instructor roles (IN1, IN2, IN3);
+// Only render for SAO, HOD, DIR, ACC, FIN, EXAM, ADM and instructor roles (IN1, IN2, IN3);
 // otherwise do nothing to avoid unintended menus
-if (!in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'IN1', 'IN2', 'IN3'], true)) {
+if (!in_array($u_t, ['SAO', 'HOD', 'DIR', 'ACC', 'FIN', 'EXAM', 'ADM', 'IN1', 'IN2', 'IN3'], true)) {
   return;
 }
 // Decide content container: center the dashboard like other pages
@@ -123,6 +123,47 @@ $__content_container = 'container';
         </li>
       <?php endif; ?>
 
+      <?php if ($u_t === 'ADM'): ?>
+        <!-- Admin-specific menus -->
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="admAdmin" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-tools"></i> Admin
+          </a>
+          <div class="dropdown-menu" aria-labelledby="admAdmin">
+            <a class="dropdown-item" href="<?php echo $base; ?>/administration/LoginActivity.php">Login Activity</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/staff/StaffPositionType.php">Staff Position Types</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/notices/Notice.php">Notice Info</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/notices/AddNotice.php">Add Notice</a>
+          </div>
+        </li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="admAcademic" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-graduation-cap"></i> Academic
+          </a>
+          <div class="dropdown-menu" aria-labelledby="admAcademic">
+            <a class="dropdown-item" href="<?php echo $base; ?>/academic/AcademicYear.php">Academic Years</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/academic/AddAcademicYear.php">Add Academic Year</a>
+            <div class="dropdown-divider"></div>
+            <a class="dropdown-item" href="<?php echo $base; ?>/course/Course.php">Courses</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/course/AddCourse.php">Add Course</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/module/Module.php">Modules</a>
+          </div>
+        </li>
+
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="admAttendance" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-calendar-check"></i> Attendance
+          </a>
+          <div class="dropdown-menu" aria-labelledby="admAttendance">
+            <a class="dropdown-item" href="<?php echo $base; ?>/attendance/MonthlyAttendanceReport.php">Monthly Attendance Report</a>
+            <a class="dropdown-item" href="<?php echo $base; ?>/attendance/BulkMonthlyMark.php">Bulk Monthly Mark</a>
+          </div>
+        </li>
+      <?php endif; ?>
+
       <!-- Examinations: EXAM role gets exam-wide tools across departments -->
       <?php if ($u_t === 'EXAM'): ?>
         <li class="nav-item dropdown">
@@ -197,6 +238,30 @@ $__content_container = 'container';
               <a class="dropdown-item" href="<?php echo $base; ?>/student/AllowanceEligibility.php">Allowance Eligibility</a>
               <div class="dropdown-divider"></div>
               <a class="dropdown-item" href="<?php echo $base; ?>/student/ExportStudents.php">Export Students (CSV)</a>
+            <?php endif; ?>
+          </div>
+        </li>
+      <?php endif; ?>
+
+      <!-- Season Requests: HOD, ADM, FIN, SAO -->
+      <?php if (in_array($u_t, ['HOD', 'ADM', 'FIN', 'SAO'], true)): ?>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="seasonMenu" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            <i class="fas fa-bus"></i> Season Requests
+          </a>
+          <div class="dropdown-menu" aria-labelledby="seasonMenu">
+            <a class="dropdown-item" href="<?php echo $base; ?>/season/SeasonRequests.php"><i class="fas fa-list mr-1"></i> All Requests</a>
+            <?php if (in_array($u_t, ['HOD', 'ADM'], true)): ?>
+              <a class="dropdown-item" href="<?php echo $base; ?>/season/ApproveSeasonRequest.php"><i class="fas fa-check-circle mr-1"></i> Approve Requests</a>
+            <?php endif; ?>
+            <?php if (in_array($u_t, ['HOD', 'ADM', 'FIN', 'SAO'], true)): ?>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="<?php echo $base; ?>/season/CollectSeasonPayment.php"><i class="fas fa-money-bill-wave mr-1"></i> Collect Payment</a>
+              <a class="dropdown-item" href="<?php echo $base; ?>/season/BalancePayment.php"><i class="fas fa-balance-scale mr-1"></i> Balance/Arrears</a>
+            <?php endif; ?>
+            <?php if (in_array($u_t, ['HOD', 'ADM', 'SAO'], true)): ?>
+              <div class="dropdown-divider"></div>
+              <a class="dropdown-item" href="<?php echo $base; ?>/season/IssueSeason.php"><i class="fas fa-ticket-alt mr-1"></i> Issue Season</a>
             <?php endif; ?>
           </div>
         </li>

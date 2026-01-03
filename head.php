@@ -14,7 +14,7 @@ if(!isset($_SESSION['user_name'])){
     <?php $__base = (defined('APP_BASE') ? APP_BASE : ''); if ($__base !== '' && substr($__base,-1) !== '/') { $__base .= '/'; } ?>
     <base href="<?php echo $__base === '' ? '/' : $__base; ?>">
     <link rel="shortcut icon" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/img/favicon.ico" type="image/x-icon">
-    <!-- Bootstrap CSS -->
+    <!-- Bootstrap 4 CSS -->
     <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/bootstrap.min.css">
     <link rel="stylesheet" href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/signin.css">
     <link href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/css/all.min.css" rel="stylesheet">
@@ -35,14 +35,195 @@ if(!isset($_SESSION['user_name'])){
         --text-muted: #adb5bd;
         --border-color: #343a40;
       }
-      body { background-color: var(--bg-body); color: var(--text-body); }
+      body { 
+        background-color: var(--bg-body); 
+        color: var(--text-body);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
       .bg-white { background-color: var(--bg-card) !important; }
-      .card { background-color: var(--bg-card); border-color: var(--border-color); }
-      .card-header { background-color: var(--bg-card); border-bottom-color: var(--border-color); }
+      .card { 
+        background-color: var(--bg-card); 
+        border-color: var(--border-color);
+        border-radius: 0.75rem;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        transition: all 0.3s ease;
+      }
+      .card:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        transform: translateY(-2px);
+      }
+      .card-header { 
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: #ffffff;
+        border: none;
+        padding: 1rem 1.5rem;
+        font-weight: 600;
+        border-radius: 0.75rem 0.75rem 0 0 !important;
+      }
+      .card-header.bg-light {
+        background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%) !important;
+        color: #1e293b !important;
+      }
+      .card-header.bg-info {
+        background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+        color: #ffffff !important;
+      }
       .text-muted { color: var(--text-muted) !important; }
       .border, .border-bottom, .border-top { border-color: var(--border-color) !important; }
       .nav-tabs .nav-link { color: var(--text-body); }
-      .nav-tabs .nav-link.active { background-color: var(--bg-card); border-color: var(--border-color) var(--border-color) transparent; }
+      .nav-tabs .nav-link.active { 
+        background-color: var(--bg-card); 
+        border-color: var(--border-color) var(--border-color) transparent;
+        color: #2563eb;
+        font-weight: 600;
+      }
+      
+      /* Enhanced Form Inputs */
+      input[type="text"], input[type="email"], input[type="password"], 
+      input[type="number"], input[type="date"], input[type="time"],
+      select, textarea {
+        border: 1.5px solid #e2e8f0;
+        border-radius: 8px;
+        padding: 0.65rem 0.95rem;
+        transition: all 0.3s ease;
+        font-size: 0.95rem;
+        color: #1e293b !important; /* Dark text on light background */
+        background-color: #ffffff;
+      }
+      input:focus, select:focus, textarea:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        outline: none;
+        color: #1e293b !important; /* Dark text on focus */
+        background-color: #ffffff;
+      }
+      input::placeholder, textarea::placeholder {
+        color: #94a3b8 !important; /* Light gray placeholder */
+      }
+      input:disabled, select:disabled, textarea:disabled {
+        background-color: #f1f5f9;
+        color: #64748b !important; /* Muted dark text for disabled */
+      }
+      
+      /* Enhanced Buttons */
+      .btn {
+        border-radius: 8px;
+        padding: 0.6rem 1.5rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        letter-spacing: 0.5px;
+      }
+      .btn-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        border: none;
+        box-shadow: 0 4px 6px rgba(37, 99, 235, 0.3);
+      }
+      .btn-primary:hover {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        box-shadow: 0 6px 12px rgba(37, 99, 235, 0.4);
+        transform: translateY(-2px);
+      }
+      .btn-success {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        box-shadow: 0 4px 6px rgba(16, 185, 129, 0.3);
+      }
+      .btn-success:hover {
+        background: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+        box-shadow: 0 6px 12px rgba(16, 185, 129, 0.4);
+        transform: translateY(-2px);
+      }
+      
+      /* Enhanced Tables */
+      .table {
+        color: #1e293b !important; /* Dark text for table content */
+      }
+      .table thead th {
+        background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+        color: #ffffff !important; /* White text on dark header */
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        border: none;
+        padding: 1rem;
+      }
+      .table thead th * {
+        color: #ffffff !important; /* All text in dark header should be white */
+      }
+      .table tbody {
+        background-color: #ffffff;
+        color: #1e293b !important; /* Dark text on white background */
+      }
+      .table tbody tr {
+        transition: all 0.2s ease;
+        color: #1e293b !important;
+      }
+      .table tbody tr:hover {
+        background-color: #f8fafc;
+      }
+      .table tbody td {
+        color: #1e293b !important; /* Dark text in table cells */
+      }
+      .table tbody tr.table-info {
+        background-color: #e0f2fe;
+        color: #0c4a6e !important; /* Dark blue text on light blue background */
+      }
+      .table tbody tr.table-info td {
+        color: #0c4a6e !important;
+      }
+      
+      /* Card body text colors */
+      .card-body {
+        color: #1e293b !important; /* Dark text on white card body */
+      }
+      .card-body h1, .card-body h2, .card-body h3, 
+      .card-body h4, .card-body h5, .card-body h6 {
+        color: #0f172a !important; /* Very dark for headings */
+      }
+      .card-body p, .card-body span, .card-body div {
+        color: #1e293b !important; /* Dark text for content */
+      }
+      .card-body .text-muted {
+        color: #64748b !important; /* Muted dark gray */
+      }
+      
+      /* Labels - always dark and visible on light backgrounds */
+      label, .form-label {
+        color: #475569 !important; /* Dark gray - always visible on light backgrounds */
+        font-weight: 600;
+      }
+      
+      /* Labels in dark card headers - white */
+      .card-header:not(.bg-light) label,
+      .card-header:not(.bg-light) .form-label {
+        color: #ffffff !important; /* White labels only in dark headers */
+      }
+      
+      /* Labels in card body and forms - always dark */
+      .card-body label,
+      .card-body .form-label,
+      .form-group label,
+      .form-group .form-label,
+      .form-row label,
+      .form-row .form-label,
+      .page-content label,
+      .page-content .form-label {
+        color: #475569 !important; /* Dark gray - always visible */
+      }
+      
+      .col-form-label {
+        color: #475569 !important; /* Dark gray */
+      }
+      
+      .form-check-label {
+        color: #1e293b !important; /* Dark text for checkboxes/radios */
+      }
+      
+      label small,
+      .form-label small {
+        color: #64748b !important; /* Muted dark gray for small label text */
+      }
       /* Mobile-friendly dropdown in top nav */
       @media (max-width: 576px) {
         .dropdown-menu-mobile {
@@ -127,20 +308,30 @@ if(!isset($_SESSION['user_name'])){
     <?php } ?>
     <script>
       // Improve mobile: close sidebar after clicking a menu link
+      // This runs after jQuery handlers, so we use a small delay
       document.addEventListener('DOMContentLoaded', function(){
         try {
           var wrapper = document.querySelector('.page-wrapper');
-          document.querySelectorAll('#sidebar a[href]').forEach(function(a){
-            function maybeClose(){
-              var href = a.getAttribute('href');
-              // Do not close for dropdown toggles or non-navigating links
-              var isDropdownToggle = a.parentElement && a.parentElement.classList && a.parentElement.classList.contains('sidebar-dropdown');
-              if (!href || href === '#' || isDropdownToggle) { return; }
-              setTimeout(function(){ if (wrapper) { wrapper.classList.remove('toggled'); } }, 50);
+          // Use event delegation to handle dynamically added links
+          document.addEventListener('click', function(e) {
+            var link = e.target.closest('#sidebar a[href]');
+            if (!link) return;
+            
+            var href = link.getAttribute('href');
+            // Do not close for dropdown toggles or non-navigating links
+            var isDropdownToggle = link.parentElement && link.parentElement.classList && 
+                                   link.parentElement.classList.contains('sidebar-dropdown') &&
+                                   (href === '#' || href === 'javascript:void(0)' || !href);
+            
+            if (!isDropdownToggle && href && href !== '#' && href !== 'javascript:void(0)') {
+              // Only close on mobile
+              if (window.innerWidth < 992 && wrapper) {
+                setTimeout(function(){ 
+                  wrapper.classList.remove('toggled'); 
+                }, 100);
+              }
             }
-            a.addEventListener('click', maybeClose, {passive: true});
-            a.addEventListener('touchstart', maybeClose, {passive: true});
-          });
+          }, true); // Use capture phase to run before other handlers
         } catch(e) { /* no-op */ }
       });
     </script>
@@ -213,6 +404,8 @@ if(!isset($_SESSION['user_name'])){
 </head>
   <body>
   <div class="page-wrapper chiller-theme toggled">
+  <!-- Sidebar overlay for mobile -->
+  <div class="sidebar-overlay" style="display: none;"></div>
   <a id="show-sidebar" class="btn btn-sm btn-dark" href="#">
     <i class="fas fa-bars"></i>
   </a>

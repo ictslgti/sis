@@ -89,13 +89,13 @@ if ($selectedYear === '') {
   <div class="col-md-4 col-sm-12">
     <div class="card mb-3 text-center">
       <div class="card-body">
-        <img src="/MIS/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail mb-3" style="width:160px;height:160px;object-fit:cover;">
+        <img src="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/get_student_image.php?Sid=<?php echo urlencode($username); ?>&t=<?php echo time(); ?>" alt="user image" class="img-thumbnail mb-3" style="width:160px;height:160px;object-fit:cover;">
         <h5 class="card-title mb-1"><?php echo htmlspecialchars(($p_title ? $p_title.'. ' : '').$p_fname); ?></h5>
         <div class="text-muted">ID: <?php echo htmlspecialchars($username); ?></div>
         <?php if ($p_nic): ?><div class="text-muted">NIC: <?php echo htmlspecialchars($p_nic); ?></div><?php endif; ?>
         <div class="mt-3">
-          <a href="/MIS/student/Student_profile.php" class="btn btn-primary btn-sm">View Full Profile</a>
-          <a href="/MIS/student/Student_profile.php#nav-modules" class="btn btn-outline-secondary btn-sm">My Modules</a>
+          <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/Student_profile.php" class="btn btn-primary btn-sm">View Full Profile</a>
+          <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/Student_profile.php#nav-modules" class="btn btn-outline-secondary btn-sm">My Modules</a>
         </div>
       </div>
     </div>
@@ -205,17 +205,128 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 ?>
 
 <style>
-  /* Lightweight gradients for stat cards */
-  .stat-card { border: 0; color: #fff; }
-  /* Requested palette: red, black, yellow, blue */
-  .bg-red    { background: linear-gradient(135deg, #e74a3b 0%, #be2617 100%); }
-  .bg-black  { background: linear-gradient(135deg, #343a40 0%, #000000 100%); }
-  .bg-yellow { background: linear-gradient(135deg, #f6c23e 0%, #e0a800 100%); color: #212529; }
-  .bg-blue   { background: linear-gradient(135deg, #4e73df 0%, #224abe 100%); }
-  .stat-card .icon { width: 48px; height: 48px; display: inline-flex; align-items: center; justify-content: center; border-radius: 10px; background: rgba(255,255,255,0.2); }
-  .bg-yellow .icon { background: rgba(0,0,0,0.15); }
-  .stat-label { opacity: .9; font-size: .8rem; text-transform: uppercase; letter-spacing: .5px; }
-  .stat-value { font-size: 2rem; font-weight: 700; line-height: 1; }
+  /* Cool Color Theme Variables - Matching Index.php */
+  :root {
+    --theme-primary: #6366f1;
+    --theme-primary-dark: #4f46e5;
+    --theme-primary-light: #818cf8;
+    --theme-secondary: #06b6d4;
+    --theme-accent: #f472b6;
+    --theme-success: #22d3ee;
+    --theme-indigo: #6366f1;
+    --theme-cyan: #06b6d4;
+    --theme-pink: #f472b6;
+  }
+  
+  /* Admin Dashboard Container - Full Width */
+  .page-content .container-fluid {
+    max-width: 100% !important;
+    width: 100% !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 15px;
+    padding-right: 15px;
+    box-sizing: border-box;
+  }
+
+  /* Responsive adjustments */
+  @media (min-width: 992px) {
+    .page-content .container-fluid {
+      padding-left: 20px;
+      padding-right: 20px;
+    }
+  }
+
+  @media (max-width: 991.98px) {
+    .page-content .container-fluid {
+      padding-left: 15px;
+      padding-right: 15px;
+    }
+  }
+
+  @media (max-width: 575.98px) {
+    .page-content .container-fluid {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
+  }
+  
+  /* Enhanced Form Controls - Cool Colors */
+  .form-control {
+    border: 1.5px solid #c7d2fe;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+  }
+  .form-control:focus {
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    outline: none;
+  }
+  
+  /* Enhanced Buttons - Cool Gradient */
+  .btn-primary {
+    background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%);
+    border: none;
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    transition: all 0.3s ease;
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--theme-primary-light) 0%, var(--theme-primary) 50%, var(--theme-success) 100%);
+    box-shadow: 0 6px 20px rgba(99, 102, 241, 0.5);
+    transform: translateY(-2px);
+  }
+
+  /* Enhanced stat cards with modern design */
+  .stat-card { 
+    border: 0; 
+    color: #fff; 
+    border-radius: 12px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  }
+  .stat-card:hover {
+    transform: translateY(-5px) scale(1.02);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.25) !important;
+  }
+  /* Cool Color Palette - Matching Index.php */
+  .bg-red    { background: linear-gradient(135deg, #f472b6 0%, #ec4899 100%); }
+  .bg-black  { background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); }
+  .bg-yellow { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: #ffffff; }
+  .bg-blue   { background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); }
+  .bg-green  { background: linear-gradient(135deg, var(--theme-secondary) 0%, #0891b2 100%); }
+  .bg-purple { background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); }
+  .stat-card .icon { 
+    width: 56px; 
+    height: 56px; 
+    display: inline-flex; 
+    align-items: center; 
+    justify-content: center; 
+    border-radius: 12px; 
+    background: rgba(255,255,255,0.25);
+    font-size: 1.5rem;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+  }
+  .stat-card:hover .icon {
+    transform: scale(1.1);
+    background: rgba(255,255,255,0.35);
+  }
+  .bg-yellow .icon { background: rgba(255,255,255,0.25); }
+  .stat-label { 
+    opacity: .95; 
+    font-size: .75rem; 
+    text-transform: uppercase; 
+    letter-spacing: 1px; 
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+  .stat-value { 
+    font-size: 2.25rem; 
+    font-weight: 800; 
+    line-height: 1; 
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
 
   /* Mobile-only: remove outer side space on dashboard */
   @media (max-width: 575.98px) {
@@ -262,11 +373,11 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     font-size: 11px; 
     padding: 0 6px; 
   }
-  /* Ensure department titles in accordion headers are left-aligned and can wrap */
-  .accordion .card-header .btn-link { text-align: left; white-space: normal; }
+  /* Ensure department titles in accordion headers are left-aligned and can wrap - Bootstrap 5 */
+  .accordion .accordion-header .accordion-button { text-align: left; white-space: normal; }
   @media (max-width: 575.98px) {
-    .accordion .card-header h6 { justify-content: space-between; }
-    .accordion .card-header .btn-link { text-align: left; }
+    .accordion .accordion-header h6 { justify-content: space-between; }
+    .accordion .accordion-header .accordion-button { text-align: left; }
   }
   /* Footer-specific tweaks: remove divider inside card-footer */
   .card-footer .chip-list { border-top: 0; padding-top: 0; }
@@ -275,107 +386,134 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     .chip { font-size: 11px; padding: 2px 8px; }
     .chip .count { min-width: 16px; height: 16px; font-size: 10px; }
   }
+  
+  /* Disable table hover effects */
+  .table tbody tr:hover {
+    background-color: transparent !important;
+  }
+  .table-striped tbody tr:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+  }
+  .table tbody tr:hover td {
+    background-color: transparent !important;
+  }
 </style>
-<div class="row mt-1">
+<!-- Admin Dashboard Header -->
+<div class="row mt-2 mb-3">
   <div class="col-12">
-    <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
-      <div class="mb-2 mb-md-0">
-        <h4 class="mb-0 font-weight-bold text-dark text-left text-md-left">Sri Lanka German Training Institute - MIS</h4>
-        <div class="text-muted small text-left text-md-left">Dashboard Overview</div>
-      </div>
-      <div class="ml-md-auto">
-        <form method="get" action="" class="form-inline mb-2">
-          <label class="mr-2 small text-muted">Academic Year</label>
-          <select name="academic_year" class="form-control form-control-sm mr-2" style="min-width:200px;">
-            <option value="">-- Latest Active --</option>
-            <?php
-            $years = [];
-            if ($rs = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
-              while ($r = mysqli_fetch_assoc($rs)) { $years[] = $r['academic_year']; }
-              mysqli_free_result($rs);
-            }
-            foreach ($years as $y) {
-              $sel = ($selectedYear === $y) ? 'selected' : '';
-              echo '<option value="'.htmlspecialchars($y).'" '.$sel.'>'.htmlspecialchars($y).'</option>';
-            }
-            ?>
-          </select>
-          <button type="submit" class="btn btn-primary btn-sm">Apply</button>
-          <?php if (!empty($_GET['academic_year'])): ?>
-            <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-link btn-sm ml-2">Clear</a>
-          <?php endif; ?>
-        </form>
+    <div class="card shadow-sm border-0" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); border-radius: 12px; box-shadow: 0 10px 25px rgba(99, 102, 241, 0.4) !important;">
+      <div class="card-body p-4">
+        <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between">
+          <div class="mb-3 mb-md-0 text-white">
+            <h3 class="mb-1 font-weight-bold">
+              <i class="fas fa-tachometer-alt mr-2"></i>Sri Lanka German Training Institute - MIS
+            </h3>
+            <div class="text-white-50 small">
+              <i class="fas fa-chart-line mr-1"></i>Administrative Dashboard Overview
+            </div>
+          </div>
+          <div class="ml-md-auto">
+            <form method="get" action="" class="form-inline">
+              <div class="form-group mb-0 mr-2">
+                <label class="mr-2 text-white small font-weight-bold">
+                  <i class="fas fa-calendar-alt mr-1"></i>Academic Year
+                </label>
+                <select name="academic_year" class="form-control form-control-sm" style="min-width:200px; border-radius: 6px;">
+                  <option value="">-- Latest Active --</option>
+                  <?php
+                  $years = [];
+                  if ($rs = mysqli_query($con, "SELECT academic_year FROM academic ORDER BY academic_year DESC")) {
+                    while ($r = mysqli_fetch_assoc($rs)) { $years[] = $r['academic_year']; }
+                    mysqli_free_result($rs);
+                  }
+                  foreach ($years as $y) {
+                    $sel = ($selectedYear === $y) ? 'selected' : '';
+                    echo '<option value="'.htmlspecialchars($y).'" '.$sel.'>'.htmlspecialchars($y).'</option>';
+                  }
+                  ?>
+                </select>
+              </div>
+              <button type="submit" class="btn btn-light btn-sm mr-2" style="border-radius: 6px;">
+                <i class="fas fa-filter mr-1"></i>Apply
+              </button>
+              <?php if (!empty($_GET['academic_year'])): ?>
+                <a href="<?php echo (defined('APP_BASE')? APP_BASE : ''); ?>/dashboard/index.php" class="btn btn-outline-light btn-sm" style="border-radius: 6px;">
+                  <i class="fas fa-times mr-1"></i>Clear
+                </a>
+              <?php endif; ?>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
-    <hr class="mt-1 mb-2">
   </div>
 </div>
 
 <div class="row mt-2 mobile-tight">
   <div class="col-md-4 col-sm-6 col-12 mb-2">
-    <div class="card stat-card bg-black shadow-sm">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-building fa-lg"></i></div>
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #818cf8; font-size: 2rem;"><i class="fas fa-building fa-lg"></i></div>
         <div>
-          <div class="stat-label">Departments</div>
-          <div class="stat-value"><?php echo $deptCount; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Departments</div>
+          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $deptCount; ?></div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-red shadow-sm">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-book-open fa-lg"></i></div>
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--theme-pink) 0%, #ec4899 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(244, 114, 182, 0.3);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #fbcfe8; font-size: 2rem;"><i class="fas fa-book-open fa-lg"></i></div>
         <div>
-          <div class="stat-label">Courses</div>
-          <div class="stat-value"><?php echo $courseCount; ?></div>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-blue shadow-sm">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-users fa-lg"></i></div>
-        <div>
-          <div class="stat-label">Following Students</div>
-          <div class="stat-value"><?php echo $studentCount; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Courses</div>
+          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $courseCount; ?></div>
         </div>
       </div>
     </div>
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-orange shadow-sm" style="background: linear-gradient(135deg,#fd7e14 0%, #c05621 100%);">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-briefcase fa-lg"></i></div>
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 50%, var(--theme-secondary) 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #c7d2fe; font-size: 2rem;"><i class="fas fa-users fa-lg"></i></div>
         <div>
-          <div class="stat-label">Internships</div>
-          <div class="stat-value"><?php echo $internCount; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Following Students</div>
+          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $studentCount; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #fde68a; font-size: 2rem;"><i class="fas fa-briefcase fa-lg"></i></div>
+        <div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Internships</div>
+          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $internCount; ?></div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-green shadow-sm" style="background: linear-gradient(135deg,#1cc88a 0%, #13855c 100%);">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-level-up-alt fa-lg"></i></div>
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--theme-secondary) 0%, #0891b2 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #a5f3fc; font-size: 2rem;"><i class="fas fa-level-up-alt fa-lg"></i></div>
         <div>
-          <div class="stat-label">NVQ Level 4</div>
-          <div class="stat-value"><?php echo $nvq4Count; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">NVQ Level 4</div>
+          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $nvq4Count; ?></div>
         </div>
       </div>
     </div>
   </div>
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card bg-purple shadow-sm" style="background: linear-gradient(135deg,#6f42c1 0%, #4b2f88 100%);">
-      <div class="card-body d-flex align-items-center">
-        <div class="icon mr-3"><i class="fas fa-level-up-alt fa-lg"></i></div>
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); border-radius: 12px; transition: all 0.3s ease; border: none; box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: #ddd6fe; font-size: 2rem;"><i class="fas fa-level-up-alt fa-lg"></i></div>
         <div>
-          <div class="stat-label">NVQ Level 5</div>
-          <div class="stat-value"><?php echo $nvq5Count; ?></div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.9); font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">NVQ Level 5</div>
+          <div class="stat-value" style="color: #ffffff; font-size: 2rem; font-weight: 800; line-height: 1.2; text-shadow: 0 2px 4px rgba(0,0,0,0.2);"><?php echo $nvq5Count; ?></div>
         </div>
       </div>
     </div>
@@ -447,50 +585,72 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 <div class="row mt-1 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white d-flex justify-content-between py-2">
-        <div class="font-weight-semibold"><i class="fas fa-sitemap mr-1 text-primary"></i> Department-wise Course Counts</div>
+      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important; border-bottom: 2px solid #e2e8f0;">
+        <div class="font-weight-bold" style="color: var(--theme-primary); font-size: 1.1rem;">
+          <i class="fas fa-chart-bar mr-2"></i> Department-wise Course Counts
+        </div>
         <?php if (!empty($selectedYear)) : ?>
-          <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
+          <span class="badge" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%); color: #ffffff; padding: 0.5rem 1rem; font-weight: 600;">
+            <i class="fas fa-calendar-alt mr-1"></i>Year: <?php echo htmlspecialchars($selectedYear); ?>
+          </span>
         <?php endif; ?>
       </div>
-      <div class="card-body">
+      <div class="card-body p-4">
         <?php if (empty($byDept)): ?>
-          <div class="text-center text-muted small">No data available<?php echo $selectedYear ? ' for the selected year' : ''; ?>.</div>
+          <div class="text-center text-muted py-5">
+            <i class="fas fa-inbox fa-3x mb-3" style="color: #cbd5e1;"></i>
+            <p class="mb-0">No data available<?php echo $selectedYear ? ' for the selected year' : ''; ?>.</p>
+          </div>
         <?php else: ?>
-          <div class="accordion" id="deptCourseAcc">
-            <?php $i=0; foreach ($byDept as $deptName => $rows): $i++; $collapseId = 'dcoll'.$i; ?>
-              <div class="card mb-2 border-0">
-                <div class="card-header bg-light py-2" id="h<?php echo $i; ?>">
+          <!-- Department Accordion - Full Width -->
+          <div class="accordion" id="deptCourseAcc" style="width: 100%;">
+            <?php $i=0; foreach ($byDept as $deptName => $rows): $i++; $collapseId = 'dcoll'.$i; 
+              $g = $genderByDept[$deptName] ?? ['male'=>0,'female'=>0];
+              $courseCount = count($rows);
+              $totalStudents = $deptTotals[$deptName] ?? 0;
+            ?>
+              <div class="card mb-2 border-0 shadow-sm" style="background: #ffffff; border-radius: 8px;">
+                <div class="card-header py-3" id="h<?php echo $i; ?>" style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); border-radius: 8px; cursor: pointer;">
                   <h6 class="mb-0 d-flex justify-content-between align-items-center">
-                    <button class="btn btn-link p-0" type="button" data-toggle="collapse" data-target="#<?php echo $collapseId; ?>" aria-expanded="<?php echo $i===1?'true':'false'; ?>" aria-controls="<?php echo $collapseId; ?>">
-                      <?php echo htmlspecialchars($deptName); ?>
+                    <button class="btn btn-link p-0 text-left" type="button" data-toggle="collapse" data-target="#<?php echo $collapseId; ?>" aria-expanded="false" aria-controls="<?php echo $collapseId; ?>" style="color: #1e293b; font-weight: 600; text-decoration: none; width: 100%;">
+                      <span style="font-size: 1rem;">
+                        <i class="fas fa-building mr-2" style="color: var(--theme-primary);"></i>
+                        <?php echo htmlspecialchars($deptName); ?>
+                      </span>
+                      <small class="ml-2 text-muted">(<?php echo $courseCount; ?> <?php echo $courseCount == 1 ? 'Course' : 'Courses'; ?>)</small>
                     </button>
-                    <span>
-                      <?php $g = $genderByDept[$deptName] ?? ['male'=>0,'female'=>0]; ?>
-                      <span class="badge badge-primary mr-1" title="Male"><i class="fas fa-male"></i> <?php echo number_format($g['male']); ?></span>
-                      <span class="badge" style="background:#e83e8c;color:#fff" title="Female"><i class="fas fa-female"></i> <?php echo number_format($g['female']); ?></span>
+                    <span class="ml-2 d-flex align-items-center">
+                      <span class="badge badge-primary mr-2" title="Total Students" style="background: linear-gradient(135deg, var(--theme-secondary) 0%, #0891b2 100%); padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                        <i class="fas fa-users mr-1"></i><?php echo number_format($totalStudents); ?>
+                      </span>
+                      <span class="badge badge-primary mr-1" title="Male" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%);">
+                        <i class="fas fa-male"></i> <?php echo number_format($g['male']); ?>
+                      </span>
+                      <span class="badge" style="background: linear-gradient(135deg, var(--theme-pink) 0%, #ec4899 100%); color: #fff; padding: 0.4rem 0.8rem;" title="Female">
+                        <i class="fas fa-female"></i> <?php echo number_format($g['female']); ?>
+                      </span>
                     </span>
                   </h6>
                 </div>
-                <div id="<?php echo $collapseId; ?>" class="collapse <?php echo $i===1?'show':''; ?>" data-parent="#deptCourseAcc">
+                <div id="<?php echo $collapseId; ?>" class="collapse" data-parent="#deptCourseAcc">
                   <div class="card-body p-0">
                     <div class="table-responsive">
-                      <table class="table table-sm table-striped mb-0">
+                      <table class="table table-sm table-striped mb-0" style="font-size: 0.9rem;">
                         <thead class="thead-light">
                           <tr>
-                            <th style="width:70%;">Course</th>
-                            <th class="text-right" style="width:15%;">Male</th>
-                            <th class="text-right" style="width:15%;">Female</th>
-                            <th class="text-right" style="width:30%;">Students</th>
+                            <th style="width:50%; font-weight: 600; color: #475569; padding: 12px 15px;">Course</th>
+                            <th class="text-right" style="width:15%; font-weight: 600; color: #475569; padding: 12px 15px;">Male</th>
+                            <th class="text-right" style="width:15%; font-weight: 600; color: #475569; padding: 12px 15px;">Female</th>
+                            <th class="text-right" style="width:20%; font-weight: 600; color: #475569; padding: 12px 15px;">Total</th>
                           </tr>
                         </thead>
                         <tbody>
                           <?php foreach ($rows as $r): ?>
                             <tr>
-                              <td><?php echo htmlspecialchars($r['course_name'] ?? ''); ?></td>
-                              <td class="text-right font-weight-bold"><?php echo (int)($r['male'] ?? 0); ?></td>
-                              <td class="text-right font-weight-bold"><?php echo (int)($r['female'] ?? 0); ?></td>
-                              <td class="text-right font-weight-bold"><?php echo (int)($r['total'] ?? 0); ?></td>
+                              <td style="color: #1e293b; padding: 12px 15px;"><?php echo htmlspecialchars($r['course_name'] ?? ''); ?></td>
+                              <td class="text-right font-weight-bold" style="color: var(--theme-primary); padding: 12px 15px;"><?php echo (int)($r['male'] ?? 0); ?></td>
+                              <td class="text-right font-weight-bold" style="color: var(--theme-pink); padding: 12px 15px;"><?php echo (int)($r['female'] ?? 0); ?></td>
+                              <td class="text-right font-weight-bold" style="color: #1e293b; padding: 12px 15px;"><?php echo (int)($r['total'] ?? 0); ?></td>
                             </tr>
                           <?php endforeach; ?>
                         </tbody>
@@ -513,7 +673,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     <small class="text-muted">Live count by student religion</small>
   </div>
   <div class="col-md-6 col-sm-12 text-md-right mt-2 mt-md-0">
-    <form class="form-inline justify-content-md-end" id="relFilterForm">
+    <form class="form-inline justify-content-md-end" id="relFilterForm" style="display: none !important;">
       <label class="mr-2 small text-muted">Department</label>
       <select class="form-control form-control-sm" id="relDept">
         <option value="">All</option>
@@ -823,6 +983,109 @@ function showTeacher() {
 <!-- Chart and script removed -->
  
  
+<!-- Admin Dashboard Alignment Script -->
+<script>
+  (function() {
+    'use strict';
+    
+    var resizeTimer = null;
+    var sidebarToggleTimer = null;
+    
+    // Ensure proper alignment for admin dashboard - Full Width
+    function ensureDashboardAlignment() {
+      try {
+        var containerFluid = document.querySelector('.page-content .container-fluid');
+        if (!containerFluid) return;
+        
+        // Full width - no centering
+        containerFluid.style.maxWidth = '100%';
+        containerFluid.style.width = '100%';
+        containerFluid.style.marginLeft = '0';
+        containerFluid.style.marginRight = '0';
+        
+        // Ensure proper padding based on screen size
+        var windowWidth = window.innerWidth || document.documentElement.clientWidth;
+        if (windowWidth >= 992) {
+          containerFluid.style.paddingLeft = '20px';
+          containerFluid.style.paddingRight = '20px';
+        } else if (windowWidth >= 576) {
+          containerFluid.style.paddingLeft = '15px';
+          containerFluid.style.paddingRight = '15px';
+        } else {
+          containerFluid.style.paddingLeft = '10px';
+          containerFluid.style.paddingRight = '10px';
+        }
+        
+        // Ensure box-sizing
+        containerFluid.style.boxSizing = 'border-box';
+      } catch(e) {
+        console.warn('Error ensuring dashboard alignment:', e);
+      }
+    }
+    
+    // Handle window resize with debouncing
+    function handleResize() {
+      if (resizeTimer) {
+        clearTimeout(resizeTimer);
+      }
+      resizeTimer = setTimeout(function() {
+        ensureDashboardAlignment();
+      }, 150);
+    }
+    
+    // Handle sidebar toggle
+    function handleSidebarToggle() {
+      if (sidebarToggleTimer) {
+        clearTimeout(sidebarToggleTimer);
+      }
+      sidebarToggleTimer = setTimeout(function() {
+        ensureDashboardAlignment();
+      }, 300);
+    }
+    
+    // Initialize on DOM ready
+    function initDashboardAlignment() {
+      ensureDashboardAlignment();
+      
+      // Setup resize handler
+      window.removeEventListener('resize', handleResize);
+      window.addEventListener('resize', handleResize, { passive: true });
+      
+      // Setup sidebar toggle handlers (if jQuery is available)
+      if (window.jQuery) {
+        jQuery(document).off('click', '#show-sidebar, #close-sidebar').on('click', '#show-sidebar, #close-sidebar', handleSidebarToggle);
+        
+        // Also listen for sidebar state changes
+        var observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              handleSidebarToggle();
+            }
+          });
+        });
+        
+        var pageWrapper = document.querySelector('.page-wrapper');
+        if (pageWrapper) {
+          observer.observe(pageWrapper, {
+            attributes: true,
+            attributeFilter: ['class']
+          });
+        }
+      }
+    }
+    
+    // Run initialization
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initDashboardAlignment);
+    } else {
+      initDashboardAlignment();
+    }
+    
+    // Also run after a short delay to ensure all styles are applied
+    setTimeout(ensureDashboardAlignment, 100);
+  })();
+</script>
+
 <!--BLOCK#3 START DON'T CHANGE THE ORDER-->
 <?php include_once("../footer.php"); ?>
 <!--END DON'T CHANGE THE ORDER-->

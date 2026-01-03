@@ -268,6 +268,8 @@ if ($deptCode !== '') {
   if ($onlyAE === '1') {
     $where .= " AND s.allowance_eligible=1";
   }
+  // Only show active students (status 'Active' or NULL)
+  $where .= " AND (s.student_status = 'Active' OR s.student_status IS NULL)";
   $sql = "SELECT s.student_id, s.student_fullname, s.student_nic, s.bank_account_no, se.course_id, c.course_name
           FROM student_enroll se
           JOIN course c ON c.course_id = se.course_id
@@ -333,6 +335,17 @@ if (!empty($students)) {
 }
 
 if ($isExport) {
+  // Only allow export if month is HOD-approved
+  if (!$isApproved) {
+    // Redirect back with warning message
+    $params = $_GET;
+    unset($params['export']);
+    $params['err'] = 'not_approved';
+    $baseUrl = defined('APP_BASE') ? APP_BASE : '';
+    $redirectUrl = $baseUrl . '/attendance/MonthlyAttendanceReport.php?' . http_build_query($params);
+    header('Location: ' . $redirectUrl);
+    exit;
+  }
   // Build HTML content first
   $html = "<table border='1'>";
   if ($view === 'detailed') {
@@ -446,9 +459,9 @@ if ($isExport) {
 }
 ?>
 
-<div class="container<?php echo $__isADM ? '' : ' hod-desktop-offset'; ?>" style="margin-top:30px">
+<!-- Content is already inside page-content > container-fluid from menu.php -->
 <?php include_once ("Attendancenav.php"); ?>
-  <div class="card">
+<div class="card mt-3">
     <div class="card-header d-flex flex-column flex-md-row justify-content-between align-items-md-center">
       <div class="mb-2 mb-md-0">
         <p class="mb-0">
@@ -498,14 +511,18 @@ if ($isExport) {
                 <label class="custom-control-label" for="only_allowance">Only allowance-eligible</label>
               </div>
             </div>
-            <div class="col-6 col-md-1 mb-2 d-flex justify-content-md-end">
-              <div class="btn-group btn-group-sm ml-md-auto" role="group">
-                <input type="hidden" name="view" value="detailed">
-                <button class="btn btn-primary"><i class="fas fa-sync-alt mr-1"></i></button>
-                <a href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php?export=1&view=detailed&month=<?php echo urlencode($month); ?><?php echo $deptCode?('&department_id='.urlencode($deptCode)) : ''; ?><?php echo $course?('&course_id='.urlencode($course)) : ''; ?><?php echo ($academicYear!=='')?('&academic_year='.urlencode($academicYear)) : ''; ?><?php echo ($onlyAE==='1')?'&only_allowance=1':''; ?>" class="btn btn-success" id="exportBtn" title="Export to Excel">
-                  <i class="fas fa-file-excel mr-1"></i>
+            <div class="col-12 col-md-auto mb-2 d-flex align-items-end">
+              <input type="hidden" name="view" value="detailed">
+              <button type="submit" class="btn btn-primary btn-sm mr-2" style="min-width: 90px;">Refresh</button>
+              <?php if ($isApproved): ?>
+                <a href="<?php echo APP_BASE; ?>/attendance/MonthlyAttendanceReport.php?export=1&view=detailed&month=<?php echo urlencode($month); ?><?php echo $deptCode?('&department_id='.urlencode($deptCode)) : ''; ?><?php echo $course?('&course_id='.urlencode($course)) : ''; ?><?php echo ($academicYear!=='')?('&academic_year='.urlencode($academicYear)) : ''; ?><?php echo ($onlyAE==='1')?'&only_allowance=1':''; ?>" class="btn btn-success btn-sm" id="exportBtn" title="Export to Excel" style="min-width: 120px;">
+                  Excel Report
                 </a>
-              </div>
+              <?php else: ?>
+                <button type="button" class="btn btn-success btn-sm" id="exportBtn" title="Export to Excel (HOD approval required)" onclick="alert('This month must be HOD-approved before you can download the Excel file. Please approve the month first.'); return false;" style="opacity: 0.6; cursor: not-allowed; min-width: 120px;">
+                  Excel Report
+                </button>
+              <?php endif; ?>
             </div>
           </div>
         </form>
@@ -533,9 +550,13 @@ if ($isExport) {
         <?php endif; ?>
         <?php if (isset($_GET['err'])): ?>
           <div class="alert alert-danger py-2">
-            Operation failed. Code: <?php echo htmlspecialchars($_GET['err']); ?>
-            <?php if (!empty($_GET['errm'])): ?>
-              <div class="small mt-1"><strong>Details:</strong> <?php echo htmlspecialchars($_GET['errm']); ?></div>
+            <?php if ($_GET['err'] === 'not_approved'): ?>
+              <strong><i class="fas fa-exclamation-triangle mr-1"></i> Export Not Allowed:</strong> This month must be HOD-approved before you can download the Excel file. Please approve the month first.
+            <?php else: ?>
+              Operation failed. Code: <?php echo htmlspecialchars($_GET['err']); ?>
+              <?php if (!empty($_GET['errm'])): ?>
+                <div class="small mt-1"><strong>Details:</strong> <?php echo htmlspecialchars($_GET['errm']); ?></div>
+              <?php endif; ?>
             <?php endif; ?>
           </div>
         <?php endif; ?>

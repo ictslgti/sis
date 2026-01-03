@@ -4,7 +4,7 @@ if (session_status() === PHP_SESSION_NONE) { session_start(); }
 $base = defined('APP_BASE') ? APP_BASE : '';
 
 $role = isset($_SESSION['user_type']) ? $_SESSION['user_type'] : '';
-if (!in_array($role, ['HOD','IN3'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
+if (!in_array($role, ['HOD','IN3','ADM','DIR'], true)) { http_response_code(403); echo 'Forbidden'; exit; }
 
 function hredir($qs){ global $base; header('Location: '.$base.'/attendance/BulkMonthlyMark.php?'.$qs); exit; }
 
@@ -123,7 +123,7 @@ if (!empty($__students)) {
   $idList = implode(',', array_map(function($sid){ return "'".mysqli_real_escape_string($GLOBALS['con'],$sid)."'"; }, $__students));
   $qLock = "SELECT 1 FROM attendance WHERE student_id IN ($idList) AND `date` BETWEEN '".mysqli_real_escape_string($con,$firstDay)."' AND '".mysqli_real_escape_string($con,$lastDay)."' AND approved_status='HOD is Approved' LIMIT 1";
   $rsLock = @mysqli_query($con, $qLock);
-  if ($rsLock && mysqli_fetch_row($rsLock)) { hredir(http_build_query(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'locked'])); }
+  if ($rsLock && mysqli_fetch_row($rsLock) && !in_array($role, ['ADM','DIR'], true)) { hredir(http_build_query(['month'=>$month,'course_id'=>$courseId,'group_id'=>$groupId,'err'=>'locked'])); }
   if ($rsLock) mysqli_free_result($rsLock);
 }
 

@@ -146,6 +146,8 @@ if ($deptCode !== '') {
   if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
   // Only active/following students
   $where .= " AND se.student_enroll_status IN ('Following','Active')";
+  // Exclude inactive students (status 'Inactive' or 0)
+  $where .= " AND (s.student_status IS NULL OR (s.student_status != 'Inactive' AND s.student_status != 0))";
   // Exclude students who have NOT accepted conduct (when column exists)
   if ($hasConduct) { $where .= " AND s.student_conduct_accepted_at IS NOT NULL"; }
 
@@ -161,7 +163,7 @@ if ($deptCode !== '') {
   if ($hasConduct) {
     $whereBase = "WHERE c.department_id='".mysqli_real_escape_string($con,$deptCode)."'";
     if ($course !== '') { $whereBase .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
-    $whereBase .= " AND se.student_enroll_status IN ('Following','Active') AND s.student_conduct_accepted_at IS NULL";
+    $whereBase .= " AND se.student_enroll_status IN ('Following','Active') AND (s.student_status IS NULL OR (s.student_status != 'Inactive' AND s.student_status != 0)) AND s.student_conduct_accepted_at IS NULL";
     $cntSql = "SELECT COUNT(*) AS cnt\n              FROM student_enroll se\n              JOIN course c ON c.course_id = se.course_id\n              JOIN student s ON s.student_id = se.student_id\n              $whereBase";
     if ($cres = mysqli_query($con, $cntSql)) {
       if ($crow = mysqli_fetch_assoc($cres)) { $excludedCount = (int)$crow['cnt']; }
