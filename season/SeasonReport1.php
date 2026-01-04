@@ -6,7 +6,7 @@
 $export = isset($_GET['export']) ? trim($_GET['export']) : '';
 
 // If export requested, handle it immediately
-if ($export === 'excel' || $export === 'csv') {
+if ($export === 'excel' || $export === 'csv' || $export === 'docx') {
     // Start session and get basic config for database
     if (session_status() === PHP_SESSION_NONE) { 
         session_start(); 
@@ -78,40 +78,181 @@ if ($export === 'excel' || $export === 'csv') {
     if (!$result) {
         http_response_code(500);
         header('Content-Type: text/plain');
-        die('Database error');
+        die('Database error: ' . mysqli_error($con));
     }
+    
+    // Collect data
+    $data = [];
+    if ($result && mysqli_num_rows($result) > 0) {
+        while ($row = mysqli_fetch_assoc($result)) {
+            $data[] = [
+                'student_id' => trim($row['student_id'] ?? ''),
+                'student_name' => trim($row['student_fullname'] ?? ''),
+                'nic' => trim($row['student_nic'] ?? ''),
+                'route' => trim($row['route'] ?? ''),
+                'payment_month' => trim($row['payment_reference'] ?? '')
+            ];
+        }
+        mysqli_free_result($result);
+    }
+    
+    // Generate DOCX file
+    $filename = 'season_report1_' . ($filter_month ? $filter_month : 'all') . '_' . date('Ymd_His') . '.docx';
     
     // Clear output buffers
     while (ob_get_level() > 0) {
         ob_end_clean();
     }
     
-    // Set headers
-    $filename = 'season_report1_' . ($filter_month ? $filter_month : 'all') . '_' . date('Ymd_His') . '.csv';
-    header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-    header('Content-Disposition: attachment; filename="' . $filename . '"');
-    header('Pragma: no-cache');
-    header('Expires: 0');
+    // Create temporary file
+    $temp_dir = sys_get_temp_dir();
+    $temp_file = $temp_dir . DIRECTORY_SEPARATOR . 'docx_' . uniqid() . '.zip';
     
-    // Output BOM and CSV
-    echo "\xEF\xBB\xBF";
-    $out = fopen('php://output', 'w');
-    fputcsv($out, ['Student ID', 'Student Name', 'NIC Number', 'Route', 'Payment Month']);
-    
-    if ($result && mysqli_num_rows($result) > 0) {
-        while ($row = mysqli_fetch_assoc($result)) {
-            fputcsv($out, [
-                $row['student_id'] ?? '',
-                $row['student_fullname'] ?? '',
-                $row['student_nic'] ?? '',
-                $row['route'] ?? '',
-                $row['payment_reference'] ?? ''
-            ]);
-        }
-        mysqli_free_result($result);
+    if (!class_exists('ZipArchive')) {
+        http_response_code(500);
+        die('ZipArchive class not available. Please enable php_zip extension.');
     }
     
-    fclose($out);
+    $zip = new ZipArchive();
+    $zip_result = $zip->open($temp_file, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    
+    if ($zip_result !== TRUE) {
+        http_response_code(500);
+        die('Cannot create DOCX file. Error code: ' . $zip_result);
+    }
+    
+    // Helper function to escape XML
+    function escapeXml($text) {
+        return htmlspecialchars($text ?? '', ENT_XML1, 'UTF-8');
+    }
+    
+    // Create [Content_Types].xml
+    $content_types = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+</Types>';
+    $zip->addFromString('[Content_Types].xml', $content_types);
+    
+    // Create _rels/.rels
+    $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>';
+    $zip->addFromString('_rels/.rels', $rels);
+    
+    // Create word/_rels/document.xml.rels
+    $doc_rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>';
+    $zip->addFromString('word/_rels/document.xml.rels', $doc_rels);
+    
+    // Create word/styles.xml
+    $styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:style w:type="table" w:styleId="TableGrid">
+<w:name w:val="Table Grid"/>
+<w:tblPr>
+<w:tblBorders>
+<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>
+</w:tblBorders>
+</w:tblPr>
+</w:style>
+</w:styles>';
+    $zip->addFromString('word/styles.xml', $styles);
+    
+    // Build table rows
+    $table_rows = '';
+    if (!empty($data)) {
+        // Header row with bold text
+        $table_rows .= '<w:tr>
+<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/></w:tcPr><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Student ID</w:t></w:r></w:p></w:tc>
+<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/></w:tcPr><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Student Name</w:t></w:r></w:p></w:tc>
+<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/></w:tcPr><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>NIC Number</w:t></w:r></w:p></w:tc>
+<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/></w:tcPr><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Route</w:t></w:r></w:p></w:tc>
+<w:tc><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="D9D9D9"/></w:tcPr><w:p><w:r><w:rPr><w:b/></w:rPr><w:t>Payment Month</w:t></w:r></w:p></w:tc>
+</w:tr>';
+        
+        // Data rows
+        foreach ($data as $row) {
+            $table_rows .= '<w:tr>
+<w:tc><w:p><w:r><w:t>' . escapeXml($row['student_id']) . '</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>' . escapeXml($row['student_name']) . '</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>' . escapeXml($row['nic']) . '</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>' . escapeXml($row['route']) . '</w:t></w:r></w:p></w:tc>
+<w:tc><w:p><w:r><w:t>' . escapeXml($row['payment_month']) . '</w:t></w:r></w:p></w:tc>
+</w:tr>';
+        }
+    } else {
+        // Empty data row spanning all columns
+        $table_rows = '<w:tr>
+<w:tc><w:tcPr><w:gridSpan w:val="5"/></w:tcPr><w:p><w:r><w:t>No data found for the selected criteria.</w:t></w:r></w:p></w:tc>
+</w:tr>';
+    }
+    
+    // Create word/document.xml
+    $document = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:body>
+<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:rPr><w:b/><w:sz w:val="28"/></w:rPr><w:t>Season Report 1 - Student Details</w:t></w:r></w:p>
+<w:p><w:r><w:t>Generated: ' . escapeXml(date('Y-m-d H:i:s')) . '</w:t></w:r></w:p>';
+    
+    if (!empty($filter_month)) {
+        $document .= '<w:p><w:r><w:t>Payment Month: ' . escapeXml($filter_month) . '</w:t></w:r></w:p>';
+    }
+    
+    $document .= '<w:p></w:p>
+<w:tbl>
+<w:tblPr>
+<w:tblStyle w:val="TableGrid"/>
+<w:tblW w:w="0" w:type="auto"/>
+<w:tblLook w:val="04A0"/>
+</w:tblPr>
+<w:tblGrid>
+<w:gridCol w:w="2000"/>
+<w:gridCol w:w="3000"/>
+<w:gridCol w:w="2000"/>
+<w:gridCol w:w="3000"/>
+<w:gridCol w:w="2000"/>
+</w:tblGrid>
+' . $table_rows . '
+</w:tbl>
+<w:p></w:p>
+</w:body>
+</w:document>';
+    
+    $zip->addFromString('word/document.xml', $document);
+    
+    // Close zip
+    if (!$zip->close()) {
+        http_response_code(500);
+        die('Error closing DOCX file');
+    }
+    
+    // Check if file was created
+    if (!file_exists($temp_file) || filesize($temp_file) == 0) {
+        http_response_code(500);
+        die('DOCX file creation failed');
+    }
+    
+    // Output file
+    header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Length: ' . filesize($temp_file));
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+    
+    readfile($temp_file);
+    @unlink($temp_file);
     exit;
 }
 
@@ -196,7 +337,7 @@ include_once("../menu.php");
 <div class="container-fluid mt-3">
     <div class="card shadow">
         <div class="card-header bg-primary text-white">
-            <h3 class="mb-0"><i class="fas fa-file-excel"></i> Season Report 1 - Student Details</h3>
+            <h3 class="mb-0"><i class="fas fa-file-word"></i> Season Report 1 - Student Details</h3>
         </div>
         <div class="card-body">
             <!-- Filter Form -->
@@ -218,12 +359,11 @@ include_once("../menu.php");
                         <div class="col-md-4">
                             <label>&nbsp;</label><br>
                             <?php 
-                            $exportQuery = array_merge($_GET, ['export' => 'excel']);
-                            unset($exportQuery['export']);
-                            $exportQuery['export'] = 'excel';
+                            $exportQuery = $_GET;
+                            $exportQuery['export'] = 'docx';
                             ?>
                             <a href="?<?= http_build_query($exportQuery) ?>" class="btn btn-success">
-                                <i class="fas fa-file-excel"></i> Download Excel
+                                <i class="fas fa-file-word"></i> Download DOCX
                             </a>
                         </div>
                     </form>

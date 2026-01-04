@@ -21,19 +21,11 @@ $date = isset($_POST['date']) ? trim($_POST['date']) : '';
 $dept = isset($_POST['department_id']) ? trim($_POST['department_id']) : '';
 $course = isset($_POST['course_id']) ? trim($_POST['course_id']) : '';
 $month = isset($_POST['month']) ? trim($_POST['month']) : '';
+$isSAO = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO');
+$markAllDepts = ($isSAO && ($dept === 'ALL' || $dept === ''));
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { redirect_back(['err'=>'date']); }
-if ($dept==='') { redirect_back(['err'=>'dept']); }
-
-// Build student scope
-$where = "WHERE c.department_id='".mysqli_real_escape_string($con,$dept)."'";
-if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
-$where .= " AND se.student_enroll_status IN ('Following','Active')";
-$sql = "SELECT s.student_id\n        FROM student_enroll se\n        JOIN course c ON c.course_id = se.course_id\n        JOIN student s ON s.student_id = se.student_id\n        $where";
-$rs = mysqli_query($con, $sql);
-$ids = [];
-if ($rs) { while($r=mysqli_fetch_assoc($rs)){ $ids[] = $r['student_id']; } }
-if (empty($ids)) { redirect_back(['ok'=>'1','note'=>'no_students','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]); }
+if (!$markAllDepts && $dept==='') { redirect_back(['err'=>'dept']); }
 
 $dt = mysqli_real_escape_string($con, $date);
 $now = date('Y-m-d H:i:s');
@@ -45,15 +37,73 @@ if ($chk2 = mysqli_query($con, "SHOW COLUMNS FROM `attendance` LIKE 'created_at'
 
 mysqli_begin_transaction($con);
 try {
-  // 1) UPDATE existing attendance rows for this date and scope to -1 (NWD) without deleting
-  $where = "c.department_id='".mysqli_real_escape_string($con,$dept)."'";
+  if ($markAllDepts) {
+    // SAO marking for ALL students across ALL departments
+    // Get all active students regardless of department
+    $sql = "SELECT DISTINCT s.student_id 
+            FROM student s
+            JOIN student_enroll se ON se.student_id = s.student_id
+            WHERE se.student_enroll_status IN ('Following','Active')";
+    $rs = mysqli_query($con, $sql);
+    $ids = [];
+    if ($rs) { while($r=mysqli_fetch_assoc($rs)){ $ids[] = $r['student_id']; } }
+    
+    if (empty($ids)) { redirect_back(['ok'=>'1','note'=>'no_students','month'=>$month,'focus_date'=>$date]); }
+    
+    // Build insert columns dynamically
+    $cols = ['student_id','date','attendance_status'];
+    if ($hasModuleName) $cols[] = 'module_name';
+    if ($hasCreatedAt) $cols[] = 'created_at';
+    $colsSql = array_map(function($c){ return "`".$c."`"; }, $cols);
+    $colList = '('.implode(', ', $colsSql).')';
+    
+    // Process in chunks to avoid memory and query size limits
+    $chunkSize = 500;
+    
+    // Only INSERT new -1 records for students without attendance on this date
+    // Do NOT update existing records (0, 1, or -1) - preserve all existing data
+    // Determine students who do not have any attendance row for this date
+    $presentSet = [];
+    for ($i=0; $i<count($ids); $i+=$chunkSize) {
+      $chunk = array_slice($ids, $i, $chunkSize);
+      $inChunk = implode(',', array_map(function($x) use ($con){ return "'".mysqli_real_escape_string($con,$x)."'"; }, $chunk));
+      $qexist = mysqli_query($con, "SELECT DISTINCT student_id FROM attendance WHERE `date`='$dt' AND student_id IN ($inChunk)");
+      if ($qexist) { while($r=mysqli_fetch_assoc($qexist)){ $presentSet[$r['student_id']] = true; } }
+    }
+    $idsToInsert = array_values(array_filter($ids, function($sid) use ($presentSet){ return !isset($presentSet[$sid]); }));
+    
+    // Insert new rows in chunks
+    for ($i=0; $i<count($idsToInsert); $i+=$chunkSize) {
+      $values = [];
+      $slice = array_slice($idsToInsert, $i, $chunkSize);
+      foreach ($slice as $sid) {
+        $sidEsc = mysqli_real_escape_string($con, $sid);
+        $row = ["'$sidEsc'", "'$dt'", "-1"];
+        if ($hasModuleName) { $row[] = "'".mysqli_real_escape_string($con,'NWD')."'"; }
+        if ($hasCreatedAt) { $row[] = "'".mysqli_real_escape_string($con,$now)."'"; }
+        $values[] = '('.implode(',', $row).')';
+      }
+      if (!empty($values)) {
+        $ins = "INSERT INTO attendance $colList VALUES ".implode(',', $values);
+        @mysqli_query($con, $ins);
+      }
+    }
+    
+    mysqli_commit($con);
+    redirect_back(['ok'=>'1','month'=>$month,'focus_date'=>$date,'all_depts'=>'1']);
+    exit;
+  }
+  
+  // Original single department logic
+  // Build student scope
+  $where = "WHERE c.department_id='".mysqli_real_escape_string($con,$dept)."'";
   if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
   $where .= " AND se.student_enroll_status IN ('Following','Active')";
-  $upd = "UPDATE attendance a\n          JOIN student s ON s.student_id=a.student_id\n          JOIN student_enroll se ON se.student_id=s.student_id\n          JOIN course c ON c.course_id=se.course_id\n          SET a.attendance_status=-1";
-  if ($hasModuleName) { $upd .= ", a.module_name='".mysqli_real_escape_string($con,'NWD')."'"; }
-  if ($hasCreatedAt) { $upd .= ", a.created_at='".mysqli_real_escape_string($con,$now)."'"; }
-  $upd .= " WHERE a.`date`='$dt' AND $where";
-  mysqli_query($con, $upd);
+  $sql = "SELECT s.student_id\n        FROM student_enroll se\n        JOIN course c ON c.course_id = se.course_id\n        JOIN student s ON s.student_id = se.student_id\n        $where";
+  $rs = mysqli_query($con, $sql);
+  $ids = [];
+  if ($rs) { while($r=mysqli_fetch_assoc($rs)){ $ids[] = $r['student_id']; } }
+  if (empty($ids)) { redirect_back(['ok'=>'1','note'=>'no_students','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]); }
 
   // Build insert columns dynamically (escape reserved names like `date`)
   $cols = ['student_id','date','attendance_status'];
@@ -62,15 +112,21 @@ try {
   $colsSql = array_map(function($c){ return "`".$c."`"; }, $cols);
   $colList = '('.implode(', ', $colsSql).')';
 
+  // Process in chunks to avoid memory and query size limits
+  $chunkSize = 500;
+  
+  // Only INSERT new -1 records for students without attendance on this date
+  // Do NOT update existing records (0, 1, or -1) - preserve all existing data
+
   // Determine students who still do not have any attendance row for this date
   $presentSet = [];
-  $inAll = implode(',', array_map(function($x) use ($con){ return "'".mysqli_real_escape_string($con,$x)."'"; }, $ids));
-  $qexist = mysqli_query($con, "SELECT DISTINCT student_id FROM attendance WHERE `date`='$dt' AND student_id IN ($inAll)");
-  if ($qexist) { while($r=mysqli_fetch_assoc($qexist)){ $presentSet[$r['student_id']] = true; } }
+  for ($i=0; $i<count($ids); $i+=$chunkSize) {
+    $chunk = array_slice($ids, $i, $chunkSize);
+    $inChunk = implode(',', array_map(function($x) use ($con){ return "'".mysqli_real_escape_string($con,$x)."'"; }, $chunk));
+    $qexist = mysqli_query($con, "SELECT DISTINCT student_id FROM attendance WHERE `date`='$dt' AND student_id IN ($inChunk)");
+    if ($qexist) { while($r=mysqli_fetch_assoc($qexist)){ $presentSet[$r['student_id']] = true; } }
+  }
   $idsToInsert = array_values(array_filter($ids, function($sid) use ($presentSet){ return !isset($presentSet[$sid]); }));
-
-  // Prepare values in chunks to avoid packet size limits
-  $chunkSize = 500;
   for ($i=0; $i<count($idsToInsert); $i+=$chunkSize) {
     $values = [];
     $slice = array_slice($idsToInsert, $i, $chunkSize);
@@ -81,29 +137,12 @@ try {
       if ($hasCreatedAt) { $row[] = "'".mysqli_real_escape_string($con,$now)."'"; }
       $values[] = '('.implode(',', $row).')';
     }
-    if (!empty($values)) {
-      $ins = "INSERT INTO attendance $colList VALUES ".implode(',', $values);
-      // If INSERT fails (due to unknown NOT NULL cols), do not hard-fail; we'll persist override in nwd_overrides
-      @mysqli_query($con, $ins);
-    }
+      if (!empty($values)) {
+        $ins = "INSERT INTO attendance $colList VALUES ".implode(',', $values);
+        // If INSERT fails (due to unknown NOT NULL cols), do not hard-fail
+        @mysqli_query($con, $ins);
+      }
   }
-
-  // Ensure an override marker exists in a dedicated table to drive UI logic, independent of attendance rows
-  $create = "CREATE TABLE IF NOT EXISTS `nwd_overrides` (
-              `date` date NOT NULL,
-              `department_id` varchar(32) NOT NULL,
-              `course_id` varchar(32) NOT NULL DEFAULT '',
-              `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-              PRIMARY KEY (`date`,`department_id`,`course_id`)
-            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4";
-  mysqli_query($con, $create);
-
-  $deptEsc = mysqli_real_escape_string($con, $dept);
-  // course_id participates in PRIMARY KEY, so avoid NULL; use empty string when not specified
-  $courseEsc = ($course==='') ? "''" : "'".mysqli_real_escape_string($con,$course)."'";
-  $upsert = "INSERT INTO `nwd_overrides` (`date`,`department_id`,`course_id`) VALUES ('$dt','$deptEsc', $courseEsc)
-             ON DUPLICATE KEY UPDATE `created_at`=VALUES(`created_at`)";
-  if (!mysqli_query($con, $upsert)) { throw new Exception('insert_nwd: '.mysqli_error($con)); }
 
   mysqli_commit($con);
   redirect_back(['ok'=>'1','month'=>$month,'department_id'=>$dept,'course_id'=>$course,'focus_date'=>$date]);

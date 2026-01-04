@@ -440,7 +440,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
         <?php endforeach; ?>
 
       <!-- Filters: Modern card layout with responsive grid -->
-      <div class="card shadow-sm border-0 mb-4 first-section-card">
+      <div class="card shadow-sm border-0 first-section-card">
         <div class="card-header d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between" style="background: linear-gradient(135deg, #6366f1 0%, #4f46e5 50%, #06b6d4 100%); color: #ffffff; padding: 1rem 1.25rem;">
           <div class="font-weight-semibold mb-2 mb-md-0" style="color: #ffffff !important;"><i class="fa fa-sliders-h mr-1"></i> Filters</div>
           <div class="d-flex align-items-center w-100 w-md-auto justify-content-between justify-content-md-end">
@@ -580,6 +580,9 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
             padding-left: 30px;
             padding-right: 30px;
           }
+          .page-content .container-fluid .row {
+            margin-left: -150px;
+          }
         }
         
         /* Card header white text */
@@ -596,7 +599,7 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
         
         /* Balanced card spacing */
         .card {
-          margin-bottom: 1.5rem;
+          margin-bottom: 0;
         }
         
         /* Compact table spacing */

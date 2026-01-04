@@ -17,6 +17,7 @@ if (!$isExport) {
   // Roles allowed to add/remove NWD overrides (FIN/ACC are read-only)
   $canNWD = (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['HOD','IN3','SAO','ADM'], true));
   $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type']==='ADM');
+  $isSAO = (isset($_SESSION['user_type']) && $_SESSION['user_type']==='SAO');
   // Scoped styles for better alignment
   echo '<style>
     .att-filter .form-group { margin-right: .75rem; }
@@ -24,12 +25,12 @@ if (!$isExport) {
     .att-report { table-layout: fixed; font-size: 0.92rem; border-collapse: separate; border-spacing: 0; }
     .att-report th, .att-report td { vertical-align: middle; box-sizing: border-box; padding: .35rem .4rem; }
     /* Sticky header */
-    .att-report thead th { position: sticky; top: 0; background: #f8f9fa; z-index: 10; text-align: center; white-space: nowrap; }
+    .att-report thead th { position: sticky; top: 0; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important; color: #ffffff !important; z-index: 10; text-align: center; white-space: nowrap; }
     /* Sticky first two columns for both head and body */
     .att-report .id-col { width: 160px; white-space: nowrap; position: sticky; left: 0; z-index: 12; background: #fff; text-align: left; border-right: 1px solid #dee2e6; overflow: hidden; text-overflow: ellipsis; padding-right: .5rem; }
     .att-report .name-col { min-width: 260px; white-space: nowrap; position: sticky; left: 160px; z-index: 12; background: #fff; text-align: left; border-right: 1px solid #dee2e6; overflow: hidden; text-overflow: ellipsis; padding-right: .5rem; }
     .att-report .nic-col { width: 170px; white-space: nowrap; background: #fff; text-align: left; border-right: 1px solid #dee2e6; overflow: hidden; text-overflow: ellipsis; padding-right: .5rem; }
-    .att-report thead .id-col, .att-report thead .name-col { z-index: 13; background: #fff; }
+    .att-report thead .id-col, .att-report thead .name-col { z-index: 13; background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important; color: #ffffff !important; }
     /* Visual separator for sticky columns */
     .att-report .id-col { box-shadow: 2px 0 0 rgba(0,0,0,.05); }
     .att-report .name-col { box-shadow: 2px 0 0 rgba(0,0,0,.05); }
@@ -38,6 +39,126 @@ if (!$isExport) {
     .att-report .num-col { width: 70px; text-align: center; white-space: nowrap; }
     /* Vertical label for non-considered dates */
     .att-report .nc-col { writing-mode: vertical-rl; text-orientation: mixed; transform: rotate(180deg); white-space: nowrap; text-align: center; padding: .2rem .15rem; min-width: 22px; font-size: .75rem; }
+    
+    /* Proper select option sizing */
+    select.form-control,
+    select.form-control-sm {
+      height: calc(1.5em + 0.75rem + 2px);
+      padding: 0.375rem 2rem 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      border: 1px solid #ced4da;
+      border-radius: 0.25rem;
+      background-color: #fff;
+      background-image: url("data:image/svg+xml,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 16 16\'%3e%3cpath fill=\'none\' stroke=\'%23343a40\' stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M2 5l6 6 6-6\'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 16px 12px;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      cursor: pointer;
+    }
+    
+    select.form-control:focus,
+    select.form-control-sm:focus {
+      border-color: #80bdff;
+      outline: 0;
+      box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+    
+    select.form-control:disabled,
+    select.form-control-sm:disabled {
+      background-color: #e9ecef;
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    
+    /* Ensure select options are properly sized */
+    select.form-control option,
+    select.form-control-sm option {
+      padding: 0.5rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+      min-height: 1.5em;
+    }
+    
+    /* Consistent input sizing */
+    input.form-control,
+    input.form-control-sm {
+      height: calc(1.5em + 0.75rem + 2px);
+      padding: 0.375rem 0.75rem;
+      font-size: 0.875rem;
+      line-height: 1.5;
+    }
+    
+    /* Label alignment */
+    label.small {
+      font-size: 0.875rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+      display: block;
+    }
+    
+    /* SAO card toggle button */
+    #toggle-sao-card {
+      color: #1e3a8a;
+      border: 1px solid rgba(255,255,255,0.3);
+      background-color: rgba(255,255,255,0.9);
+      transition: all 0.2s ease;
+    }
+    
+    #toggle-sao-card:hover {
+      background-color: #ffffff;
+      color: #1e40af;
+      border-color: rgba(255,255,255,0.5);
+    }
+    
+    #toggle-sao-card:focus {
+      box-shadow: 0 0 0 0.2rem rgba(255,255,255,0.5);
+    }
+    
+    /* Card header white text */
+    .card-header {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+      color: #ffffff !important;
+      border-bottom: 2px solid #1e40af;
+    }
+    
+    .card-header p,
+    .card-header h1,
+    .card-header h2,
+    .card-header h3,
+    .card-header h4,
+    .card-header h5,
+    .card-header h6,
+    .card-header div,
+    .card-header span,
+    .card-header small,
+    .card-header i {
+      color: #ffffff !important;
+    }
+    
+    /* Table header white text */
+    .table thead th,
+    .table thead.thead-light th {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+      color: #ffffff !important;
+      font-weight: 600;
+      border-bottom: 2px solid #1e40af;
+    }
+    
+    .table thead th *,
+    .table thead.thead-light th * {
+      color: #ffffff !important;
+    }
+    
+    /* Sticky header white text override */
+    .att-report thead .id-col,
+    .att-report thead .name-col {
+      background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+      color: #ffffff !important;
+    }
   </style>';
 }
 
@@ -529,6 +650,117 @@ if ($isExport) {
       </div>
     </div>
     <div class="card-body">
+      <?php if ($isSAO && !$isApproved): ?>
+        <div class="card border-primary mb-3" id="sao-nwd-card">
+          <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="fas fa-calendar-times mr-2"></i>Mark/Remove -1 Day Attendance (SAO Only)</h6>
+            <button type="button" class="btn btn-sm btn-light ml-auto" id="toggle-sao-card" onclick="toggleSAOCard()">
+              <i class="fas fa-chevron-up" id="toggle-sao-icon"></i> <span id="toggle-sao-text">Hide</span>
+            </button>
+          </div>
+          <div class="card-body" id="sao-nwd-card-body">
+            <?php
+            // Load all departments for SAO selection
+            $allDepartments = [];
+            if ($isSAO) {
+              $dqAll = mysqli_query($con, "SELECT department_id, department_name FROM department ORDER BY department_name");
+              if ($dqAll) { while($row=mysqli_fetch_assoc($dqAll)){ $allDepartments[]=$row; } }
+            }
+            ?>
+            <form method="post" action="<?php echo APP_BASE; ?>/controller/SetNWDOverride.php" class="mb-3" onsubmit="return confirm('Are you sure you want to mark the selected date as Non-Working Day (-1) for the selected scope? This will only change existing attendance_status values to -1 or insert new -1 records. It will NOT change any other attendance data.');">
+              <input type="hidden" name="month" value="<?php echo htmlspecialchars($month); ?>">
+              <div class="form-row align-items-end">
+                <div class="form-group col-md-3 mb-2">
+                  <label for="nwd_sao_date" class="font-weight-semibold">Select Date:</label>
+                  <input type="date" id="nwd_sao_date" name="date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($focusDate ?: date('Y-m-d')); ?>" required>
+                </div>
+                <div class="form-group col-md-4 mb-2">
+                  <label for="nwd_sao_dept" class="font-weight-semibold">Department:</label>
+                  <select id="nwd_sao_dept" name="department_id" class="form-control form-control-sm">
+                    <option value="ALL">All Departments</option>
+                    <?php foreach ($allDepartments as $d): ?>
+                      <option value="<?php echo htmlspecialchars($d['department_id']); ?>"><?php echo htmlspecialchars($d['department_name']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-md-5 mb-2">
+                  <button type="submit" class="btn btn-sm btn-danger">
+                    <i class="fas fa-ban mr-1"></i> Mark as NWD (-1)
+                  </button>
+                </div>
+              </div>
+            </form>
+            <form method="post" action="<?php echo APP_BASE; ?>/controller/RemoveNWDOverride.php" onsubmit="return confirm('Are you sure you want to remove the NWD (-1) override for the selected date? This will only delete records with attendance_status = -1. It will NOT change any other attendance data.');">
+              <input type="hidden" name="month" value="<?php echo htmlspecialchars($month); ?>">
+              <div class="form-row align-items-end">
+                <div class="form-group col-md-3 mb-2">
+                  <label for="remove_nwd_sao_date" class="font-weight-semibold">Select Date:</label>
+                  <input type="date" id="remove_nwd_sao_date" name="date" class="form-control form-control-sm" value="<?php echo htmlspecialchars($focusDate ?: date('Y-m-d')); ?>" required>
+                </div>
+                <div class="form-group col-md-4 mb-2">
+                  <label for="remove_nwd_sao_dept" class="font-weight-semibold">Department:</label>
+                  <select id="remove_nwd_sao_dept" name="department_id" class="form-control form-control-sm">
+                    <option value="ALL">All Departments</option>
+                    <?php foreach ($allDepartments as $d): ?>
+                      <option value="<?php echo htmlspecialchars($d['department_id']); ?>"><?php echo htmlspecialchars($d['department_name']); ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                </div>
+                <div class="form-group col-md-5 mb-2">
+                  <button type="submit" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-undo mr-1"></i> Remove NWD (-1)
+                  </button>
+                </div>
+              </div>
+            </form>
+            <small class="text-muted d-block mt-2">
+              <i class="fas fa-info-circle mr-1"></i> <strong>Note:</strong> This will only insert new -1 records or update existing records to -1. It will NOT modify any attendance data that is already 0 or 1. To change -1 to 0 or 1, use the regular attendance marking interface.
+            </small>
+          </div>
+        </div>
+        
+        <script>
+        // Toggle SAO card visibility with localStorage persistence
+        function toggleSAOCard() {
+          const cardBody = document.getElementById('sao-nwd-card-body');
+          const toggleIcon = document.getElementById('toggle-sao-icon');
+          const toggleText = document.getElementById('toggle-sao-text');
+          
+          if (cardBody.style.display === 'none') {
+            cardBody.style.display = 'block';
+            toggleIcon.className = 'fas fa-chevron-up';
+            toggleText.textContent = 'Hide';
+            localStorage.setItem('sao-nwd-card-hidden', 'false');
+          } else {
+            cardBody.style.display = 'none';
+            toggleIcon.className = 'fas fa-chevron-down';
+            toggleText.textContent = 'Show';
+            localStorage.setItem('sao-nwd-card-hidden', 'true');
+          }
+        }
+        
+        // Restore card state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+          const isHidden = localStorage.getItem('sao-nwd-card-hidden') === 'true';
+          const cardBody = document.getElementById('sao-nwd-card-body');
+          const toggleIcon = document.getElementById('toggle-sao-icon');
+          const toggleText = document.getElementById('toggle-sao-text');
+          
+          if (cardBody) {
+            if (isHidden) {
+              cardBody.style.display = 'none';
+              toggleIcon.className = 'fas fa-chevron-down';
+              toggleText.textContent = 'Show';
+            } else {
+              cardBody.style.display = 'block';
+              toggleIcon.className = 'fas fa-chevron-up';
+              toggleText.textContent = 'Hide';
+            }
+          }
+        });
+        </script>
+      <?php endif; ?>
+      
       <?php if ($deptCode===''): ?>
         <div class="alert alert-warning">Department not configured for your account. Please contact admin.</div>
       <?php else: ?>

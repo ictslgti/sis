@@ -27,6 +27,7 @@ function fetch_student_info(mysqli $con, $sid) {
   $sid = trim((string)$sid);
   if ($sid === '') return null;
   $sidEsc = mysqli_real_escape_string($con, $sid);
+  
   // 1) Prefer Active/Following enrollment
   $sql1 = "SELECT s.student_id, s.student_fullname, s.student_profile_img,
                   c.department_id, d.department_name
@@ -37,10 +38,19 @@ function fetch_student_info(mysqli $con, $sid) {
            WHERE s.student_id = '$sidEsc'
            ORDER BY se.student_enroll_date DESC LIMIT 1";
   if ($rs = mysqli_query($con, $sql1)) {
-    $row = mysqli_fetch_assoc($rs);
-    mysqli_free_result($rs);
-    if ($row && (!empty($row['department_id']) || !empty($row['student_fullname']))) { return $row; }
+    if ($rs === false) {
+      error_log('fetch_student_info query1 error: ' . mysqli_error($con));
+    } else {
+      $row = mysqli_fetch_assoc($rs);
+      mysqli_free_result($rs);
+      if ($row && !empty($row['student_id'])) { 
+        return $row; 
+      }
+    }
+  } else {
+    error_log('fetch_student_info query1 failed: ' . mysqli_error($con));
   }
+  
   // 2) Fallback: latest enrollment regardless of status
   $sql2 = "SELECT s.student_id, s.student_fullname, s.student_profile_img,
                   c.department_id, d.department_name
@@ -51,17 +61,39 @@ function fetch_student_info(mysqli $con, $sid) {
            WHERE s.student_id = '$sidEsc'
            ORDER BY se.student_enroll_date DESC LIMIT 1";
   if ($rs2 = mysqli_query($con, $sql2)) {
-    $row2 = mysqli_fetch_assoc($rs2);
-    mysqli_free_result($rs2);
-    if ($row2) { return $row2; }
+    if ($rs2 === false) {
+      error_log('fetch_student_info query2 error: ' . mysqli_error($con));
+    } else {
+      $row2 = mysqli_fetch_assoc($rs2);
+      mysqli_free_result($rs2);
+      if ($row2 && !empty($row2['student_id'])) { 
+        return $row2; 
+      }
+    }
+  } else {
+    error_log('fetch_student_info query2 failed: ' . mysqli_error($con));
   }
+  
   // 3) Minimal baseline: student row only
-  $sql3 = "SELECT s.student_id, s.student_fullname, s.student_profile_img FROM student s WHERE s.student_id='$sidEsc' LIMIT 1";
+  $sql3 = "SELECT s.student_id, s.student_fullname, s.student_profile_img 
+           FROM student s 
+           WHERE s.student_id = '$sidEsc' 
+           LIMIT 1";
   if ($rs3 = mysqli_query($con, $sql3)) {
-    $row3 = mysqli_fetch_assoc($rs3);
-    mysqli_free_result($rs3);
-    return $row3 ?: null;
+    if ($rs3 === false) {
+      error_log('fetch_student_info query3 error: ' . mysqli_error($con));
+      return null;
+    } else {
+      $row3 = mysqli_fetch_assoc($rs3);
+      mysqli_free_result($rs3);
+      if ($row3 && !empty($row3['student_id'])) {
+        return $row3;
+      }
+    }
+  } else {
+    error_log('fetch_student_info query3 failed: ' . mysqli_error($con));
   }
+  
   return null;
 }
 
@@ -178,72 +210,108 @@ include_once __DIR__ . '/../menu.php';
   <?php foreach ($errors as $e): ?><div class="alert alert-danger py-2"><?php echo h($e); ?></div><?php endforeach; ?>
 
   <div class="card mb-3">
-    <div class="card-header">Find Student</div>
+    <div class="card-header bg-primary border-bottom">
+      <h5 class="mb-0 text-white"><i class="fas fa-search mr-2 text-white"></i> Find Student</h5>
+    </div>
     <div class="card-body">
-      <div class="form-row align-items-center">
-        <div class="col-md-6 mb-2">
+      <div class="form-row align-items-end">
+        <div class="form-group col-md-6 mb-3 mb-md-0">
+          <label for="sidInput" class="form-label font-weight-semibold">
+            <i class="fas fa-id-card-alt mr-1 text-primary"></i>Search Student
+          </label>
           <div class="input-group">
             <div class="input-group-prepend">
-              <span class="input-group-text"><i class="fas fa-id-card-alt"></i></span>
+              <span class="input-group-text bg-primary text-white"><i class="fas fa-search"></i></span>
             </div>
-            <input type="text" id="sidInput" class="form-control" placeholder="Type ID or Name to search...">
+            <input type="text" id="sidInput" class="form-control" placeholder="Type Student ID or Name to search...">
           </div>
         </div>
-        <div class="col-md-6 mb-2">
+        <div class="form-group col-md-6 mb-3 mb-md-0">
+          <label for="sidSelect" class="form-label font-weight-semibold">
+            <i class="fas fa-list mr-1 text-primary"></i>Select Student
+          </label>
           <select id="sidSelect" class="form-control" disabled>
             <option value="">-- Type to search --</option>
           </select>
         </div>
       </div>
       <?php if ($student): ?>
-        <div class="mt-3">
-          <div><strong><?php echo h($student['student_id']); ?></strong> — <?php echo h($student['student_fullname']); ?></div>
-          <div class="text-muted">Department: <?php echo h($p_dept_name !== '' ? $p_dept_name : ($p_dept ?: '')); ?></div>
+        <div class="alert alert-info mt-3 mb-0">
+          <div class="d-flex align-items-center">
+            <i class="fas fa-user-check fa-2x text-primary mr-3"></i>
+            <div>
+              <div class="font-weight-bold h5 mb-1">
+                <?php echo h($student['student_id']); ?> — <?php echo h($student['student_fullname']); ?>
+              </div>
+              <div class="text-muted">
+                <i class="fas fa-building mr-1"></i>Department: <?php echo h($p_dept_name !== '' ? $p_dept_name : ($p_dept ?: 'N/A')); ?>
+              </div>
+            </div>
+          </div>
         </div>
       <?php endif; ?>
     </div>
   </div>
 
   <div class="card">
-    <div class="card-header">Payment Details</div>
+    <div class="card-header bg-primary border-bottom">
+      <h5 class="mb-0 text-white"><i class="fas fa-money-bill-wave mr-2 text-white"></i> Payment Details</h5>
+    </div>
     <div class="card-body">
       <form method="post">
         <input type="hidden" name="action" value="save">
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label class="small text-muted">Student ID</label>
-            <input type="text" name="student_id" class="form-control" value="<?php echo h($student['student_id'] ?? $sid); ?>" readonly required>
+        
+        <!-- Student Information Row -->
+        <div class="form-row mb-3">
+          <div class="form-group col-md-3 mb-3 mb-md-0">
+            <label for="student_id" class="form-label font-weight-semibold">
+              <i class="fas fa-user-graduate mr-1 text-primary"></i>Student ID
+            </label>
+            <input type="text" id="student_id" name="student_id" class="form-control" value="<?php echo h($student['student_id'] ?? $sid); ?>" readonly required>
           </div>
-          <div class="form-group col-md-3">
-            <label class="small text-muted">Department</label>
+          <div class="form-group col-md-3 mb-3 mb-md-0">
+            <label for="department" class="form-label font-weight-semibold">
+              <i class="fas fa-building mr-1 text-primary"></i>Department
+            </label>
             <input type="hidden" name="pays_department" value="<?php echo h($p_dept); ?>">
-            <input type="text" class="form-control" value="<?php echo h($p_dept_name !== '' ? $p_dept_name : ($p_dept ?: '')); ?>" readonly>
+            <input type="text" id="department" class="form-control" value="<?php echo h($p_dept_name !== '' ? $p_dept_name : ($p_dept ?: '')); ?>" readonly>
           </div>
-          <div class="form-group col-md-3">
-            <label class="small text-muted">Date</label>
-            <input type="date" name="pays_date" class="form-control" value="<?php echo h(isset($_GET['date'])?$_GET['date']:date('Y-m-d')); ?>">
+          <div class="form-group col-md-3 mb-3 mb-md-0">
+            <label for="pays_date" class="form-label font-weight-semibold">
+              <i class="fas fa-calendar-alt mr-1 text-primary"></i>Date
+            </label>
+            <input type="date" id="pays_date" name="pays_date" class="form-control" value="<?php echo h(isset($_GET['date'])?$_GET['date']:date('Y-m-d')); ?>" required>
           </div>
-          <div class="form-group col-md-3">
-            <label class="small text-muted">Reference No (optional)</label>
-            <input type="text" name="reference_no" class="form-control" maxlength="64" placeholder="Bank slip / internal ref">
+          <div class="form-group col-md-3 mb-3 mb-md-0">
+            <label for="reference_no" class="form-label font-weight-semibold">
+              <i class="fas fa-hashtag mr-1 text-primary"></i>Reference No <span class="text-muted small">(optional)</span>
+            </label>
+            <input type="text" id="reference_no" name="reference_no" class="form-control" maxlength="64" placeholder="Bank slip / internal ref">
           </div>
         </div>
 
-        <div class="form-row">
+        <!-- Payment Information Row -->
+        <div class="form-row mb-3">
           <?php if ($is_ma4): ?>
             <?php $DEF_TYPE = 'Student Charges'; $DEF_REASON = 'Bus Season'; ?>
-            <div class="form-group col-md-4">
-              <label class="small text-muted">Payment Type</label>
+            <div class="form-group col-md-4 mb-3 mb-md-0">
+              <label for="payment_type_ma4" class="form-label font-weight-semibold">
+                <i class="fas fa-money-bill-wave mr-1 text-primary"></i>Payment Type
+              </label>
               <input type="hidden" name="payment_type" value="<?php echo h($DEF_TYPE); ?>">
-              <input type="text" class="form-control" value="<?php echo h($DEF_TYPE); ?>" readonly>
+              <input type="text" id="payment_type_ma4" class="form-control" value="<?php echo h($DEF_TYPE); ?>" readonly>
             </div>
-            <div class="form-group col-md-4">
-              <label class="small text-muted">Payment Reason</label>
+            <div class="form-group col-md-4 mb-3 mb-md-0">
+              <label for="payment_reason_ma4" class="form-label font-weight-semibold">
+                <i class="fas fa-list-alt mr-1 text-primary"></i>Payment Reason
+              </label>
               <input type="hidden" name="payment_reason" value="<?php echo h($DEF_REASON); ?>">
-              <input type="text" class="form-control" value="<?php echo h($DEF_REASON); ?>" readonly>
+              <input type="text" id="payment_reason_ma4" class="form-control" value="<?php echo h($DEF_REASON); ?>" readonly>
             </div>
-            <div class="form-group col-md-4">
-              <label class="small text-muted">Payment Method</label>
+            <div class="form-group col-md-4 mb-3 mb-md-0">
+              <label for="payment_method" class="form-label font-weight-semibold">
+                <i class="fas fa-credit-card mr-1 text-primary"></i>Payment Method
+              </label>
               <select class="form-control" id="payment_method" name="payment_method" required>
                 <option value="">-- Select Method --</option>
                 <option value="SLGTI">SLGTI</option>
@@ -251,8 +319,10 @@ include_once __DIR__ . '/../menu.php';
               </select>
             </div>
           <?php else: ?>
-            <div class="form-group col-md-4">
-              <label class="small text-muted">Payment Type</label>
+            <div class="form-group col-md-4 mb-3 mb-md-0">
+              <label for="payment_type" class="form-label font-weight-semibold">
+                <i class="fas fa-money-bill-wave mr-1 text-primary"></i>Payment Type <span class="text-danger">*</span>
+              </label>
               <select class="form-control" id="payment_type" name="payment_type" onchange="loadReasons(this.value)" required>
                 <option value="">-- Select a Payment Type --</option>
                 <?php foreach ($paymentTypes as $pt): ?>
@@ -260,14 +330,18 @@ include_once __DIR__ . '/../menu.php';
                 <?php endforeach; ?>
               </select>
             </div>
-            <div class="form-group col-md-4">
-              <label class="small text-muted">Payment Reason</label>
+            <div class="form-group col-md-4 mb-3 mb-md-0">
+              <label for="payment_reason" class="form-label font-weight-semibold">
+                <i class="fas fa-list-alt mr-1 text-primary"></i>Payment Reason <span class="text-danger">*</span>
+              </label>
               <select class="form-control" id="payment_reason" name="payment_reason" required>
                 <option value="">-- Select a Payment Reason --</option>
               </select>
             </div>
-            <div class="form-group col-md-4">
-              <label class="small text-muted">Payment Method</label>
+            <div class="form-group col-md-4 mb-3 mb-md-0">
+              <label for="payment_method" class="form-label font-weight-semibold">
+                <i class="fas fa-credit-card mr-1 text-primary"></i>Payment Method <span class="text-danger">*</span>
+              </label>
               <select class="form-control" id="payment_method" name="payment_method" required>
                 <option value="">-- Select Method --</option>
                 <option value="SLGTI">SLGTI</option>
@@ -277,32 +351,114 @@ include_once __DIR__ . '/../menu.php';
           <?php endif; ?>
         </div>
 
-        <div class="form-row">
-          <div class="form-group col-md-3">
-            <label class="small text-muted">Amount</label>
-            <input type="number" min="1" step="0.01" class="form-control" name="payment_amount" placeholder="Amount" required>
+        <!-- Amount and Quantity Row -->
+        <div class="form-row mb-3">
+          <div class="form-group col-md-3 mb-3 mb-md-0">
+            <label for="payment_amount" class="form-label font-weight-semibold">
+              <i class="fas fa-dollar-sign mr-1 text-primary"></i>Amount <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="payment_amount" min="1" step="0.01" class="form-control" name="payment_amount" placeholder="0.00" required>
           </div>
-          <div class="form-group col-md-3">
-            <label class="small text-muted">Quantity</label>
-            <input type="number" min="1" max="50" class="form-control" name="payment_qty" value="1" required>
+          <div class="form-group col-md-3 mb-3 mb-md-0">
+            <label for="payment_qty" class="form-label font-weight-semibold">
+              <i class="fas fa-sort-numeric-up mr-1 text-primary"></i>Quantity <span class="text-danger">*</span>
+            </label>
+            <input type="number" id="payment_qty" min="1" max="50" class="form-control" name="payment_qty" value="1" required>
           </div>
-          <div class="form-group col-md-6">
-            <label class="small text-muted">Note</label>
-            <input type="text" class="form-control" name="payment_note" placeholder="Short note (optional)">
+          <div class="form-group col-md-6 mb-3 mb-md-0">
+            <label for="payment_note" class="form-label font-weight-semibold">
+              <i class="fas fa-sticky-note mr-1 text-primary"></i>Note <span class="text-muted small">(optional)</span>
+            </label>
+            <input type="text" id="payment_note" class="form-control" name="payment_note" placeholder="Short note (optional)">
           </div>
         </div>
 
-        <div class="text-right">
-          <button type="submit" class="btn btn-primary"><i class="fas fa-save mr-1"></i> Record Payment</button>
-          <?php if ($student): ?>
-            <a class="btn btn-outline-secondary" href="<?php echo $base; ?>/finance/CollectPayment.php?Sid=<?php echo urlencode($student['student_id']); ?>"><i class="fa fa-redo mr-1"></i> Reset</a>
-          <?php else: ?>
-            <a class="btn btn-outline-secondary" href="<?php echo $base; ?>/finance/CollectPayment.php"><i class="fa fa-redo mr-1"></i> Reset</a>
-          <?php endif; ?>
+        <!-- Action Buttons -->
+        <div class="form-row mt-4">
+          <div class="col-12 text-right">
+            <button type="submit" class="btn btn-primary btn-lg">
+              <i class="fas fa-save mr-2"></i>Record Payment
+            </button>
+            <?php if ($student): ?>
+              <a class="btn btn-outline-secondary btn-lg ml-2" href="<?php echo $base; ?>/finance/CollectPayment.php?Sid=<?php echo urlencode($student['student_id']); ?>">
+                <i class="fa fa-redo mr-2"></i>Reset
+              </a>
+            <?php else: ?>
+              <a class="btn btn-outline-secondary btn-lg ml-2" href="<?php echo $base; ?>/finance/CollectPayment.php">
+                <i class="fa fa-redo mr-2"></i>Reset
+              </a>
+            <?php endif; ?>
+          </div>
         </div>
       </form>
     </div>
   </div>
+  
+  <style>
+    .form-label {
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      color: #495057;
+      display: block;
+    }
+    .form-label i {
+      width: 18px;
+      text-align: center;
+    }
+    .form-control {
+      height: calc(2.25rem + 2px);
+      font-size: 0.9375rem;
+      padding: 0.375rem 0.75rem;
+      line-height: 1.5;
+    }
+    .form-control:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+    }
+    /* Select dropdown styling */
+    select.form-control {
+      height: calc(2.25rem + 2px);
+      padding: 0.375rem 2rem 0.375rem 0.75rem;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+      background-repeat: no-repeat;
+      background-position: right 0.75rem center;
+      background-size: 16px 12px;
+      cursor: pointer;
+    }
+    select.form-control:focus {
+      background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236366f1' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    }
+    select.form-control option {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.9375rem;
+      line-height: 1.5;
+    }
+    select.form-control:disabled {
+      background-color: #e9ecef;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    .form-group {
+      margin-bottom: 0;
+    }
+    .card-header {
+      padding: 1rem 1.25rem;
+    }
+    .card-header h5 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+    @media (max-width: 768px) {
+      .form-group {
+        margin-bottom: 1rem;
+      }
+    }
+  </style>
 </div>
 <?php include_once __DIR__ . '/../footer.php'; ?>
 <script>

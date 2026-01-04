@@ -22,21 +22,30 @@ $qs = mysqli_real_escape_string($con, $q);
 // Exclude inactive students
 $sql = "SELECT s.student_id, s.student_fullname
         FROM student s
-        WHERE (s.student_id LIKE '$qs%'
-           OR s.student_fullname LIKE '%$qs%')
-        AND (s.student_status IS NULL OR (s.student_status != 'Inactive' AND s.student_status != 0))
+        WHERE (LOWER(s.student_id) LIKE LOWER('$qs%')
+           OR LOWER(s.student_fullname) LIKE LOWER('%$qs%'))
+        AND (s.student_status IS NULL OR s.student_status = '' OR (s.student_status != 'Inactive' AND s.student_status != '0'))
         ORDER BY s.student_id ASC
         LIMIT $limit";
 
 $rs = mysqli_query($con, $sql);
-if ($rs && mysqli_num_rows($rs) > 0) {
+if (!$rs) {
+  // Log error for debugging
+  error_log('FindStudents query error: ' . mysqli_error($con));
+  echo '<option value="">Error: Database query failed</option>';
+  exit;
+}
+
+if (mysqli_num_rows($rs) > 0) {
   echo '<option value="">-- Select student --</option>';
   while ($r = mysqli_fetch_assoc($rs)) {
-    $id = htmlspecialchars($r['student_id'], ENT_QUOTES, 'UTF-8');
+    $id = htmlspecialchars($r['student_id'] ?? '', ENT_QUOTES, 'UTF-8');
     $nm = htmlspecialchars($r['student_fullname'] ?? '', ENT_QUOTES, 'UTF-8');
-    echo '<option value="'.$id.'">'.$id.' — '.$nm.'</option>';
+    if ($id !== '') {
+      echo '<option value="'.$id.'">'.$id.' — '.$nm.'</option>';
+    }
   }
   mysqli_free_result($rs);
 } else {
-  echo '<option value="">No matches</option>';
+  echo '<option value="">No matches found</option>';
 }

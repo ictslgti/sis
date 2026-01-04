@@ -300,7 +300,7 @@ if ($qpos) {
             <i class="fas fa-tachometer-alt"></i>
           </div>
           <div>
-            <h2 class="dashboard-title mb-1">HOD Dashboard</h2>
+            <h2 class="dashboard-title mb-1">Department Dashboard</h2>
             <p class="dashboard-subtitle mb-0">
               <i class="fas fa-building mr-1"></i>
               <span class="text-muted">Department:</span> 

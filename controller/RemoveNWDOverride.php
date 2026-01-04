@@ -21,9 +21,11 @@ $date = isset($_POST['date']) ? trim($_POST['date']) : '';
 $dept = isset($_POST['department_id']) ? trim($_POST['department_id']) : '';
 $course = isset($_POST['course_id']) ? trim($_POST['course_id']) : '';
 $month = isset($_POST['month']) ? trim($_POST['month']) : '';
+$isSAO = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'SAO');
+$removeAllDepts = ($isSAO && ($dept === 'ALL' || $dept === ''));
 
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { redirect_back(['err'=>'date']); }
-if ($dept==='') { redirect_back(['err'=>'dept']); }
+if (!$removeAllDepts && $dept==='') { redirect_back(['err'=>'dept']); }
 
 $dt = mysqli_real_escape_string($con, $date);
 
@@ -34,6 +36,31 @@ if ($chk = mysqli_query($con, "SHOW COLUMNS FROM `attendance` LIKE 'module_name'
   mysqli_free_result($chk);
 }
 
+if ($removeAllDepts) {
+  // SAO removing for ALL departments
+  // Get all departments
+  $deptList = [];
+  $dq = mysqli_query($con, "SELECT department_id FROM department");
+  if ($dq) { while($r=mysqli_fetch_assoc($dq)){ $deptList[] = $r['department_id']; } }
+  
+  if (!empty($deptList)) {
+    foreach ($deptList as $deptId) {
+      $deptEsc = mysqli_real_escape_string($con, $deptId);
+      $where = "c.department_id='$deptEsc'";
+      if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }
+      $where .= " AND se.student_enroll_status IN ('Following','Active')";
+      
+      $del = "DELETE a FROM attendance a JOIN student s ON s.student_id=a.student_id JOIN student_enroll se ON se.student_id=s.student_id JOIN course c ON c.course_id=se.course_id WHERE a.`date`='$dt' AND a.attendance_status=-1 AND $where";
+      if ($hasModuleName) { $del .= " AND a.module_name='".mysqli_real_escape_string($con,'NWD')."'"; }
+      @mysqli_query($con, $del);
+    }
+  }
+  
+  redirect_back(['ok'=>'1','month'=>$month,'focus_date'=>$date,'all_depts'=>'1']);
+  exit;
+}
+
+// Original single department logic
 // Build DELETE with joins to scope by department/course
 $where = "c.department_id='".mysqli_real_escape_string($con,$dept)."'";
 if ($course !== '') { $where .= " AND se.course_id='".mysqli_real_escape_string($con,$course)."'"; }

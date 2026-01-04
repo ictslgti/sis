@@ -200,6 +200,9 @@ require_once __DIR__ . '/../menu.php';
   <h3 class="mb-3"><i class="fas fa-file-invoice-dollar text-primary mr-2"></i> Payments Summary</h3>
 
   <div class="card mb-3">
+    <div class="card-header">
+      <h5 class="mb-0 text-white"><i class="fas fa-filter mr-2 text-white"></i> Filters</h5>
+    </div>
     <div class="card-body">
       <form method="get" class="form-row align-items-end">
         <div class="form-group col-md-3">
@@ -286,21 +289,24 @@ require_once __DIR__ . '/../menu.php';
   </div>
 
   <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0 text-white"><i class="fas fa-table mr-2 text-white"></i> Payment Summary Results</h5>
+    </div>
     <div class="card-body">
       <?php if ($group === 'detailed'): ?>
         <div class="table-responsive">
           <table class="table table-sm table-bordered table-hover">
             <thead class="thead-light">
               <tr>
-                <th>Date</th>
-                <th>Student ID</th>
-                <th>Name</th>
-                <th>Department</th>
-                <th>Type</th>
-                <th>Reason</th>
-                <th class="text-right">Amount</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Total</th>
+                <th style="color: #ffffff !important;">Date</th>
+                <th style="color: #ffffff !important;">Student ID</th>
+                <th style="color: #ffffff !important;">Name</th>
+                <th style="color: #ffffff !important;">Department</th>
+                <th style="color: #ffffff !important;">Type</th>
+                <th style="color: #ffffff !important;">Reason</th>
+                <th class="text-right" style="color: #ffffff !important;">Amount</th>
+                <th class="text-right" style="color: #ffffff !important;">Qty</th>
+                <th class="text-right" style="color: #ffffff !important;">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -337,11 +343,11 @@ require_once __DIR__ . '/../menu.php';
           <table class="table table-sm table-bordered table-hover">
             <thead class="thead-light">
               <tr>
-                <th>Student ID</th>
-                <th>Name</th>
-                <th class="text-right">Amount</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Total</th>
+                <th style="color: #ffffff !important;">Student ID</th>
+                <th style="color: #ffffff !important;">Name</th>
+                <th class="text-right" style="color: #ffffff !important;">Amount</th>
+                <th class="text-right" style="color: #ffffff !important;">Qty</th>
+                <th class="text-right" style="color: #ffffff !important;">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -375,10 +381,10 @@ require_once __DIR__ . '/../menu.php';
           <table class="table table-sm table-bordered table-hover">
             <thead class="thead-light">
               <tr>
-                <th>Department</th>
-                <th class="text-right">Amount</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Total</th>
+                <th style="color: #ffffff !important;">Department</th>
+                <th class="text-right" style="color: #ffffff !important;">Amount</th>
+                <th class="text-right" style="color: #ffffff !important;">Qty</th>
+                <th class="text-right" style="color: #ffffff !important;">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -410,10 +416,10 @@ require_once __DIR__ . '/../menu.php';
           <table class="table table-sm table-bordered table-hover">
             <thead class="thead-light">
               <tr>
-                <th>Payment Type | Reason</th>
-                <th class="text-right">Amount</th>
-                <th class="text-right">Qty</th>
-                <th class="text-right">Total</th>
+                <th style="color: #ffffff !important;">Payment Type | Reason</th>
+                <th class="text-right" style="color: #ffffff !important;">Amount</th>
+                <th class="text-right" style="color: #ffffff !important;">Qty</th>
+                <th class="text-right" style="color: #ffffff !important;">Total</th>
               </tr>
             </thead>
             <tbody>
@@ -434,4 +440,275 @@ require_once __DIR__ . '/../menu.php';
     </div>
   </div>
 </div>
+
+<style>
+  /* White and Blue Theme - Payments Summary */
+  
+  /* Page Header */
+  h3 {
+    color: #1e3a8a;
+    font-weight: 600;
+  }
+  
+  /* Card Styling */
+  .card {
+    border: 1px solid #e0e7ff;
+    box-shadow: 0 2px 4px rgba(30, 58, 138, 0.1);
+    border-radius: 0.5rem;
+  }
+  
+  .card-header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    color: #ffffff !important;
+    border-bottom: 2px solid #1e40af;
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+  }
+  
+  .card-header * {
+    color: #ffffff !important;
+  }
+  
+  .card-header h1,
+  .card-header h2,
+  .card-header h3,
+  .card-header h4,
+  .card-header h5,
+  .card-header h6 {
+    color: #ffffff !important;
+  }
+  
+  .card-header i,
+  .card-header .fa,
+  .card-header .fas,
+  .card-header .far,
+  .card-header .icon {
+    color: #ffffff !important;
+  }
+  
+  .card-header .text-white,
+  .card-header span,
+  .card-header div,
+  .card-header label {
+    color: #ffffff !important;
+  }
+  
+  .card-body {
+    background-color: #ffffff;
+    padding: 1.5rem;
+  }
+  
+  /* Form Elements */
+  .form-group label {
+    color: #1e3a8a;
+    font-weight: 600;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+  }
+  
+  .form-control {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9375rem;
+    transition: all 0.2s ease;
+  }
+  
+  .form-control:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    outline: 0;
+  }
+  
+  select.form-control {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%231e3a8a' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+  }
+  
+  select.form-control:focus {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%233b82f6' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+    border: none;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(30, 58, 138, 0.3);
+  }
+  
+  .btn-success {
+    background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+    border: none;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0.5rem 1.5rem;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+  }
+  
+  .btn-success:hover {
+    background: linear-gradient(135deg, #047857 0%, #059669 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 6px rgba(5, 150, 105, 0.3);
+  }
+  
+  /* Table Styling */
+  .table {
+    background-color: #ffffff;
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  
+  .table thead th {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+    color: #ffffff !important;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.8125rem;
+    letter-spacing: 0.5px;
+    padding: 0.875rem 0.75rem;
+    border: none;
+    border-bottom: 2px solid #1e40af;
+  }
+  
+  .table thead th * {
+    color: #ffffff !important;
+  }
+  
+  .table thead th:first-child {
+    border-top-left-radius: 0.5rem;
+  }
+  
+  .table thead th:last-child {
+    border-top-right-radius: 0.5rem;
+  }
+  
+  /* Override thead-light class */
+  .table thead.thead-light th {
+    background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%) !important;
+    color: #ffffff !important;
+  }
+  
+  .table tbody td {
+    padding: 0.875rem 0.75rem;
+    border-bottom: 1px solid #e0e7ff;
+    color: #1e293b;
+    vertical-align: middle;
+  }
+  
+  .table tbody tr {
+    transition: background-color 0.2s ease;
+  }
+  
+  .table tbody tr:hover {
+    background-color: #f0f9ff;
+  }
+  
+  .table tbody tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+  
+  .table tbody tr:nth-child(even):hover {
+    background-color: #f0f9ff;
+  }
+  
+  .table tfoot {
+    background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  }
+  
+  .table tfoot td {
+    border-top: 2px solid #3b82f6;
+    font-weight: 700;
+    color: #1e3a8a;
+    padding: 1rem 0.75rem;
+  }
+  
+  .table-bordered {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    overflow: hidden;
+  }
+  
+  .table-bordered thead th {
+    border: none;
+  }
+  
+  .table-bordered tbody td {
+    border-right: 1px solid #e0e7ff;
+  }
+  
+  .table-bordered tbody td:last-child {
+    border-right: none;
+  }
+  
+  /* Text Colors */
+  .text-primary {
+    color: #1e3a8a !important;
+  }
+  
+  .text-muted {
+    color: #64748b !important;
+  }
+  
+  /* Input Group */
+  .input-group-text {
+    background-color: #eff6ff;
+    border: 1px solid #cbd5e1;
+    color: #1e3a8a;
+  }
+  
+  /* Breadcrumb */
+  .breadcrumb {
+    background-color: #ffffff;
+    border: 1px solid #e0e7ff;
+  }
+  
+  .breadcrumb-item a {
+    color: #3b82f6;
+  }
+  
+  .breadcrumb-item.active {
+    color: #1e3a8a;
+  }
+  
+  /* Responsive */
+  @media (max-width: 768px) {
+    .card-body {
+      padding: 1rem;
+    }
+    
+    .table {
+      font-size: 0.875rem;
+    }
+    
+    .table thead th,
+    .table tbody td {
+      padding: 0.5rem;
+    }
+  }
+  
+  /* Empty State */
+  .text-center.text-muted {
+    color: #94a3b8 !important;
+    font-style: italic;
+    padding: 2rem !important;
+  }
+</style>
+
 <?php require_once __DIR__ . '/../footer.php'; ?>

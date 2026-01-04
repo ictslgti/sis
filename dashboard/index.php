@@ -103,7 +103,9 @@ if ($selectedYear === '') {
   <div class="col-md-8 col-sm-12">
     <div class="card mb-3">
       <div class="card-body">
-        <h6 class="card-header font-weight-lighter mb-3 bg-white px-0">My Academic Summary</h6>
+        <h6 class="mb-3 px-0" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%); color: #ffffff; padding: 0.75rem 1rem; border-radius: 8px; font-weight: 600;">
+          <i class="fas fa-graduation-cap mr-2"></i>My Academic Summary
+        </h6>
         <div class="row">
           <div class="col-md-6 mb-2">
             <div class="small text-uppercase text-muted">Department</div>
@@ -125,8 +127,8 @@ if ($selectedYear === '') {
       </div>
     </div>
 
-    <div class="alert alert-info">
-      This dashboard is personalized for students. Use the sidebar to access Attendance, Assessments, Notices, and more.
+    <div class="alert alert-info" style="background-color: var(--color-light-blue); border-color: var(--color-medium-blue); color: var(--color-dark-navy);">
+      <i class="fas fa-info-circle mr-2"></i>This dashboard is personalized for students. Use the sidebar to access Attendance, Assessments, Notices, and more.
     </div>
   </div>
 </div>
@@ -204,18 +206,19 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 
 <style>
   /* ============================================
-     DASHBOARD - SIMPLE BLUE/WHITE THEME
-     NO HOVER EFFECTS - PROFESSIONAL & CLEAN
+     DASHBOARD - CUSTOM COLOR THEME
+     Colors: #E7F0FA, #7BA4D0, #2E5E00, #0D2440
      ============================================ */
   
-  /* Blue/White Theme Variables */
+  /* Custom Color Theme Variables */
   :root {
-    --blue-primary: #2563eb;
-    --blue-dark: #1e40af;
-    --blue-light: #3b82f6;
+    --color-light-blue: #E7F0FA;
+    --color-medium-blue: #7BA4D0;
+    --color-dark-green: #2E5E00;
+    --color-dark-navy: #0D2440;
     --white: #ffffff;
     --gray-light: #f8fafc;
-    --gray-border: #e2e8f0;
+    --gray-border: #d1d5db;
     --text-dark: #1e293b;
     --text-muted: #64748b;
   }
@@ -295,9 +298,9 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     }
   }
   
-  /* Form Controls - Blue/White Theme */
+  /* Form Controls - Custom Color Theme */
   .form-control {
-    border: 1.5px solid var(--gray-border);
+    border: 1.5px solid var(--color-medium-blue);
     border-radius: 8px;
     background: var(--white);
     color: var(--text-dark);
@@ -308,8 +311,8 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   }
   
   .form-control:focus {
-    border-color: var(--blue-primary);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+    border-color: var(--color-dark-navy);
+    box-shadow: 0 0 0 3px rgba(13, 36, 64, 0.1);
     outline: none;
     background: var(--white);
     color: var(--text-dark);
@@ -325,7 +328,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     appearance: none;
     -webkit-appearance: none;
     -moz-appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232563eb' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%230D2440' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 0.75rem center;
     background-size: 12px;
@@ -426,35 +429,82 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     }
   }
   
-  /* Buttons - Blue Theme */
+  /* Buttons - Custom Color Theme */
   .btn-primary {
-    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
     border: none;
     color: var(--white);
-    box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 2px 4px rgba(13, 36, 64, 0.2);
     border-radius: 8px;
+    font-weight: 600;
+  }
+  
+  .btn-primary:hover {
+    background: linear-gradient(135deg, var(--color-medium-blue) 0%, var(--color-dark-navy) 100%);
+    box-shadow: 0 4px 8px rgba(13, 36, 64, 0.3);
   }
   
   .btn-outline-primary {
-    border: 2px solid var(--blue-primary);
-    color: var(--blue-primary);
+    border: 2px solid var(--color-dark-navy);
+    color: var(--color-dark-navy);
     background: transparent;
     border-radius: 8px;
   }
   
+  .btn-outline-primary:hover {
+    background: var(--color-dark-navy);
+    color: var(--white);
+  }
+  
   .btn-outline-secondary {
-    border: 2px solid var(--gray-border);
-    color: var(--text-dark);
+    border: 2px solid var(--color-medium-blue);
+    color: var(--color-medium-blue);
     background: transparent;
     border-radius: 8px;
   }
+  
+  .btn-outline-secondary:hover {
+    background: var(--color-medium-blue);
+    color: var(--white);
+  }
+  
+  .btn-light {
+    background: var(--color-light-blue);
+    border: 1px solid var(--color-medium-blue);
+    color: var(--color-dark-navy);
+    border-radius: 8px;
+    font-weight: 600;
+  }
+  
+  .btn-light:hover {
+    background: var(--color-medium-blue);
+    color: var(--white);
+  }
+  
+  .btn-outline-light {
+    border: 2px solid var(--white);
+    color: var(--white);
+    background: transparent;
+    border-radius: 8px;
+  }
+  
+  .btn-outline-light:hover {
+    background: var(--white);
+    color: var(--color-dark-navy);
+  }
 
-  /* Stat Cards - Blue/White Theme */
+  /* Stat Cards - Custom Color Theme */
   .stat-card { 
     border: 0; 
     color: var(--white); 
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(13, 36, 64, 0.15);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(13, 36, 64, 0.2);
   }
   
   .stat-card .icon { 
@@ -464,7 +514,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     align-items: center; 
     justify-content: center; 
     border-radius: 12px; 
-    background: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.25);
     font-size: 1.5rem;
   }
   
@@ -475,7 +525,7 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     letter-spacing: 1px; 
     font-weight: 600;
     margin-bottom: 0.25rem;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(255, 255, 255, 0.95);
   }
   
   .stat-value { 
@@ -599,17 +649,18 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
     }
   }
   
-  /* Table Styles - Blue/White Theme */
+  /* Table Styles - Custom Color Theme */
   .table {
     color: var(--text-dark);
     background: var(--white);
   }
   
   .table thead th {
-    background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-primary) 100%);
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
     color: var(--white);
     font-weight: 600;
     border: none;
+    padding: 1rem 0.75rem;
   }
   
   .table tbody {
@@ -619,31 +670,252 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   
   .table tbody td {
     color: var(--text-dark);
-    border-color: var(--gray-border);
+    border-color: var(--color-light-blue);
+    padding: 0.875rem 0.75rem;
   }
   
   .table-striped tbody tr:nth-of-type(odd) {
-    background-color: var(--gray-light);
+    background-color: var(--color-light-blue);
   }
   
-  /* Cards - Blue/White Theme */
+  .table tbody tr:hover {
+    background-color: rgba(123, 164, 208, 0.1);
+  }
+  
+  /* Cards - Custom Color Theme */
   .card {
     background: var(--white);
-    border: 1px solid var(--gray-border);
+    border: 1px solid var(--color-light-blue);
     border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 2px 8px rgba(13, 36, 64, 0.08);
+    transition: box-shadow 0.2s ease;
+  }
+  
+  .card:hover {
+    box-shadow: 0 4px 12px rgba(13, 36, 64, 0.12);
   }
   
   .card-header {
-    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
     color: var(--white);
     border: none;
     border-radius: 12px 12px 0 0;
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+  }
+  
+  .card-header * {
+    color: var(--white) !important;
+  }
+  
+  .card-header h1,
+  .card-header h2,
+  .card-header h3,
+  .card-header h4,
+  .card-header h5,
+  .card-header h6 {
+    color: var(--white) !important;
   }
   
   .card-body {
     color: var(--text-dark);
     background: var(--white);
+    padding: 1.5rem;
+  }
+  
+  /* Alert Styles */
+  .alert-info {
+    background-color: var(--color-light-blue);
+    border-color: var(--color-medium-blue);
+    color: var(--color-dark-navy);
+  }
+  
+  /* Badge Styles */
+  .badge {
+    background: var(--color-medium-blue);
+    color: var(--white);
+    padding: 0.4rem 0.8rem;
+    border-radius: 6px;
+    font-weight: 600;
+  }
+  
+  .badge-primary {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
+  }
+  
+  .badge-light {
+    background: var(--color-light-blue);
+    color: var(--color-dark-navy);
+  }
+  
+  /* Text Colors */
+  .text-primary {
+    color: var(--color-dark-navy) !important;
+  }
+  
+  .text-muted {
+    color: var(--text-muted) !important;
+  }
+  
+  /* Chip Styles */
+  .chip {
+    background: var(--color-light-blue);
+    border: 1px solid var(--color-medium-blue);
+    color: var(--color-dark-navy);
+  }
+  
+  .chip .count {
+    background: var(--color-medium-blue);
+    color: var(--white);
+  }
+  
+  /* Accordion Header */
+  .accordion .card-header {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
+    color: var(--white);
+  }
+  
+  .accordion .card-header * {
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header button {
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header button i {
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header .badge {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: var(--white) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+  }
+  
+  /* Dashboard Header Card */
+  .dashboard-header-card {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(13, 36, 64, 0.2);
+  }
+  
+  /* Religion Cards */
+  .rel-card {
+    background: linear-gradient(135deg, var(--color-light-blue) 0%, var(--color-medium-blue) 100%);
+    border: 1px solid var(--color-medium-blue);
+    color: var(--color-dark-navy);
+  }
+  
+  .rel-card .rel-name {
+    color: var(--color-dark-navy);
+    font-weight: 700;
+  }
+  
+  .rel-card .rel-count {
+    color: var(--color-dark-navy);
+    font-weight: 800;
+    font-size: 1.5rem;
+  }
+  
+  /* Chart Container */
+  .dept-line-body {
+    background: var(--color-light-blue);
+  }
+  
+  /* Alert Styling */
+  .alert-info {
+    background-color: var(--color-light-blue) !important;
+    border-color: var(--color-medium-blue) !important;
+    color: var(--color-dark-navy) !important;
+  }
+  
+  .alert-warning {
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+  }
+  
+  /* Card Footer */
+  .card-footer {
+    background-color: var(--white) !important;
+    border-top: 1px solid var(--color-light-blue);
+  }
+  
+  .card-footer .chip-list-label {
+    color: var(--color-dark-navy);
+    font-weight: 600;
+  }
+  
+  /* Chip Styling */
+  .chip {
+    background: var(--color-light-blue) !important;
+    border: 1px solid var(--color-medium-blue) !important;
+    color: var(--color-dark-navy) !important;
+  }
+  
+  .chip .count {
+    background: var(--color-medium-blue) !important;
+    color: var(--white) !important;
+  }
+  
+  .chip.top1 .count,
+  .chip.top2 .count,
+  .chip.top3 .count {
+    background: var(--color-dark-navy) !important;
+    color: var(--white) !important;
+  }
+  
+  /* Student Dashboard Cards */
+  .card-title {
+    color: var(--color-dark-navy);
+    font-weight: 600;
+  }
+  
+  /* Academic Year Selector in Header */
+  .dashboard-header-card select.form-control {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    border-color: rgba(255, 255, 255, 0.3) !important;
+    color: var(--white) !important;
+  }
+  
+  .dashboard-header-card select.form-control option {
+    background-color: var(--color-dark-navy);
+    color: var(--white);
+  }
+  
+  .dashboard-header-card select.form-control:focus {
+    background-color: rgba(255, 255, 255, 0.3) !important;
+    border-color: rgba(255, 255, 255, 0.5) !important;
+    color: var(--white) !important;
+  }
+  
+  /* Table Striped Rows */
+  .table-striped tbody tr:nth-of-type(odd) {
+    background-color: var(--color-light-blue) !important;
+  }
+  
+  .table-striped tbody tr:nth-of-type(even) {
+    background-color: var(--white) !important;
+  }
+  
+  /* Text Colors */
+  .text-muted {
+    color: var(--text-muted) !important;
+  }
+  
+  /* Links */
+  a {
+    color: var(--color-dark-navy);
+  }
+  
+  a:hover {
+    color: var(--color-medium-blue);
+  }
+  
+  /* Empty State */
+  .text-center.text-muted i {
+    color: var(--color-medium-blue) !important;
   }
 </style>
 
@@ -699,21 +971,216 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 </div>
 
 <style>
+  /* ============================================
+     DASHBOARD BLUE THEME - COMPREHENSIVE
+     ============================================ */
+  
+  /* Page Background */
+  body {
+    background-color: var(--color-light-blue);
+  }
+  
+  .page-content {
+    background-color: var(--color-light-blue);
+    min-height: 100vh;
+  }
+  
+  .container-fluid {
+    background-color: transparent;
+  }
+  
+  /* Dashboard Header Card */
   .dashboard-header-card {
-    background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);
     border-radius: 12px;
-    box-shadow: 0 4px 8px rgba(37, 99, 235, 0.2);
+    box-shadow: 0 4px 12px rgba(13, 36, 64, 0.2);
+  }
+  
+  .dashboard-header-card * {
+    color: var(--white) !important;
+  }
+  
+  .dashboard-header-card h3 {
+    color: var(--white) !important;
+  }
+  
+  .dashboard-header-card .text-white-50 {
+    color: rgba(255, 255, 255, 0.8) !important;
+  }
+  
+  /* Stat Card Backgrounds */
+  .stat-card[style*="background"] {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%) !important;
+  }
+  
+  /* All Card Headers - Blue Theme */
+  .card-header {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%) !important;
+    color: var(--white) !important;
+  }
+  
+  .card-header * {
+    color: var(--white) !important;
+  }
+  
+  .card-header h1,
+  .card-header h2,
+  .card-header h3,
+  .card-header h4,
+  .card-header h5,
+  .card-header h6,
+  .card-header .font-weight-bold,
+  .card-header .font-weight-semibold,
+  .card-header div,
+  .card-header span,
+  .card-header label {
+    color: var(--white) !important;
+  }
+  
+  .card-header i,
+  .card-header .fa,
+  .card-header .fas,
+  .card-header .far {
+    color: var(--white) !important;
+  }
+  
+  .card-header .badge {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    color: var(--white) !important;
+  }
+  
+  /* Card Bodies - White Background */
+  .card-body {
+    background-color: var(--white) !important;
+    color: var(--text-dark);
+  }
+  
+  /* Accordion Headers - Blue Theme */
+  .accordion .card-header {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%) !important;
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header * {
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header button {
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header button i {
+    color: var(--white) !important;
+  }
+  
+  .accordion .card-header .badge {
+    background: rgba(255, 255, 255, 0.25) !important;
+    border: 1px solid rgba(255, 255, 255, 0.4) !important;
+    color: var(--white) !important;
+  }
+  
+  /* Headings */
+  h3, h5, h6 {
+    color: var(--color-dark-navy);
+  }
+  
+  /* Horizontal Rules */
+  hr {
+    border-color: var(--color-medium-blue);
+    border-width: 1px;
+    opacity: 0.3;
+  }
+  
+  /* Form Elements */
+  label {
+    color: var(--color-dark-navy);
+    font-weight: 600;
+  }
+  
+  .form-control {
+    background-color: var(--white);
+    border-color: var(--color-medium-blue);
+  }
+  
+  .form-control:focus {
+    border-color: var(--color-dark-navy);
+    background-color: var(--white);
+  }
+  
+  /* Buttons in Header */
+  .dashboard-header-card .btn-light {
+    background: rgba(255, 255, 255, 0.2) !important;
+    border: 1px solid rgba(255, 255, 255, 0.3) !important;
+    color: var(--white) !important;
+  }
+  
+  .dashboard-header-card .btn-light:hover {
+    background: rgba(255, 255, 255, 0.3) !important;
+    color: var(--white) !important;
+  }
+  
+  .dashboard-header-card .btn-outline-light {
+    border: 1px solid rgba(255, 255, 255, 0.5) !important;
+    color: var(--white) !important;
+  }
+  
+  .dashboard-header-card .btn-outline-light:hover {
+    background: rgba(255, 255, 255, 0.2) !important;
+    color: var(--white) !important;
+  }
+  
+  /* Icon Colors */
+  .text-primary i,
+  i.text-primary {
+    color: var(--color-dark-navy) !important;
+  }
+  
+  /* Success/Info Colors using Green */
+  .text-success {
+    color: var(--color-dark-green) !important;
+  }
+  
+  .bg-success {
+    background-color: var(--color-dark-green) !important;
+  }
+  
+  /* Table Headers in Accordion */
+  .accordion .table thead th {
+    background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%) !important;
+    color: var(--white) !important;
+  }
+  
+  /* Empty State */
+  .text-center.text-muted {
+    color: var(--text-muted) !important;
+  }
+  
+  /* Department List Items */
+  .accordion .card {
+    background: var(--white);
+    border: 1px solid var(--color-light-blue);
+  }
+  
+  .accordion .card-body {
+    background: var(--white);
+  }
+  
+  /* Badge in Card Header */
+  .card-header .badge-primary {
+    background: rgba(255, 255, 255, 0.25) !important;
+    color: var(--white) !important;
   }
 </style>
 
 <!-- Stat Cards Row -->
 <div class="row mt-2 mobile-tight">
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-primary) 100%);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-building fa-lg"></i></div>
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-building fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Departments</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">Departments</div>
           <div class="stat-value" style="color: #ffffff;"><?php echo $deptCount; ?></div>
         </div>
       </div>
@@ -721,23 +1188,23 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-light) 100%);">
-      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-book-open fa-lg"></i></div>
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--color-medium-blue) 0%, var(--color-light-blue) 100%); color: var(--color-dark-navy);">
+      <div class="card-body d-flex align-items-center">
+        <div class="icon mr-3" style="color: var(--color-dark-navy); background: rgba(13, 36, 64, 0.1);"><i class="fas fa-book-open fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Courses</div>
-          <div class="stat-value" style="color: #ffffff;"><?php echo $courseCount; ?></div>
+          <div class="stat-label" style="color: var(--color-dark-navy);">Courses</div>
+          <div class="stat-value" style="color: var(--color-dark-navy);"><?php echo $courseCount; ?></div>
         </div>
       </div>
     </div>
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-users fa-lg"></i></div>
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-users fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Following Students</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">Following Students</div>
           <div class="stat-value" style="color: #ffffff;"><?php echo $studentCount; ?></div>
         </div>
       </div>
@@ -745,11 +1212,11 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-light) 0%, var(--blue-primary) 100%);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--color-dark-green) 0%, #3d7a00 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-briefcase fa-lg"></i></div>
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-briefcase fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9);">Internships</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">Internships</div>
           <div class="stat-value" style="color: #ffffff;"><?php echo $internCount; ?></div>
         </div>
       </div>
@@ -757,11 +1224,11 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-dark) 100%);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--color-medium-blue) 0%, var(--color-dark-navy) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-level-up-alt fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9);">NVQ Level 4</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">NVQ Level 4</div>
           <div class="stat-value" style="color: #ffffff;"><?php echo $nvq4Count; ?></div>
         </div>
       </div>
@@ -769,11 +1236,11 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
   </div>
   
   <div class="col-md-4 col-sm-6 col-12 mb-3">
-    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--blue-dark) 0%, var(--blue-primary) 100%);">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%);">
       <div class="card-body d-flex align-items-center" style="color: #ffffff;">
-        <div class="icon mr-3" style="color: #c7d2fe;"><i class="fas fa-level-up-alt fa-lg"></i></div>
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-level-up-alt fa-lg"></i></div>
         <div>
-          <div class="stat-label" style="color: rgba(255,255,255,0.9);">NVQ Level 5</div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">NVQ Level 5</div>
           <div class="stat-value" style="color: #ffffff;"><?php echo $nvq5Count; ?></div>
         </div>
       </div>
@@ -846,13 +1313,13 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 <div class="row mt-1 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white d-flex justify-content-between align-items-center py-3" style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important; border-bottom: 2px solid #e2e8f0;">
-        <div class="font-weight-bold" style="color: var(--theme-primary); font-size: 1.1rem;">
-          <i class="fas fa-chart-bar mr-2"></i> Department-wise Course Counts
+      <div class="card-header d-flex justify-content-between align-items-center py-3" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%) !important; border-bottom: 2px solid rgba(255,255,255,0.2);">
+        <div class="font-weight-bold text-white" style="color: #ffffff !important; font-size: 1.1rem;">
+          <i class="fas fa-chart-bar mr-2 text-white"></i> Department-wise Course Counts
         </div>
         <?php if (!empty($selectedYear)) : ?>
-          <span class="badge" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-secondary) 100%); color: #ffffff; padding: 0.5rem 1rem; font-weight: 600;">
-            <i class="fas fa-calendar-alt mr-1"></i>Year: <?php echo htmlspecialchars($selectedYear); ?>
+          <span class="badge" style="background: rgba(255, 255, 255, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; color: #ffffff !important; padding: 0.5rem 1rem; font-weight: 600;">
+            <i class="fas fa-calendar-alt mr-1 text-white"></i>Year: <?php echo htmlspecialchars($selectedYear); ?>
           </span>
         <?php endif; ?>
       </div>
@@ -870,24 +1337,24 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
               $totalStudents = $deptTotals[$deptName] ?? 0;
             ?>
               <div class="card mb-2 border-0 shadow-sm" style="background: #ffffff; border-radius: 8px;">
-                <div class="card-header py-3" id="h<?php echo $i; ?>" style="background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%); border-radius: 8px; cursor: pointer;">
+                <div class="card-header py-3" id="h<?php echo $i; ?>" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%); border-radius: 8px; cursor: pointer;">
                   <h6 class="mb-0 d-flex justify-content-between align-items-center">
-                    <button class="btn btn-link p-0 text-left" type="button" data-toggle="collapse" data-target="#<?php echo $collapseId; ?>" aria-expanded="false" aria-controls="<?php echo $collapseId; ?>" style="color: #1e293b; font-weight: 600; text-decoration: none; width: 100%;">
-                      <span style="font-size: 1rem;">
-                        <i class="fas fa-building mr-2" style="color: var(--theme-primary);"></i>
+                    <button class="btn btn-link p-0 text-left" type="button" data-toggle="collapse" data-target="#<?php echo $collapseId; ?>" aria-expanded="false" aria-controls="<?php echo $collapseId; ?>" style="color: #ffffff !important; font-weight: 600; text-decoration: none; width: 100%;">
+                      <span style="font-size: 1rem; color: #ffffff;">
+                        <i class="fas fa-building mr-2 text-white"></i>
                         <?php echo htmlspecialchars($deptName); ?>
                       </span>
-                      <small class="ml-2 text-muted">(<?php echo $courseCount; ?> <?php echo $courseCount == 1 ? 'Course' : 'Courses'; ?>)</small>
+                      <small class="ml-2 text-white" style="color: rgba(255,255,255,0.9) !important;">(<?php echo $courseCount; ?> <?php echo $courseCount == 1 ? 'Course' : 'Courses'; ?>)</small>
                     </button>
                     <span class="ml-2 d-flex align-items-center">
-                      <span class="badge badge-primary mr-2" title="Total Students" style="background: linear-gradient(135deg, var(--theme-secondary) 0%, #0891b2 100%); padding: 0.4rem 0.8rem; font-size: 0.85rem;">
-                        <i class="fas fa-users mr-1"></i><?php echo number_format($totalStudents); ?>
+                      <span class="badge badge-primary mr-2" title="Total Students" style="background: rgba(255, 255, 255, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; color: #ffffff !important; padding: 0.4rem 0.8rem; font-size: 0.85rem;">
+                        <i class="fas fa-users mr-1 text-white"></i><?php echo number_format($totalStudents); ?>
                       </span>
-                      <span class="badge badge-primary mr-1" title="Male" style="background: linear-gradient(135deg, var(--theme-primary) 0%, var(--theme-primary-dark) 100%);">
-                        <i class="fas fa-male"></i> <?php echo number_format($g['male']); ?>
+                      <span class="badge badge-primary mr-1" title="Male" style="background: rgba(255, 255, 255, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; color: #ffffff !important; padding: 0.4rem 0.8rem;">
+                        <i class="fas fa-male text-white"></i> <?php echo number_format($g['male']); ?>
                       </span>
-                      <span class="badge" style="background: linear-gradient(135deg, var(--theme-pink) 0%, #ec4899 100%); color: #fff; padding: 0.4rem 0.8rem;" title="Female">
-                        <i class="fas fa-female"></i> <?php echo number_format($g['female']); ?>
+                      <span class="badge" style="background: rgba(255, 255, 255, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; color: #ffffff !important; padding: 0.4rem 0.8rem;" title="Female">
+                        <i class="fas fa-female text-white"></i> <?php echo number_format($g['female']); ?>
                       </span>
                     </span>
                   </h6>
@@ -896,21 +1363,21 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
                   <div class="card-body p-0">
                     <div class="table-responsive">
                       <table class="table table-sm table-striped mb-0" style="font-size: 0.9rem;">
-                        <thead class="thead-light">
+                        <thead>
                           <tr>
-                            <th style="width:50%; font-weight: 600; color: #475569; padding: 12px 15px;">Course</th>
-                            <th class="text-right" style="width:15%; font-weight: 600; color: #475569; padding: 12px 15px;">Male</th>
-                            <th class="text-right" style="width:15%; font-weight: 600; color: #475569; padding: 12px 15px;">Female</th>
-                            <th class="text-right" style="width:20%; font-weight: 600; color: #475569; padding: 12px 15px;">Total</th>
+                            <th style="width:50%; font-weight: 600; color: #ffffff; background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%); padding: 12px 15px;">Course</th>
+                            <th class="text-right" style="width:15%; font-weight: 600; color: #ffffff; background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%); padding: 12px 15px;">Male</th>
+                            <th class="text-right" style="width:15%; font-weight: 600; color: #ffffff; background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%); padding: 12px 15px;">Female</th>
+                            <th class="text-right" style="width:20%; font-weight: 600; color: #ffffff; background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%); padding: 12px 15px;">Total</th>
                           </tr>
                         </thead>
                         <tbody>
                           <?php foreach ($rows as $r): ?>
                             <tr>
-                              <td style="color: #1e293b; padding: 12px 15px;"><?php echo htmlspecialchars($r['course_name'] ?? ''); ?></td>
-                              <td class="text-right font-weight-bold" style="color: var(--theme-primary); padding: 12px 15px;"><?php echo (int)($r['male'] ?? 0); ?></td>
-                              <td class="text-right font-weight-bold" style="color: var(--theme-pink); padding: 12px 15px;"><?php echo (int)($r['female'] ?? 0); ?></td>
-                              <td class="text-right font-weight-bold" style="color: #1e293b; padding: 12px 15px;"><?php echo (int)($r['total'] ?? 0); ?></td>
+                              <td style="color: var(--color-dark-navy); padding: 12px 15px;"><?php echo htmlspecialchars($r['course_name'] ?? ''); ?></td>
+                              <td class="text-right font-weight-bold" style="color: var(--color-dark-navy); padding: 12px 15px;"><?php echo (int)($r['male'] ?? 0); ?></td>
+                              <td class="text-right font-weight-bold" style="color: var(--color-dark-navy); padding: 12px 15px;"><?php echo (int)($r['female'] ?? 0); ?></td>
+                              <td class="text-right font-weight-bold" style="color: var(--color-dark-navy); padding: 12px 15px;"><?php echo (int)($r['total'] ?? 0); ?></td>
                             </tr>
                           <?php endforeach; ?>
                         </tbody>
@@ -930,8 +1397,8 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 <!-- Religion Distribution -->
 <div class="row mt-3 mobile-tight align-items-center rel-filter">
   <div class="col-md-6 col-sm-12">
-    <h5 class="mb-0"><i class="fas fa-praying-hands mr-2 text-primary"></i>Religion-wise Students</h5>
-    <small class="text-muted">Live count by student religion</small>
+    <h5 class="mb-0" style="color: var(--color-dark-navy);"><i class="fas fa-praying-hands mr-2" style="color: var(--color-dark-navy);"></i>Religion-wise Students</h5>
+    <small class="text-muted" style="color: var(--text-muted);">Live count by student religion</small>
   </div>
   <div class="col-md-6 col-sm-12 text-md-right mt-2 mt-md-0">
     <form class="form-inline justify-content-md-end" id="relFilterForm" style="display: none !important;">
@@ -983,10 +1450,10 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
 <div class="row mt-4 mobile-tight">
   <div class="col-12">
     <div class="card shadow-sm border-0">
-      <div class="card-header bg-white d-flex align-items-center justify-content-between py-2">
-        <div class="font-weight-semibold"><i class="fas fa-chart-line mr-1 text-primary"></i> Department-wise District Counts</div>
+      <div class="card-header d-flex align-items-center justify-content-between py-2" style="background: linear-gradient(135deg, var(--color-dark-navy) 0%, var(--color-medium-blue) 100%) !important;">
+        <div class="font-weight-semibold text-white" style="color: #ffffff !important;"><i class="fas fa-chart-line mr-1 text-white"></i> Department-wise District Counts</div>
         <?php if (!empty($selectedYear)) : ?>
-          <span class="badge badge-light">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
+          <span class="badge" style="background: rgba(255, 255, 255, 0.25) !important; border: 1px solid rgba(255, 255, 255, 0.4) !important; color: #ffffff !important; padding: 0.4rem 0.8rem; font-weight: 600;">Year: <?php echo htmlspecialchars($selectedYear); ?></span>
         <?php endif; ?>
       </div>
       <div class="card-body dept-line-body" style="height: clamp(260px, 42vh, 420px);">

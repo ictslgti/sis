@@ -674,7 +674,7 @@ if ($u_t === 'STU') {
             </a>
           </li>
         </ul>
-      <?php } elseif (in_array($u_t, ['DIR', 'ACC'], true)) { ?>
+      <?php } elseif ($u_t === 'DIR') { ?>
         <ul>
           <li class="header-menu"><span>Director</span></li>
           <li>
@@ -712,6 +712,59 @@ if ($u_t === 'STU') {
               <i class="fas fa-check-circle"></i>
               <span>Department Wise Conduct Acceptance</span>
             </a>
+          </li>
+        </ul>
+      <?php } elseif ($u_t === 'ACC') { ?>
+        <ul>
+          <li class="header-menu"><span>Accounts</span></li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/dashboard/index.php">
+              <i class="fa fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fab fa-amazon-pay"></i>
+              <span>Payments</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/CollectPayment.php">Collect Payment</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/PaymentsSummary.php">Payments Summary</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/finance/ManagePaymentTypes.php">Manage Payment Types</a></li>
+              </ul>
+            </div>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/hostel/AllocatedRoomWise.php">
+              <i class="far fa-building"></i>
+              <span>Hostel Info</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/student/ManageStudents.php">
+              <i class="fas fa-users"></i>
+              <span>Manage Students</span>
+            </a>
+          </li>
+          <li>
+            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
+              <i class="fas fa-calendar-check"></i>
+              <span>Attendance Report</span>
+            </a>
+          </li>
+          <li class="sidebar-dropdown">
+            <a href="#">
+              <i class="fas fa-bus"></i>
+              <span>Season Reports</span>
+            </a>
+            <div class="sidebar-submenu">
+              <ul>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport1.php">Report 1 - Student Details</a></li>
+                <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonReport2.php">Report 2 - Payment Details</a></li>
+              </ul>
+            </div>
           </li>
         </ul>
       <?php } elseif ($u_t === 'FIN') { ?>
@@ -1188,14 +1241,16 @@ if ($u_t === 'STU') {
                 </ul>
               </div>
             </li>
-          <?php } ?>
-
-          <?php if (isset($_SESSION['user_type']) && in_array($_SESSION['user_type'], ['SAO'])) { ?>
-            <li>
-              <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">
+            <li class="sidebar-dropdown">
+              <a href="#">
                 <i class="fas fa-calendar-check"></i>
-                <span>Attendance Report</span>
+                <span>Attendance</span>
               </a>
+              <div class="sidebar-submenu">
+                <ul>
+                  <li><a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/attendance/MonthlyAttendanceReport.php">Monthly Attendance Report</a></li>
+                </ul>
+              </div>
             </li>
           <?php } ?>
 
