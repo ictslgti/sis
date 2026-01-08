@@ -296,41 +296,21 @@ $sqlExport = $sqlList;
 $res = mysqli_query($con, $sqlList);
 $total_count = ($res ? mysqli_num_rows($res) : 0);
 
-// Optional debug: show filters/SQL on demand for admins/SAO
-if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
-  echo '<div class="container-fluid"><div class="alert alert-warning small">'
-    . '<div><strong>Debug (server):</strong></div>'
-    . '<div><strong>Filters</strong> ' . h(json_encode([
-      'status' => $fstatus,
-      'department_id' => $fdept,
-      'course_id' => $fcourse,
-      'gender' => $fgender,
-      'conduct' => $fconduct,
-      'group_id' => $fgroup,
-      'academic_year' => $fyear,
-    ])) . '</div>'
-    . '<div><strong>SQL (list)</strong> <code style="white-space:pre-wrap;">' . h($sqlList) . '</code></div>'
-    . '<div><strong>Rows</strong> ' . (int)$total_count . '</div>'
-    . '<div><strong>DB Error</strong> ' . h(mysqli_error($con)) . '</div>';
-  // Extra counts to compare
-  $cntAll = 0; $cntYear = 0;
-  if ($r0 = mysqli_query($con, 'SELECT COUNT(*) AS `c` FROM `student`')) { $cntAll = (int)mysqli_fetch_assoc($r0)['c']; mysqli_free_result($r0); }
-  echo '<div><strong>Total students</strong> ' . $cntAll . '</div>'
-     . '</div></div>';
-}
-
 // Export (CSV opened by Excel) with current filters
+// This must be checked AFTER SQL is built but BEFORE any HTML output
 if (isset($_GET['export']) && $_GET['export'] === 'excel') {
-  $filename = 'students_' . date('Ymd_His') . '.csv';
-  // Send Excel-friendly CSV headers
-  header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
-  header('Content-Disposition: attachment; filename=' . $filename);
-  header('Pragma: no-cache');
-  header('Expires: 0');
-  // Clear any existing output buffers to avoid stray bytes
+  // Clear any existing output buffers FIRST to avoid stray bytes
   if (function_exists('ob_get_level')) {
     while (ob_get_level() > 0) { ob_end_clean(); }
   }
+  
+  $filename = 'students_' . date('Ymd_His') . '.csv';
+  // Send Excel-friendly CSV headers
+  header('Content-Type: application/vnd.ms-excel; charset=UTF-8');
+  header('Content-Disposition: attachment; filename="' . $filename . '"');
+  header('Pragma: no-cache');
+  header('Expires: 0');
+  
   // Output BOM for Excel UTF-8
   echo "\xEF\xBB\xBF";
   $out = fopen('php://output', 'w');
@@ -359,6 +339,119 @@ if (isset($_GET['export']) && $_GET['export'] === 'excel') {
     mysqli_free_result($qr);
   }
   fclose($out);
+  exit;
+}
+
+// Optional debug: show filters/SQL on demand for admins/SAO
+if (($is_admin || $is_sao) && isset($_GET['debug']) && $_GET['debug'] == '1') {
+  echo '<div class="container-fluid"><div class="alert alert-warning small">'
+    . '<div><strong>Debug (server):</strong></div>'
+    . '<div><strong>Filters</strong> ' . h(json_encode([
+      'status' => $fstatus,
+      'department_id' => $fdept,
+      'course_id' => $fcourse,
+      'gender' => $fgender,
+      'conduct' => $fconduct,
+      'group_id' => $fgroup,
+      'academic_year' => $fyear,
+    ])) . '</div>'
+    . '<div><strong>SQL (list)</strong> <code style="white-space:pre-wrap;">' . h($sqlList) . '</code></div>'
+    . '<div><strong>Rows</strong> ' . (int)$total_count . '</div>'
+    . '<div><strong>DB Error</strong> ' . h(mysqli_error($con)) . '</div>';
+  // Extra counts to compare
+  $cntAll = 0; $cntYear = 0;
+  if ($r0 = mysqli_query($con, 'SELECT COUNT(*) AS `c` FROM `student`')) { $cntAll = (int)mysqli_fetch_assoc($r0)['c']; mysqli_free_result($r0); }
+  echo '<div><strong>Total students</strong> ' . $cntAll . '</div>'
+     . '</div></div>';
+}
+
+
+// Export Attendance Sheet (Excel format) - HOD only
+// This must be checked AFTER SQL is built but BEFORE any HTML output
+if (isset($_GET['export']) && $_GET['export'] === 'attendance_sheet') {
+  // Check HOD permission
+  if (!isset($_SESSION['user_type']) || $_SESSION['user_type'] !== 'HOD') {
+    http_response_code(403);
+    die('Access denied. HOD only.');
+  }
+  
+  // Get selected month (format: YYYY-MM)
+  $selectedMonth = isset($_GET['attendance_month']) ? trim($_GET['attendance_month']) : date('Y-m');
+  if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+    $selectedMonth = date('Y-m');
+  }
+  
+  // Generate dates for the month (excluding weekends)
+  $firstDay = $selectedMonth . '-01';
+  $daysInMonth = (int)date('t', strtotime($firstDay));
+  $dateColumns = [];
+  
+  for ($d = 1; $d <= $daysInMonth; $d++) {
+    $dstr = date('Y-m-d', strtotime($selectedMonth . '-' . str_pad($d, 2, '0', STR_PAD_LEFT)));
+    $w = (int)date('w', strtotime($dstr)); // 0=Sun, 6=Sat
+    // Exclude weekends
+    if ($w !== 0 && $w !== 6) {
+      $dateColumns[] = [
+        'date' => $dstr,
+        'day' => $d
+      ];
+    }
+  }
+  
+  $filename = 'attendance_sheet_' . str_replace('-', '', $selectedMonth) . '_' . date('Ymd_His') . '.xls';
+  
+  // Clear any existing output buffers
+  if (function_exists('ob_get_level')) {
+    while (ob_get_level() > 0) { ob_end_clean(); }
+  }
+  
+  // Generate HTML table for Excel
+  $html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">';
+  $html .= '<head><meta charset="UTF-8">';
+  $html .= '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet><x:Name>Attendance Sheet</x:Name></x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->';
+  $html .= '<style>td{border:1px solid #ccc;padding:5px;}th{background-color:#4CAF50;color:white;font-weight:bold;border:1px solid #ccc;padding:8px;text-align:center;}</style>';
+  $html .= '</head><body>';
+  $html .= '<table>';
+  $html .= '<thead><tr>';
+  $html .= '<th>No</th>';
+  $html .= '<th>Student ID</th>';
+  $html .= '<th>Student Name</th>';
+  // Add date columns
+  foreach ($dateColumns as $dateCol) {
+    $html .= '<th>' . $dateCol['day'] . '</th>';
+  }
+  $html .= '</tr></thead>';
+  $html .= '<tbody>';
+  
+  // Use the already built $sqlExport query
+  if ($qr = mysqli_query($con, $sqlExport)) {
+    $rowNum = 0;
+    while ($r = mysqli_fetch_assoc($qr)) {
+      $rowNum++;
+      $html .= '<tr>';
+      $html .= '<td style="text-align:center;">' . $rowNum . '</td>';
+      $html .= '<td>' . htmlspecialchars($r['student_id'] ?? '', ENT_XML1) . '</td>';
+      $html .= '<td>' . htmlspecialchars(display_name($r['student_fullname'] ?? ''), ENT_XML1) . '</td>';
+      // Add empty cells for each date column
+      foreach ($dateColumns as $dateCol) {
+        $html .= '<td style="text-align:center;"></td>';
+      }
+      $html .= '</tr>';
+    }
+    mysqli_free_result($qr);
+  }
+  
+  $html .= '</tbody></table></body></html>';
+  
+  // Set headers for Excel download
+  header('Content-Type: application/vnd.ms-excel; charset=utf-8');
+  header('Content-Disposition: attachment; filename="' . $filename . '"');
+  header('Content-Transfer-Encoding: binary');
+  header('Cache-Control: no-store, no-cache, must-revalidate');
+  header('Cache-Control: post-check=0, pre-check=0', false);
+  header('Pragma: public');
+  header('Content-Length: ' . strlen($html));
+  echo $html;
   exit;
 }
 
@@ -917,6 +1010,27 @@ $__isADM = (isset($_SESSION['user_type']) && $_SESSION['user_type'] === 'ADM');
             <a href="<?php echo $base; ?>/student/ManageStudents.php" class="btn btn-outline-secondary btn-sm mr-2"><i class="fa fa-redo mr-1"></i> Clear Filters</a>
             <?php $qs = $_GET; $qs['export'] = 'excel'; $exportUrl = $base . '/student/ManageStudents.php?' . http_build_query($qs); ?>
             <a href="<?php echo h($exportUrl); ?>" class="btn btn-success btn-sm"><i class="fa fa-file-excel mr-1"></i> Export Excel</a>
+            <?php if ($is_hod): ?>
+              <div class="d-inline-block ml-2">
+                <form method="get" action="" class="d-inline-block" id="attendanceSheetForm">
+                  <?php 
+                  // Preserve existing filters
+                  foreach ($_GET as $key => $value) {
+                    if ($key !== 'export' && $key !== 'attendance_month') {
+                      echo '<input type="hidden" name="' . h($key) . '" value="' . h($value) . '">';
+                    }
+                  }
+                  ?>
+                  <input type="hidden" name="export" value="attendance_sheet">
+                  <div class="input-group input-group-sm">
+                    <input type="month" name="attendance_month" class="form-control" value="<?php echo h(isset($_GET['attendance_month']) ? $_GET['attendance_month'] : date('Y-m')); ?>" required style="max-width: 150px;">
+                    <div class="input-group-append">
+                      <button type="submit" class="btn btn-primary"><i class="fas fa-clipboard-list mr-1"></i> Download Attendance Sheet</button>
+                    </div>
+                  </div>
+                </form>
+              </div>
+            <?php endif; ?>
           </div>
         </div>
 

@@ -88,19 +88,13 @@ $where = [];
 if ($is_student) {
     $where[] = "sr.student_id = '".mysqli_real_escape_string($con, $user_id)."'";
 }
-// SAO can only view approved requests
-if ($is_sao && !$is_hod && !$is_admin) {
-    $where[] = "sr.status = 'approved'";
-}
+// SAO can view all requests (removed restriction to only approved)
 // Filter by HOD's department
 if ($is_hod && !empty($dept_code)) {
     $where[] = "d.department_id = '".mysqli_real_escape_string($con, $dept_code)."'";
 }
 if ($filter_status && in_array($filter_status, ['pending','approved','rejected','cancelled'])) {
-    // Don't apply status filter for SAO (they only see approved)
-    if (!($is_sao && !$is_hod && !$is_admin)) {
-        $where[] = "sr.status = '".$filter_status."'";
-    }
+    $where[] = "sr.status = '".$filter_status."'";
 }
 if ($filter_year) {
     $where[] = "sr.season_year = '".$filter_year."'";
@@ -155,7 +149,34 @@ if ($result) {
             </div>
 
             <!-- Filters -->
-            
+            <div class="card mb-3">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="" class="row">
+                        <div class="col-md-4 mb-2">
+                            <label for="filter_status">Status</label>
+                            <select name="status" id="filter_status" class="form-control">
+                                <option value="">All Statuses</option>
+                                <option value="pending" <?= $filter_status === 'pending' ? 'selected' : '' ?>>Pending</option>
+                                <option value="approved" <?= $filter_status === 'approved' ? 'selected' : '' ?>>Approved</option>
+                                <option value="rejected" <?= $filter_status === 'rejected' ? 'selected' : '' ?>>Rejected</option>
+                                <option value="cancelled" <?= $filter_status === 'cancelled' ? 'selected' : '' ?>>Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4 mb-2">
+                            <label for="filter_year">Season Year</label>
+                            <input type="text" name="year" id="filter_year" class="form-control" 
+                                   placeholder="e.g., 2024" value="<?= htmlspecialchars($filter_year) ?>">
+                        </div>
+                        <div class="col-md-4 mb-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary mr-2">Apply Filters</button>
+                            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/SeasonRequests.php" class="btn btn-secondary">Clear</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
 
             <!-- Live Search Filter -->
             <div class="card mb-3">
@@ -187,17 +208,15 @@ if ($result) {
                             <th>Season Year</th>
                             <th>Route</th>
                             <th>Status</th>
-                            <?php if (!($is_sao && !$is_hod && !$is_admin)): ?>
-                                <th>Payment Status</th>
-                                <th>Balance</th>
-                                <th>Actions</th>
-                            <?php endif; ?>
+                            <th>Payment Status</th>
+                            <th>Balance</th>
+                            <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($requests)): ?>
                             <tr>
-                                <td colspan="<?= ($is_sao && !$is_hod && !$is_admin) ? '5' : '8' ?>" class="text-center">No season requests found.</td>
+                                <td colspan="8" class="text-center">No season requests found.</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($requests as $req): ?>
@@ -219,58 +238,56 @@ if ($result) {
                                         ?>
                                         <span class="badge badge-<?= $class ?>"><?= ucfirst($status) ?></span>
                                     </td>
-                                    <?php if (!($is_sao && !$is_hod && !$is_admin)): ?>
-                                        <td>
-                                            <?php if ($req['payment_id']): ?>
-                                                <span class="badge badge-<?= $req['payment_status'] === 'Completed' ? 'success' : 'info' ?>">
-                                                    <?= htmlspecialchars($req['payment_status']) ?>
-                                                </span>
-                                            <?php else: ?>
-                                                <span class="badge badge-secondary">No Payment</span>
+                                    <td>
+                                        <?php if ($req['payment_id']): ?>
+                                            <span class="badge badge-<?= $req['payment_status'] === 'Completed' ? 'success' : 'info' ?>">
+                                                <?= htmlspecialchars($req['payment_status']) ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="badge badge-secondary">No Payment</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($req['payment_id']): ?>
+                                            Rs. <?= number_format($req['remaining_balance'], 2) ?>
+                                        <?php else: ?>
+                                            -
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/RequestSeason.php?edit=<?= $req['id'] ?>" 
+                                               class="btn btn-sm btn-info" 
+                                               title="View Details">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            
+                                            <?php if (($is_hod || $is_admin) && $req['status'] === 'pending'): ?>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-success" 
+                                                        data-toggle="modal" 
+                                                        data-target="#approveModal<?= $req['id'] ?>"
+                                                        title="Approve Request">
+                                                    <i class="fas fa-check-circle"></i> Approve
+                                                </button>
+                                                <button type="button" 
+                                                        class="btn btn-sm btn-danger" 
+                                                        data-toggle="modal" 
+                                                        data-target="#rejectModal<?= $req['id'] ?>"
+                                                        title="Reject Request">
+                                                    <i class="fas fa-times-circle"></i> Reject
+                                                </button>
                                             <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <?php if ($req['payment_id']): ?>
-                                                Rs. <?= number_format($req['remaining_balance'], 2) ?>
-                                            <?php else: ?>
-                                                -
-                                            <?php endif; ?>
-                                        </td>
-                                        <td>
-                                            <div class="btn-group" role="group">
-                                                <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/RequestSeason.php?edit=<?= $req['id'] ?>" 
-                                                   class="btn btn-sm btn-info" 
-                                                   title="View Details">
-                                                    <i class="fas fa-eye"></i> View
+                                            
+                                            <?php if ($req['status'] === 'approved' && !$req['payment_id'] && ($is_hod || $is_admin || $is_sao || is_role('FIN'))): ?>
+                                                <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/CollectSeasonPayment.php?request_id=<?= $req['id'] ?>" 
+                                                   class="btn btn-sm btn-warning"
+                                                   title="Collect Payment">
+                                                    <i class="fas fa-money-bill-wave"></i> Payment
                                                 </a>
-                                                
-                                                <?php if (($is_hod || $is_admin) && $req['status'] === 'pending'): ?>
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-success" 
-                                                            data-toggle="modal" 
-                                                            data-target="#approveModal<?= $req['id'] ?>"
-                                                            title="Approve Request">
-                                                        <i class="fas fa-check-circle"></i> Approve
-                                                    </button>
-                                                    <button type="button" 
-                                                            class="btn btn-sm btn-danger" 
-                                                            data-toggle="modal" 
-                                                            data-target="#rejectModal<?= $req['id'] ?>"
-                                                            title="Reject Request">
-                                                        <i class="fas fa-times-circle"></i> Reject
-                                                    </button>
-                                                <?php endif; ?>
-                                                
-                                                <?php if ($req['status'] === 'approved' && !$req['payment_id'] && ($is_hod || $is_admin || $is_sao || is_role('FIN'))): ?>
-                                                    <a href="<?php echo defined('APP_BASE') ? APP_BASE : ''; ?>/season/CollectSeasonPayment.php?request_id=<?= $req['id'] ?>" 
-                                                       class="btn btn-sm btn-warning"
-                                                       title="Collect Payment">
-                                                        <i class="fas fa-money-bill-wave"></i> Payment
-                                                    </a>
-                                                <?php endif; ?>
-                                            </div>
-                                        </td>
-                                    <?php endif; ?>
+                                            <?php endif; ?>
+                                        </div>
+                                    </td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>

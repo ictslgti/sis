@@ -92,7 +92,7 @@ $msg = isset($_GET['msg']) ? trim($_GET['msg']) : '';
 
         <hr>
         <h6>Select Students</h6>
-        <div class="alert alert-info py-2">Only students whose gender is compatible with the selected hostel can be allocated. Existing active allocations will be ended before assigning.</div>
+        <div class="alert alert-info py-2">Only students whose gender is compatible with the selected hostel and who are not currently allocated to any hostel can be assigned.</div>
         <div class="form-row">
           <div class="form-group col-md-6">
             <label>Filter by Department (optional)</label>
@@ -197,22 +197,41 @@ $msg = isset($_GET['msg']) ? trim($_GET['msg']) : '';
       // Capacity info already set; we now fetch students from server-side simple list
       // Pass hostel_id so server can filter by hostel gender (Male/Female)
       const resp = await fetch(base + '/controller/StudentListApi.php?hostel_id=' + encodeURIComponent(hid));
-      // Fallback if API doesn't exist: we will render a message
+      // Check response status
       if (resp.status !== 200){
-        studentsBox.innerHTML = '<div class="alert alert-warning">Student list API not found. Please contact admin.</div>';
+        const errorText = await resp.text();
+        let errorMsg = 'Student list API error';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorMsg = errorJson.message || errorJson.error || errorMsg;
+        } catch(e) {
+          errorMsg = resp.status === 403 ? 'Access forbidden. Please check your permissions.' : 
+                     resp.status === 500 ? 'Server error. Please contact admin.' : 
+                     'API returned status ' + resp.status;
+        }
+        studentsBox.innerHTML = '<div class="alert alert-warning">' + errorMsg + '</div>';
         return;
       }
       const json = await resp.json();
+      // Handle both array response and error object response
+      if (json && json.ok === false) {
+        studentsBox.innerHTML = '<div class="alert alert-warning">' + (json.message || 'API returned an error') + '</div>';
+        return;
+      }
       studentsAll = Array.isArray(json)? json : (json.students || []);
+      if (!Array.isArray(studentsAll)) {
+        studentsAll = [];
+      }
       renderStudents();
     } catch (e) {
-      studentsBox.innerHTML = '<div class="alert alert-danger">Failed to load students.</div>';
+      console.error('Error loading students:', e);
+      studentsBox.innerHTML = '<div class="alert alert-danger">Failed to load students: ' + (e.message || 'Unknown error') + '</div>';
     }
   }
 
   function renderStudents(){
     if (!studentsAll || studentsAll.length === 0){
-      studentsBox.innerHTML = '<div class="text-muted">No students to show. Ensure the student list API is available.</div>';
+      studentsBox.innerHTML = '<div class="alert alert-info">No unallocated students found matching the selected hostel criteria. All eligible students may already be allocated to hostels.</div>';
       return;
     }
     const dept = (deptFilter && deptFilter.value) ? String(deptFilter.value) : '';

@@ -505,7 +505,7 @@ if ($isExport) {
         $html .= "<td>".(int)$row['present_days']."</td>";
         $html .= "<td>".(int)$row['total_days']."</td>";
         $html .= "<td>".number_format($row['percentage'], 2)."%</td>";
-        $allow = ($row['percentage']>90?5000:($row['percentage']>80?4000:0));
+        $allow = ($row['percentage']>=90?5000:($row['percentage']>=75?4000:0));
         $sumAllowDet += (int)$allow;
         $html .= "<td>".number_format($allow,0)."</td>";
         $html .= "</tr>";
@@ -546,7 +546,7 @@ if ($isExport) {
         $html .= "<td>" . (int)$row['present_days'] . "</td>";
         $html .= "<td>" . (int)$row['total_days'] . "</td>";
         $html .= "<td>" . number_format($row['percentage'], 2) . "%</td>";
-        $allow = ($row['percentage']>=90?5000:($row['percentage']>=80?4000:0));
+        $allow = ($row['percentage']>=90?5000:($row['percentage']>=75?4000:0));
         $sumAllowSum += (int)$allow;
         $html .= "<td>".number_format($allow,0)."</td>";
         $html .= "</tr>";
@@ -890,7 +890,7 @@ if ($isExport) {
                       <td class="num-col"><?php echo (int)$r['present_days']; ?></td>
                       <td class="num-col"><?php echo (int)$r['total_days']; ?></td>
                       <td class="num-col"><?php echo number_format($r['percentage'], 2); ?></td>
-                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=80?4000:0)); $__sumAllowDetPage += (int)$allow; ?>
+                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=75?4000:0)); $__sumAllowDetPage += (int)$allow; ?>
                       <td class="num-col"><?php echo number_format($allow,0); ?></td>
                     </tr>
                   <?php endforeach; ?>
@@ -923,7 +923,7 @@ if ($isExport) {
                       <td class="num-col"><?php echo (int)$r['present_days']; ?></td>
                       <td class="num-col"><?php echo (int)$r['total_days']; ?></td>
                       <td class="num-col"><?php echo number_format($r['percentage'], 2); ?></td>
-                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=80?4000:0)); $__sumAllowSumPage += (int)$allow; ?>
+                      <?php $allow = ($r['percentage']>=90?5000:($r['percentage']>=75?4000:0)); $__sumAllowSumPage += (int)$allow; ?>
                       <td class="num-col"><?php echo number_format($allow,0); ?></td>
                     </tr>
                   <?php endforeach; ?>

@@ -9,6 +9,13 @@ if (!isset($_SESSION['user_type']) || !in_array($_SESSION['user_type'], ['ADM','
   exit;
 }
 
+// Ensure database connection is available
+if (!isset($con) || !$con) {
+  http_response_code(500);
+  echo json_encode(['ok' => false, 'message' => 'Database connection failed']);
+  exit;
+}
+
 // Optional filters (not strictly used by current UI)
 $dept = isset($_GET['department_id']) ? trim($_GET['department_id']) : '';
 $q    = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -30,17 +37,24 @@ if ($hostelId !== '') {
   }
 }
 
-$sql = "SELECT DISTINCT s.`student_id`, s.`student_fullname`, s.`student_gender`, d.`department_id`, d.`department_name`
+$sql = "SELECT s.`student_id`, s.`student_fullname`, s.`student_gender`, 
+               MAX(d.`department_id`) AS `department_id`, 
+               MAX(d.`department_name`) AS `department_name`
         FROM `student` s
         LEFT JOIN `student_enroll` se ON se.`student_id` = s.`student_id`
         LEFT JOIN `course` c ON c.`course_id` = se.`course_id`
-        LEFT JOIN `department` d ON d.`department_id` = c.`department_id`";
+        LEFT JOIN `department` d ON d.`department_id` = c.`department_id`
+        LEFT JOIN `hostel_allocations` a ON a.`student_id` = s.`student_id` AND a.`status` = 'active'";
 $where = [];
 $params = [];
 $types  = '';
 
 // Exclude inactive students
 $where[] = '(s.student_status IS NULL OR (s.student_status != \'Inactive\' AND s.student_status != 0))';
+// Ensure student has a name
+$where[] = '(s.student_fullname IS NOT NULL AND s.student_fullname != \'\')';
+// Exclude students who already have an active hostel allocation
+$where[] = 'a.`id` IS NULL';
 
 if ($dept !== '') { $where[] = 'd.department_id = ?'; $params[] = $dept; $types .= 's'; }
 if ($q !== '') { $where[] = '(s.student_id LIKE ? OR s.student_fullname LIKE ?)'; $params[] = "%$q%"; $params[] = "%$q%"; $types .= 'ss'; }
@@ -52,6 +66,7 @@ if ($hostelGender === 'Male' || $hostelGender === 'Female') {
 }
 
 if (!empty($where)) { $sql .= ' WHERE ' . implode(' AND ', $where); }
+$sql .= ' GROUP BY s.`student_id`, s.`student_fullname`, s.`student_gender`';
 $sql .= ' ORDER BY s.`student_fullname`, s.`student_id`';
 
 $data = [];

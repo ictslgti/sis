@@ -38,7 +38,6 @@ $month = isset($_GET['month']) && preg_match('/^\d{4}-\d{2}$/', $_GET['month']) 
 $courseId = isset($_GET['course_id']) ? trim($_GET['course_id']) : '';
 $groupId = isset($_GET['group_id']) ? trim($_GET['group_id']) : '';
 $academicYear = isset($_GET['academic_year']) ? trim((string)$_GET['academic_year']) : '';
-$includeWeekends = isset($_GET['include_weekends']) ? (int)$_GET['include_weekends'] : 0;
 $respectHolidays = isset($_GET['respect_holidays']) ? (int)$_GET['respect_holidays'] : 1;
 $respectVacations = isset($_GET['respect_vacations']) ? (int)$_GET['respect_vacations'] : 1;
 $overrideExisting = isset($_GET['override_existing']) ? (int)$_GET['override_existing'] : 0;
@@ -58,33 +57,51 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
     border-spacing: 0;
     width: max-content; /* allow wide grid */
   }
+  /* All header cells are sticky at top */
   .grid-scroll thead th {
     position: sticky;
     top: 0;
     z-index: 3;
-    background: #f8f9fa;
+    background: #f8f9fa !important;
   }
-  /* Sticky left columns */
-  .grid-scroll th.sticky-col,
+  /* Sticky left columns - ID (body cells) */
   .grid-scroll td.sticky-col {
     position: sticky;
     left: 0;
     z-index: 2;
-    background: #fff;
+    background: #fff !important;
   }
-  .grid-scroll th.sticky-col-2,
+  /* Sticky left columns - Name (body cells) */
   .grid-scroll td.sticky-col-2 {
     position: sticky;
-    left: 160px; /* must equal width of first sticky column */
+    left: 180px; /* width of first sticky column (col-id max-width) */
     z-index: 2;
-    background: #fff;
+    background: #fff !important;
   }
-  /* Keep sticky headers above sticky body cells */
-  .grid-scroll thead th.sticky-col,
-  .grid-scroll thead th.sticky-col-2 { z-index: 5; }
+  /* Sticky left columns - ID (header) - highest z-index for corner */
+  .grid-scroll thead th.sticky-col {
+    position: sticky;
+    top: 0;
+    left: 0;
+    z-index: 7;
+    background: #f8f9fa !important;
+  }
+  /* Sticky left columns - Name (header) - highest z-index for corner */
+  .grid-scroll thead th.sticky-col-2 {
+    position: sticky;
+    top: 0;
+    left: 180px;
+    z-index: 7;
+    background: #f8f9fa !important;
+  }
+  /* Date headers are sticky at top (inherit from thead th) but scroll horizontally */
+  .grid-scroll thead th.date-col {
+    z-index: 4;
+    background: #f8f9fa !important;
+  }
 
   /* Column widths for fixed offsets */
-  .grid-scroll .col-id { min-width: 160px; max-width: 180px; }
+  .grid-scroll .col-id { width: 180px; min-width: 180px; max-width: 180px; }
   .grid-scroll .col-name { min-width: 220px; max-width: 280px; }
   .grid-scroll th.date-col, .grid-scroll td.date-col { min-width: 40px; max-width: 56px; text-align: center; }
 
@@ -203,10 +220,6 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           </div>
           <div class="form-group col-md-5">
             <div class="custom-control custom-checkbox mt-4">
-              <input type="checkbox" class="custom-control-input" id="g_weekends" name="include_weekends" value="1" <?php echo $includeWeekends? 'checked' : ''; ?>>
-              <label class="custom-control-label" for="g_weekends">Include weekends</label>
-            </div>
-            <div class="custom-control custom-checkbox mt-2">
               <input type="checkbox" class="custom-control-input" id="g_holidays" name="respect_holidays" value="1" <?php echo $respectHolidays? 'checked' : ''; ?>>
               <label class="custom-control-label" for="g_holidays">Skip public holidays</label>
             </div>
@@ -291,7 +304,7 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
             $dstr = date('Y-m-d', strtotime($month.'-'.str_pad($d,2,'0',STR_PAD_LEFT)));
             if ($dstr > $today) continue; // ignore future
             $w = (int)date('w', strtotime($dstr));
-            if (!$includeWeekends && ($w===0 || $w===6)) continue;
+            if ($w===0 || $w===6) continue; // Always exclude weekends
             if ($respectHolidays && isset($holidaySet[$dstr])) continue;
             if ($respectVacations && isset($vacationSet[$dstr])) continue;
             $visibleDates[] = $dstr;
@@ -380,7 +393,6 @@ $markAs = isset($_GET['mark_as']) && in_array($_GET['mark_as'], ['Present','Abse
           <input type="hidden" name="course_id" value="<?php echo h($courseId); ?>">
           <input type="hidden" name="group_id" value="<?php echo h($groupId); ?>">
           <input type="hidden" name="academic_year" value="<?php echo h($academicYear); ?>">
-          <input type="hidden" name="include_weekends" value="<?php echo (int)$includeWeekends; ?>">
           <input type="hidden" name="respect_holidays" value="<?php echo (int)$respectHolidays; ?>">
           <input type="hidden" name="respect_vacations" value="<?php echo (int)$respectVacations; ?>">
           <?php foreach ($visibleDates as $d): ?>

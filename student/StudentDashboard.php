@@ -436,10 +436,21 @@ if (file_exists($topNav)) {
         </div>
         <div id="cardLinks" class="collapse show">
           <div class="list-group list-group-flush">
-            <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>"><i class="fas fa-calendar mr-2"></i>Timetable</a>
-            <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>/student/Student_profile.php?Sid=<?php echo urlencode($studentId); ?>"><i class="fas fa-id-card mr-2"></i>My Profile</a>
-            <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>onpeak/RequestOnPeak.php"><i class="far fa-calendar-check mr-2"></i>OnPeak Calendar</a>
-            <a class="list-group-item list-group-item-action" href="<?php echo $base; ?>/student/RequestBusSeason.php"><i class="fas fa-bus mr-2"></i>Bus Season Request</a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" href="<?php echo $base; ?>">
+              <i class="fas fa-calendar mr-2"></i><span>Timetable</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" href="<?php echo $base; ?>/student/Student_profile.php?Sid=<?php echo urlencode($studentId); ?>">
+              <i class="fas fa-id-card mr-2"></i><span>My Profile</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" href="<?php echo $base; ?>/onpeak/RequestOnPeak.php">
+              <i class="far fa-calendar-check mr-2"></i><span>OnPeak Calendar</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" href="<?php echo $base; ?>/season/RequestSeason.php">
+              <i class="fas fa-bus mr-2"></i><span>Season Request</span>
+            </a>
+            <a class="list-group-item list-group-item-action d-flex align-items-center" href="<?php echo $base; ?>/season/SeasonRequests.php">
+              <i class="fas fa-list mr-2"></i><span>My Season Requests</span>
+            </a>
           </div>
         </div>
       </div>
