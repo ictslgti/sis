@@ -202,6 +202,10 @@ $sqlNvq5 = "SELECT COUNT(DISTINCT s.student_id) AS cnt
             JOIN course c ON c.course_id = e.course_id
             WHERE COALESCE(s.student_status,'') <> 'Inactive' AND CAST(c.course_nvq_level AS CHAR) = '5'";
 if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $nvq5Count = (int)$r['cnt']; } mysqli_free_result($rs); }
+
+// Sinhala and Tamil nationality counts (fixed values)
+$sinhalaCount = 150;
+$tamilCount = 238;
 ?>
 
 <style>
@@ -1242,6 +1246,30 @@ if ($rs = mysqli_query($con, $sqlNvq5)) { if ($r = mysqli_fetch_assoc($rs)) { $n
         <div>
           <div class="stat-label" style="color: rgba(255,255,255,0.95);">NVQ Level 5</div>
           <div class="stat-value" style="color: #ffffff;"><?php echo $nvq5Count; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #d32f2f 0%, #b71c1c 100%);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-users fa-lg"></i></div>
+        <div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">Sinhala</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $sinhalaCount; ?></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="col-md-4 col-sm-6 col-12 mb-3">
+    <div class="card stat-card shadow-sm" style="background: linear-gradient(135deg, #1976d2 0%, #0d47a1 100%);">
+      <div class="card-body d-flex align-items-center" style="color: #ffffff;">
+        <div class="icon mr-3" style="color: rgba(255,255,255,0.9);"><i class="fas fa-users fa-lg"></i></div>
+        <div>
+          <div class="stat-label" style="color: rgba(255,255,255,0.95);">Tamil</div>
+          <div class="stat-value" style="color: #ffffff;"><?php echo $tamilCount; ?></div>
         </div>
       </div>
     </div>
